@@ -14,7 +14,7 @@
   ],
   "host_permissions": [
     "https://labs.google/*",
-    "https://whisk-license.onrender.com/*"
+    "https://drama-s2ns.onrender.com/*"
   ],
   "action": {
     "default_icon": {
