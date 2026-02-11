@@ -7,11 +7,31 @@
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <div class="container">
+  <!-- License Lock Screen -->
+  <div id="licenseScreen" class="license-screen" hidden>
+    <div class="license-box">
+      <h2>Whisk 자동화</h2>
+      <p class="license-desc">라이센스 키를 입력해주세요</p>
+      <div class="license-input-group">
+        <input type="text" id="licenseKeyInput" placeholder="WHISK-XXXX-XXXX" maxlength="14" spellcheck="false" autocomplete="off">
+        <button id="licenseSubmitBtn" class="btn btn-primary">확인</button>
+      </div>
+      <p class="license-error" id="licenseError" hidden></p>
+      <p class="license-hint">유튜브 커뮤니티에서 키를 확인하세요</p>
+    </div>
+  </div>
+
+  <div class="container" id="mainContainer" hidden>
     <header>
       <h1>Whisk 자동화</h1>
       <span class="status" id="connectionStatus">연결 확인 중...</span>
     </header>
+
+    <!-- License Status Bar -->
+    <div class="license-bar" id="licenseBar">
+      <span id="licenseStatus"></span>
+      <button id="licenseChangeBtn" class="btn btn-small btn-secondary">키 변경</button>
+    </div>
 
     <section class="input-section">
       <div class="input-header">
