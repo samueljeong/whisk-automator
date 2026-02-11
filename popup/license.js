@@ -57,7 +57,7 @@ async function validateWithServer(key) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
 
-    const resp = await fetch(`${LICENSE_SERVER}/api/validate`, {
+    const resp = await fetch(`${LICENSE_SERVER}/api/whisk/validate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ key }),
