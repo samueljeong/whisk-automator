@@ -1,5 +1,5 @@
 // License validation module
-const LICENSE_SERVER = 'https://whisk-license.onrender.com';
+const LICENSE_SERVER = 'https://drama-s2ns.onrender.com';
 const CACHE_KEY = 'whisk_license';
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 const OFFLINE_GRACE = 7 * 24 * 60 * 60 * 1000; // 7 days
