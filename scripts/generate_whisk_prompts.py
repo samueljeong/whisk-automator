@@ -31,7 +31,7 @@ SCENES_BASE = FACTORY_BASE / "outputs/yonga"
 OUTPUT_BASE = FACTORY_BASE / "outputs/whisk/yonga"
 
 # "배경" 등 캐릭터가 아닌 subject 값
-NON_CHARACTER_SUBJECTS = {"배경", "background", "전경", "원경"}
+NON_CHARACTER_SUBJECTS = {"배경", "background", "전경", "원경", "경맥 내부", "일행"}
 
 # 프롬프트 텍스트 → 캐릭터 매핑 (영문 묘사 힌트)
 # 프롬프트에서 2인 장면의 동반 캐릭터를 텍스트로 추정
