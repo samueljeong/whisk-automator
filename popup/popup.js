@@ -103,11 +103,89 @@ let currentProject = "yonga";
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
   await loadState();
+
+  // License check
+  const licenseResult = await checkLicense();
+  if (licenseResult.valid) {
+    showMainUI(licenseResult);
+  } else {
+    showLicenseScreen();
+    return; // Don't initialize main UI
+  }
+
   await checkConnection();
   updateUI();
   // 커스텀 폴더 UI 상태 반영
   if (typeof updateCustomDirUI === 'function') updateCustomDirUI();
   if (typeof updateCharFolderHint === 'function') updateCharFolderHint();
+});
+
+// License UI functions
+function showMainUI(licenseResult) {
+  document.getElementById('licenseScreen').hidden = true;
+  document.getElementById('mainContainer').hidden = false;
+  const statusEl = document.getElementById('licenseStatus');
+  if (licenseResult.expires) {
+    statusEl.textContent = `만료: ${formatExpiry(licenseResult.expires)}`;
+  }
+  if (licenseResult.offline) {
+    statusEl.textContent += ' (오프라인)';
+  }
+}
+
+function showLicenseScreen() {
+  document.getElementById('licenseScreen').hidden = false;
+  document.getElementById('mainContainer').hidden = true;
+
+  const keyInput = document.getElementById('licenseKeyInput');
+  const submitBtn = document.getElementById('licenseSubmitBtn');
+  const errorEl = document.getElementById('licenseError');
+
+  // Auto-format input
+  keyInput.addEventListener('input', () => {
+    let val = keyInput.value.toUpperCase().replace(/[^A-Z0-9-]/g, '');
+    // Auto-insert dashes
+    const raw = val.replace(/-/g, '');
+    if (raw.length > 5) {
+      val = raw.slice(0, 5) + '-' + raw.slice(5);
+    }
+    if (raw.length > 9) {
+      val = raw.slice(0, 5) + '-' + raw.slice(5, 9) + '-' + raw.slice(9, 13);
+    }
+    keyInput.value = val.slice(0, 14);
+    errorEl.hidden = true;
+  });
+
+  submitBtn.addEventListener('click', async () => {
+    submitBtn.disabled = true;
+    submitBtn.textContent = '확인 중...';
+    errorEl.hidden = true;
+
+    const result = await submitLicenseKey(keyInput.value);
+
+    if (result.valid) {
+      showMainUI(result);
+      await checkConnection();
+      updateUI();
+      if (typeof updateCustomDirUI === 'function') updateCustomDirUI();
+      if (typeof updateCharFolderHint === 'function') updateCharFolderHint();
+    } else {
+      errorEl.textContent = result.error;
+      errorEl.hidden = false;
+      submitBtn.disabled = false;
+      submitBtn.textContent = '확인';
+    }
+  });
+
+  keyInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') submitBtn.click();
+  });
+}
+
+// License change button
+document.getElementById('licenseChangeBtn')?.addEventListener('click', async () => {
+  await clearLicenseCache();
+  showLicenseScreen();
 });
 
 // Check connection to Whisk page
