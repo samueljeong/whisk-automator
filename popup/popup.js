@@ -2555,6 +2555,37 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
             });
           } catch(e) {}
 
+          // 20장마다 하드 리셋 (DOM 누적 오류 방지)
+          const HARD_RESET_INTERVAL = 20;
+          if ((i + 1) % HARD_RESET_INTERVAL === 0 && i < promptsWithCharacters.length - 1) {
+            console.log(`[Whisk Auto] === 하드 리셋 (${i + 1}장 완료) ===`);
+
+            // 1. 피사체 슬롯 완전 초기화
+            try {
+              await clearSlotImages('subject');
+              await sleep(1000);
+            } catch(e) {
+              console.log('[Whisk Auto] 하드 리셋 중 해제 실패, 계속 진행');
+            }
+
+            // 2. 사이드바 닫았다 열기 (DOM 상태 초기화)
+            var closeBtn = document.querySelector('button[aria-label="Close"]') ||
+                           document.querySelector('button[aria-label="닫기"]');
+            if (closeBtn) {
+              closeBtn.click();
+              await sleep(1500);
+            }
+            await openSidebar();
+            await sleep(1500);
+            await waitForSidebar(5000);
+
+            // 3. 캐릭터/장면 그룹 리셋 → 다음 장면에서 강제 재업로드
+            currentCharacterGroup = '__hard_reset__';
+            currentScene = '__hard_reset__';
+
+            console.log('[Whisk Auto] === 하드 리셋 완료, 계속 진행 ===');
+          }
+
           if (i < promptsWithCharacters.length - 1) {
             console.log(`[Whisk Auto] ${delayMs}ms 대기...`);
             await sleep(delayMs);
