@@ -152,7 +152,7 @@ function showLicenseScreen() {
     if (raw.length > 9) {
       val = raw.slice(0, 5) + '-' + raw.slice(5, 9) + '-' + raw.slice(9, 13);
     }
-    keyInput.value = val.slice(0, 14);
+    keyInput.value = val.slice(0, 15);
     errorEl.hidden = true;
   });
 
