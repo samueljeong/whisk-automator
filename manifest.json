@@ -13,7 +13,8 @@
     "unlimitedStorage"
   ],
   "host_permissions": [
-    "https://labs.google/*"
+    "https://labs.google/*",
+    "https://whisk-license.onrender.com/*"
   ],
   "action": {
     "default_icon": {
