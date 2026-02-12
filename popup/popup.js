@@ -2424,18 +2424,22 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     if (styleImageUrl) {
       var styleResult = await uploadImageToSlot(styleImageUrl, 'style');
       if (!styleResult) {
-        // 스타일 업로드 실패 시 재시도 (리로드 후 UI 미준비 대비)
         console.log('[Whisk Auto] 스타일 업로드 실패, 3초 후 재시도...');
         await sleep(3000);
         styleResult = await uploadImageToSlot(styleImageUrl, 'style');
-        if (!styleResult) {
-          console.error('[Whisk Auto] 스타일 업로드 2회 실패, 스타일 없이 진행');
-        }
       }
-      if (styleResult) {
-        styleUploaded = true;
-        console.log('[Whisk Auto] 스타일 이미지 업로드 완료 (분석은 캐릭터와 함께 대기)');
+      if (!styleResult) {
+        console.error('[Whisk Auto] 스타일 업로드 2회 실패, 자동화 중단');
+        window.__whiskAutoRunning = false;
+        clearInterval(popupWatcher);
+        try {
+          chrome.runtime.sendMessage({ action: 'AUTOMATION_ERROR', error: '스타일 이미지 업로드 실패 — 페이지 상태를 확인해주세요' });
+        } catch(e) {}
+        alert('스타일 이미지 업로드에 실패했습니다. 페이지를 확인 후 다시 시작해주세요.');
+        return;
       }
+      styleUploaded = true;
+      console.log('[Whisk Auto] 스타일 이미지 업로드 완료 (분석은 캐릭터와 함께 대기)');
     }
 
     for (let i = 0; i < promptsWithCharacters.length; i++) {
