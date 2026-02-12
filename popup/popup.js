@@ -1264,6 +1264,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
   let currentCharacterGroup = ''; // 현재 피사체에 로드된 캐릭터 조합 (정렬된 키, ''=없음)
   let currentScene = '';           // 현재 장면 슬롯에 로드된 장면 (''=없음)
   let downloadedSrcs = new Set();  // 이미 다운로드한 이미지 src 추적
+  let consecutiveFailures = 0;     // 연속 실패 카운터 (2회 연속 시 페이지 리로드)
 
   async function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
