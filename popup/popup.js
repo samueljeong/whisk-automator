@@ -2186,6 +2186,48 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     }
   }
 
+  // 슬롯에 에러 메시지가 표시되는지 확인 (업로드 실패 감지)
+  function checkSlotError(slotName) {
+    var slotToLabel = { 'subject': '피사체', 'scene': '장면', 'style': '스타일' };
+    var labelText = slotToLabel[slotName];
+    if (!sidebarRoot) return false;
+
+    // 에러 메시지 패턴: "미디어를 가져오는 중에 문제가 발생했습니다" 등
+    var allText = sidebarRoot.querySelectorAll('span, p, div');
+    var sections = findWhiskSlots();
+    var slotElements = sections[slotName] || [];
+
+    for (var el of allText) {
+      var text = el.textContent.trim();
+      if (text.includes('문제가 발생') || text.includes('error') || text.includes('실패') || text.includes('problem')) {
+        // 해당 슬롯 영역 내에 있는지 확인
+        if (slotElements.length > 0) {
+          var slotRect = slotElements[0].getBoundingClientRect();
+          var elRect = el.getBoundingClientRect();
+          // 슬롯 근처(위아래 100px)에 있는 에러 메시지
+          if (Math.abs(elRect.top - slotRect.top) < 150) {
+            console.log(`[Whisk Auto] ${slotName} 슬롯에 에러 감지: "${text}"`);
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  // 슬롯에 실제 이미지가 로드되었는지 확인
+  function verifySlotHasImage(slotName) {
+    var sections = findWhiskSlots();
+    var slotElements = sections[slotName] || [];
+    if (slotElements.length === 0) return false;
+
+    for (var slot of slotElements) {
+      var img = slot.querySelector('img');
+      if (img && img.src && img.naturalWidth > 0) return true;
+    }
+    return false;
+  }
+
   async function findAndFillPrompt(text) {
     // textarea 찾기
     const textarea = document.querySelector('textarea');
