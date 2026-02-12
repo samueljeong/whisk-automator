@@ -2422,9 +2422,20 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     // 스타일 이미지 설정 (한 번만, 분석 대기는 첫 캐릭터와 함께)
     var styleUploaded = false;
     if (styleImageUrl) {
-      await uploadImageToSlot(styleImageUrl, 'style');
-      styleUploaded = true;
-      console.log('[Whisk Auto] 스타일 이미지 업로드 완료 (분석은 캐릭터와 함께 대기)');
+      var styleResult = await uploadImageToSlot(styleImageUrl, 'style');
+      if (!styleResult) {
+        // 스타일 업로드 실패 시 재시도 (리로드 후 UI 미준비 대비)
+        console.log('[Whisk Auto] 스타일 업로드 실패, 3초 후 재시도...');
+        await sleep(3000);
+        styleResult = await uploadImageToSlot(styleImageUrl, 'style');
+        if (!styleResult) {
+          console.error('[Whisk Auto] 스타일 업로드 2회 실패, 스타일 없이 진행');
+        }
+      }
+      if (styleResult) {
+        styleUploaded = true;
+        console.log('[Whisk Auto] 스타일 이미지 업로드 완료 (분석은 캐릭터와 함께 대기)');
+      }
     }
 
     for (let i = 0; i < promptsWithCharacters.length; i++) {
