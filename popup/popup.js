@@ -2179,7 +2179,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       HTMLInputElement.prototype.click = originalClick;
       observer.disconnect();
       console.log('[Whisk Auto] 업로드 완료 (success=' + uploadSuccess + ')');
-      return true;
+      return uploadSuccess;
     } catch (e) {
       console.log('[Whisk Auto] ' + slotName + ' 업로드 실패:', e.message);
       return false;
