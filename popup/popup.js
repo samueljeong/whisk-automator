@@ -2630,6 +2630,59 @@ async function stopAutomation() {
   updateUI();
 }
 
+// 페이지 리로드 후 남은 프롬프트 재주입
+async function handleHardReset(completedCount) {
+  console.log(`[Popup] 하드 리셋: ${completedCount}장 완료, 페이지 리로드 시작`);
+
+  completedOffset += completedCount;
+  const remaining = sortedPromptsCache.slice(completedOffset);
+
+  if (remaining.length === 0) {
+    console.log('[Popup] 남은 프롬프트 없음, 완료');
+    isRunning = false;
+    updateUI();
+    return;
+  }
+
+  console.log(`[Popup] 남은 프롬프트: ${remaining.length}개`);
+
+  try {
+    const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+    const tab = tabs[0];
+
+    // 페이지 리로드
+    await chrome.tabs.reload(tab.id);
+
+    // 로딩 완료 대기
+    await new Promise((resolve) => {
+      const listener = (tabId, changeInfo) => {
+        if (tabId === tab.id && changeInfo.status === 'complete') {
+          chrome.tabs.onUpdated.removeListener(listener);
+          resolve();
+        }
+      };
+      chrome.tabs.onUpdated.addListener(listener);
+    });
+
+    // Whisk 초기화 대기 (5초)
+    console.log('[Popup] Whisk 초기화 대기 5초...');
+    await new Promise(r => setTimeout(r, 5000));
+
+    // 남은 프롬프트로 재주입
+    const p = automationParams;
+    console.log(`[Popup] 재주입: ${remaining.length}개 프롬프트`);
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: runWhiskAutomation,
+      args: [remaining, p.delayMs, p.shouldDownload, p.projectStyleImage, p.characterMap, p.savePath, p.sceneMap, p.useCustomDir]
+    });
+  } catch (error) {
+    console.error('[Popup] 하드 리셋 실패:', error);
+    isRunning = false;
+    updateUI();
+  }
+}
+
 // Event Listeners
 addPromptsBtn.addEventListener('click', addPrompts);
 fileInput.addEventListener('change', loadFromFile);
