@@ -1227,6 +1227,11 @@ async function startAutomation() {
   const characterMap = buildCharacterMap();
   const sceneMap = buildSceneMap();
 
+  // 리로드 후 재개용 캐시 저장
+  sortedPromptsCache = promptsWithCharacters;
+  automationParams = { delayMs, shouldDownload, projectStyleImage, characterMap, savePath, sceneMap, useCustomDir: !!customDirHandle };
+  completedOffset = 0;
+
   // 직접 스크립트 주입
   try {
     await chrome.scripting.executeScript({
