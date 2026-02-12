@@ -2564,6 +2564,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
           }
 
           success = true;
+          consecutiveFailures = 0;  // 성공 시 연속 실패 카운터 리셋
           console.log(`[Whisk Auto] ${i + 1} 완료 (씬${origIndex + 1})`);
 
           // 완료 진행 상황 전달
@@ -2577,21 +2578,6 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
               currentPrompt: logPrefix + ' ✅'
             });
           } catch(e) {}
-
-          // 20장마다 페이지 리로드 (DOM 누적 오류 완전 방지)
-          const HARD_RESET_INTERVAL = 5;
-          if ((i + 1) % HARD_RESET_INTERVAL === 0 && i < promptsWithCharacters.length - 1) {
-            console.log(`[Whisk Auto] === 페이지 리로드 요청 (${i + 1}장 완료) ===`);
-            window.__whiskAutoRunning = false;
-            clearInterval(popupWatcher);
-            try {
-              chrome.runtime.sendMessage({
-                action: 'HARD_RESET_NEEDED',
-                completedCount: i + 1,
-              });
-            } catch(e) {}
-            return;
-          }
 
           if (i < promptsWithCharacters.length - 1) {
             console.log(`[Whisk Auto] ${delayMs}ms 대기...`);
@@ -2608,9 +2594,23 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
             }
             await sleep(3000 * retryCount); // 3초, 6초, 9초 대기
           } else {
-            console.error(`[Whisk Auto] ${MAX_RETRIES}회 재시도 실패, 건너뜀 (씬${origIndex + 1}):`, error);
-            // 건너뛴 씬도 캐릭터 그룹 리셋
+            console.error(`[Whisk Auto] ${MAX_RETRIES}회 재시도 실패 (씬${origIndex + 1}):`, error);
             currentCharacterGroup = '__reset__';
+            consecutiveFailures++;
+
+            // 연속 2회 실패 시 페이지 리로드로 복구 시도
+            if (consecutiveFailures >= 2 && i < promptsWithCharacters.length - 1) {
+              console.log(`[Whisk Auto] === 연속 ${consecutiveFailures}회 실패, 페이지 리로드 요청 ===`);
+              window.__whiskAutoRunning = false;
+              clearInterval(popupWatcher);
+              try {
+                chrome.runtime.sendMessage({
+                  action: 'HARD_RESET_NEEDED',
+                  completedCount: i + 1,
+                });
+              } catch(e) {}
+              return;
+            }
           }
         }
       }
