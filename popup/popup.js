@@ -3,6 +3,9 @@ let prompts = [];
 let isRunning = false;
 let currentIndex = 0;
 let customDirHandle = null; // File System Access API handle
+let sortedPromptsCache = [];  // 리로드 후 재개용
+let automationParams = {};     // 재주입에 필요한 파라미터
+let completedOffset = 0;       // 리로드 전 완료 수 (진행바 보정)
 
 // DOM Elements
 const connectionStatus = document.getElementById('connectionStatus');
