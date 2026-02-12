@@ -2908,19 +2908,21 @@ refreshCharFolderBtn.addEventListener('click', async () => {
 // Listen for messages from content script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   switch (message.action) {
-    case 'PROGRESS_UPDATE':
-      currentIndex = message.currentIndex;
-      if (message.totalCount) {
-        totalCountEl.textContent = message.totalCount;
+    case 'PROGRESS_UPDATE': {
+      const adjustedIndex = completedOffset + message.currentIndex;
+      const adjustedTotal = completedOffset + message.totalCount;
+      currentIndex = adjustedIndex;
+      if (adjustedTotal) {
+        totalCountEl.textContent = adjustedTotal;
       }
       if (message.status && prompts[message.promptIndex]) {
         prompts[message.promptIndex].status = message.status;
       }
-      // 진행 바 + 현재 프롬프트 즉시 업데이트
-      if (message.totalCount > 0) {
-        const pct = (message.currentIndex / message.totalCount) * 100;
+      // 진행 바 + 현재 프롬프트 즉시 업데이트 (offset 보정)
+      if (adjustedTotal > 0) {
+        const pct = (adjustedIndex / adjustedTotal) * 100;
         progressFill.style.width = `${pct}%`;
-        currentIndexEl.textContent = message.currentIndex;
+        currentIndexEl.textContent = adjustedIndex;
       }
       if (message.currentPrompt) {
         currentPromptEl.textContent = `현재: ${message.currentPrompt}`;
@@ -2928,6 +2930,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       progressSection.hidden = false;
       saveState();
       updateUI();
+      break;
+    }
+
+    case 'HARD_RESET_NEEDED':
+      handleHardReset(message.completedCount);
       break;
 
     case 'AUTOMATION_COMPLETE':
