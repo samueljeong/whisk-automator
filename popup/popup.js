@@ -2650,6 +2650,10 @@ async function handleHardReset(completedCount) {
     const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
     const tab = tabs[0];
 
+    // 리로드 전 현재 URL 저장
+    const originalUrl = tab.url;
+    console.log(`[Popup] 현재 URL 저장: ${originalUrl}`);
+
     // 페이지 리로드
     await chrome.tabs.reload(tab.id);
 
@@ -2664,9 +2668,66 @@ async function handleHardReset(completedCount) {
       chrome.tabs.onUpdated.addListener(listener);
     });
 
-    // Whisk 초기화 대기 (5초)
-    console.log('[Popup] Whisk 초기화 대기 5초...');
-    await new Promise(r => setTimeout(r, 5000));
+    // 리로드 후 URL 확인 — 다른 페이지로 갔으면 원래 URL로 이동
+    const updatedTab = await chrome.tabs.get(tab.id);
+    if (updatedTab.url !== originalUrl) {
+      console.log(`[Popup] URL 변경 감지: ${updatedTab.url} → 원래 URL로 복귀`);
+      await chrome.tabs.update(tab.id, { url: originalUrl });
+
+      // 다시 로딩 완료 대기
+      await new Promise((resolve) => {
+        const listener = (tabId, changeInfo) => {
+          if (tabId === tab.id && changeInfo.status === 'complete') {
+            chrome.tabs.onUpdated.removeListener(listener);
+            resolve();
+          }
+        };
+        chrome.tabs.onUpdated.addListener(listener);
+      });
+    }
+
+    // UI 요소 감지 폴링 (textarea 또는 contenteditable 찾기, 최대 20초)
+    console.log('[Popup] Whisk UI 요소 감지 대기 (최대 20초)...');
+    const maxWaitMs = 20000;
+    const pollMs = 2000;
+    let waited = 0;
+    let uiReady = false;
+
+    while (waited < maxWaitMs) {
+      await new Promise(r => setTimeout(r, pollMs));
+      waited += pollMs;
+
+      try {
+        const results = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: () => {
+            const textarea = document.querySelector('textarea');
+            const editable = document.querySelector('[contenteditable="true"]');
+            const buttons = document.querySelectorAll('button');
+            const hasInput = !!(textarea || editable);
+            const hasButtons = buttons.length > 3;
+            return { hasInput, hasButtons, buttonCount: buttons.length };
+          }
+        });
+
+        const check = results[0]?.result;
+        if (check && check.hasInput && check.hasButtons) {
+          console.log(`[Popup] Whisk UI 준비 완료 (${waited / 1000}초, 버튼 ${check.buttonCount}개)`);
+          uiReady = true;
+          break;
+        }
+        console.log(`[Popup] UI 미준비 (${waited / 1000}초): input=${check?.hasInput}, buttons=${check?.buttonCount}`);
+      } catch (e) {
+        console.log(`[Popup] UI 확인 실패 (${waited / 1000}초): ${e.message}`);
+      }
+    }
+
+    if (!uiReady) {
+      console.warn('[Popup] 20초 내 Whisk UI 미감지, 그래도 재주입 시도');
+    }
+
+    // 추가 안정화 대기 (UI 렌더링 완료)
+    await new Promise(r => setTimeout(r, 2000));
 
     // 남은 프롬프트로 재주입
     const p = automationParams;
