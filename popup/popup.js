@@ -2547,8 +2547,19 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
 
                 console.log(`[Whisk Auto] [${ci + 1}/${charNames.length}] ${charName} 업로드...`);
                 // 첫 번째 캐릭터만 기존 이미지 해제, 나머지는 추가
-                await uploadImageToSlot(charImageUrl, 'subject', ci > 0);
+                var charUploadOk = await uploadImageToSlot(charImageUrl, 'subject', ci > 0);
                 await sleep(1500); // 업로드 UI 반응 대기만 (분석 대기 X)
+
+                // 업로드 후 에러 확인
+                if (!charUploadOk || checkSlotError('subject')) {
+                  console.log(`[Whisk Auto] 피사체 업로드 실패 감지, 재시도...`);
+                  await sleep(2000);
+                  await uploadImageToSlot(charImageUrl, 'subject', ci > 0);
+                  await sleep(1500);
+                  if (checkSlotError('subject')) {
+                    throw new Error(`캐릭터 "${charName}" 업로드 실패 — 슬롯 에러`);
+                  }
+                }
               }
 
               // 모든 업로드 완료 후 한번만 분석 대기
