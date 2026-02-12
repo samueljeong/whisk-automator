@@ -2564,7 +2564,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
           } catch(e) {}
 
           // 20장마다 페이지 리로드 (DOM 누적 오류 완전 방지)
-          const HARD_RESET_INTERVAL = 20;
+          const HARD_RESET_INTERVAL = 5;
           if ((i + 1) % HARD_RESET_INTERVAL === 0 && i < promptsWithCharacters.length - 1) {
             console.log(`[Whisk Auto] === 페이지 리로드 요청 (${i + 1}장 완료) ===`);
             window.__whiskAutoRunning = false;
