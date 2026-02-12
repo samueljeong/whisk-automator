@@ -2580,8 +2580,19 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
 
             if (sceneTag && sceneImageUrl) {
               console.log(`[Whisk Auto] 장면 전환: ${currentScene || '없음'} → ${sceneTag}`);
-              await uploadImageToSlot(sceneImageUrl, 'scene');
+              var sceneUploadOk = await uploadImageToSlot(sceneImageUrl, 'scene');
               await sleep(2000); // 장면 분석 대기
+
+              // 업로드 후 에러 확인
+              if (!sceneUploadOk || checkSlotError('scene')) {
+                console.log(`[Whisk Auto] 장면 업로드 실패 감지, 재시도...`);
+                await sleep(2000);
+                await uploadImageToSlot(sceneImageUrl, 'scene');
+                await sleep(2000);
+                if (checkSlotError('scene')) {
+                  throw new Error(`장면 "${sceneTag}" 업로드 실패 — 슬롯 에러`);
+                }
+              }
             } else if (!sceneTag && currentScene) {
               // 장면 태그 없으면 장면 슬롯 비우기
               console.log(`[Whisk Auto] 장면 해제: ${currentScene} → 없음`);
