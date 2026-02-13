@@ -372,7 +372,19 @@ def generate_prompt_line(
             tag = " ".join(f"[{n}]" for n in top_two) + " "
             print(f"  🔗 {filename}: 배경+2인 감지 → {' '.join(f'[{n}]' for n in top_two)} 자동 태그")
 
-    return f"[filename:{filename}] {tag}{prompt}. No text."
+    # 장면 유형별 시각 스타일 키워드 보강
+    shot_type = scene.get("shot_type", "").lower()
+    style_boost = ""
+    if any(kw in prompt.lower() for kw in ["action", "slash", "clash", "fight", "sword", "attack", "dodge", "leap", "kick", "block"]):
+        style_boost = ", speed lines, ink splash effects, motion blur streaks, explosive impact"
+    elif any(kw in prompt.lower() for kw in ["close-up", "extreme close", "face", "eyes", "portrait"]):
+        style_boost = ", sharp detailed linework, dramatic chiaroscuro lighting, intense eye detail"
+    elif any(kw in prompt.lower() for kw in ["wide shot", "panoram", "landscape", "vista", "overhead", "bird"]):
+        style_boost = ", sweeping ink wash background, atmospheric perspective, layered depth"
+    elif any(kw in prompt.lower() for kw in ["dragon", "energy", "fire", "glow", "aura", "meridian", "poison"]):
+        style_boost = ", glowing energy effects, supernatural color contrast, ethereal particle effects"
+
+    return f"[filename:{filename}] {tag}{prompt}{style_boost}. No text."
 
 
 def generate_prompts(
