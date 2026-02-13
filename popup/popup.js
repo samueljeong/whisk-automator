@@ -2729,6 +2729,40 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
             currentScene = sceneTag;
           }
 
+          // --- 스타일(Style) 슬롯 전환 (프리셋 기반) ---
+          const styleTag = item.style || '';
+          if (styleTag !== currentStyleTag) {
+            const stylePresetUrl = styles ? styles[styleTag] : null;
+
+            if (styleTag && stylePresetUrl) {
+              console.log(`[Whisk Auto] 스타일 전환: ${currentStyleTag || '기본'} → ${styleTag}`);
+              var styleSwapOk = await uploadImageToSlot(stylePresetUrl, 'style');
+              await sleep(3000); // 스타일 분석 대기
+
+              // 업로드 후 에러 확인
+              if (!styleSwapOk || checkSlotError('style')) {
+                console.log(`[Whisk Auto] 스타일 업로드 실패 감지, 재시도...`);
+                await sleep(2000);
+                await uploadImageToSlot(stylePresetUrl, 'style');
+                await sleep(3000);
+                if (checkSlotError('style')) {
+                  throw new Error(`스타일 "${styleTag}" 업로드 실패 — 슬롯 에러`);
+                }
+              }
+            } else if (!styleTag && currentStyleTag) {
+              // 스타일 태그 없으면 기본 스타일로 복원
+              if (styleImageUrl) {
+                console.log(`[Whisk Auto] 스타일 복원: ${currentStyleTag} → 기본`);
+                await uploadImageToSlot(styleImageUrl, 'style');
+                await sleep(3000);
+              }
+            } else if (styleTag && !stylePresetUrl) {
+              console.log(`[Whisk Auto] 스타일 "${styleTag}" 이미지 미등록, 건너뜀`);
+            }
+
+            currentStyleTag = styleTag;
+          }
+
           await findAndFillPrompt(prompt);
           await sleep(500);
 
