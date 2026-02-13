@@ -1474,8 +1474,8 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         console.log('[Whisk Auto] 팝업 닫기 버튼 클릭: "' + (text || aria) + '"');
       }
     });
-    // 전략 3: Discord/외부 링크 팝업의 "아니오/No thanks" 버튼
-    document.querySelectorAll('button, a').forEach(function(el) {
+    // 전략 3: 팝업/모달 내부의 거절 버튼만 클릭 (일반 UI 버튼 오탐 방지)
+    document.querySelectorAll('[class*="overlay"] button, [class*="modal"] button, [class*="dialog"] button, [role="dialog"] button').forEach(function(el) {
       var text = (el.textContent || '').trim().toLowerCase();
       if (text.includes('no thanks') || text.includes('아니') || text.includes('skip') ||
           text.includes('later') || text.includes('나중에') || text.includes('dismiss')) {
