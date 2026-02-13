@@ -1230,9 +1230,10 @@ async function startAutomation() {
       cleanPrompt = cleanPrompt.replace(/^\[filename:.+?\]\s*/, '');
     }
 
-    // 2. [캐릭터] 및 [장면:...] 추출
+    // 2. [캐릭터], [장면:...], [style:...] 추출
     const charNames = [];
     let scene = null;
+    let style = null;
     const charRegex = /^\[([^\]]+)\]\s*/;
     let charM;
     while ((charM = cleanPrompt.match(charRegex)) !== null) {
@@ -1241,6 +1242,12 @@ async function startAutomation() {
       // [장면:무림맹] → 장면 태그 추출
       if (charM[1].startsWith('장면:')) {
         scene = charM[1].replace('장면:', '').trim();
+        cleanPrompt = cleanPrompt.replace(charRegex, '');
+        continue;
+      }
+      // [style:male] 또는 [스타일:male] → 스타일 태그 추출
+      if (charM[1].startsWith('style:') || charM[1].startsWith('스타일:')) {
+        style = charM[1].replace(/^(style:|스타일:)/, '').trim();
         cleanPrompt = cleanPrompt.replace(charRegex, '');
         continue;
       }
