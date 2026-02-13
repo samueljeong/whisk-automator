@@ -1897,49 +1897,48 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     console.log('[Whisk Auto] 사이드바 CSS 복원');
   }
 
+  // 핵심 함수: 3개 섹션 라벨의 위치+Y범위를 한 번에 반환
+  function getSectionRanges() {
+    var candidates = sidebarRoot.querySelectorAll('h1,h2,h3,h4,h5,h6,span,div,label,p');
+    var ranges = [];
+
+    for (var i = 0; i < candidates.length; i++) {
+      var text = candidates[i].textContent.trim();
+      var key = LABEL_TO_KEY[text];
+      if (!key) continue;
+      var rect = candidates[i].getBoundingClientRect();
+      if (rect.width === 0 || rect.left < 0) continue;
+      var dup = false;
+      for (var d = 0; d < ranges.length; d++) {
+        if (ranges[d].key === key) { dup = true; break; }
+      }
+      if (dup) continue;
+      ranges.push({ key: key, label: text, top: rect.top, labelLeft: rect.left, el: candidates[i] });
+    }
+
+    ranges.sort(function(a, b) { return a.top - b.top; });
+    for (var s = 0; s < ranges.length; s++) {
+      ranges[s].end = (s + 1 < ranges.length) ? ranges[s + 1].top : ranges[s].top + 500;
+    }
+    return ranges;
+  }
+
   // 위치 기반으로 섹션별 슬롯 찾기 (부모 순회 대신 Y좌표로 매칭)
   function findWhiskSlots() {
     var sections = { 'subject': [], 'scene': [], 'style': [] };
-    var labelToKey = { '피사체': 'subject', '장면': 'scene', '스타일': 'style' };
-
-    // Step 1: 섹션 라벨 위치 수집 (H4뿐 아니라 다양한 태그)
-    var labelCandidates = sidebarRoot.querySelectorAll('h1,h2,h3,h4,h5,h6,span,div,label,p');
-    var sectionRanges = [];
-
-    console.log('[Whisk Auto] 라벨 후보 요소 수:', labelCandidates.length);
-    var h4s = []; // 호환성 위해 유지
-
-    for (var i = 0; i < labelCandidates.length; i++) {
-      var text = labelCandidates[i].textContent.trim();
-      var key = labelToKey[text];
-      if (!key) continue;
-      var rect = labelCandidates[i].getBoundingClientRect();
-      if (rect.width === 0 || rect.left < 0) continue; // 숨겨진 요소 스킵
-      // 중복 방지: 같은 key가 이미 있으면 스킵
-      var dup = false;
-      for (var d = 0; d < sectionRanges.length; d++) {
-        if (sectionRanges[d].key === key) { dup = true; break; }
-      }
-      if (dup) continue;
-      console.log('[Whisk Auto] 라벨 "' + text + '" (' + labelCandidates[i].tagName + ') pos:' + Math.round(rect.left) + ',' + Math.round(rect.top));
-      sectionRanges.push({ key: key, top: rect.top, labelLeft: rect.left });
-    }
-
-    sectionRanges.sort(function(a, b) { return a.top - b.top; });
-
-    // 각 섹션의 Y 범위 설정 (다음 H4까지)
-    for (var s = 0; s < sectionRanges.length; s++) {
-      sectionRanges[s].end = (s + 1 < sectionRanges.length)
-        ? sectionRanges[s + 1].top
-        : sectionRanges[s].top + 500;
-    }
+    var sectionRanges = getSectionRanges();
 
     if (sectionRanges.length === 0) {
-      console.log('[Whisk Auto] H4 라벨 없음 → 슬롯 검색 불가');
+      console.log('[Whisk Auto] 라벨 없음 → 슬롯 검색 불가');
       return sections;
     }
 
-    // Step 2: 모든 큰 클릭 가능 요소를 찾아서 Y 위치로 섹션에 배정
+    console.log('[Whisk Auto] 라벨 ' + sectionRanges.length + '개 발견');
+    for (var lr = 0; lr < sectionRanges.length; lr++) {
+      console.log('[Whisk Auto] 라벨 "' + sectionRanges[lr].label + '" pos:' + Math.round(sectionRanges[lr].labelLeft) + ',' + Math.round(sectionRanges[lr].top));
+    }
+
+    // 모든 큰 클릭 가능 요소를 찾아서 Y 위치로 섹션에 배정
     // button, div[role=button], 그리고 cursor:pointer인 큰 div도 포함
     var allClickables = sidebarRoot.querySelectorAll('button, div[role="button"]');
     // cursor:pointer인 큰 div도 추가로 검색 (점선 테두리 업로드 영역)
