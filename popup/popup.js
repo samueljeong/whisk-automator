@@ -2143,32 +2143,44 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         (attempt > 0 ? ' (재시도 ' + (attempt + 1) + ')' : ''));
 
       for (var c = 0; c < checkedImgs.length; c++) {
-        // 방법 1: 체크마크 직접 클릭
-        if (checkedImgs[c].checkEl) {
-          simulateRealClick(checkedImgs[c].checkEl);
-          totalCleared++;
-          await sleep(800);
-        }
+        var imgEl = checkedImgs[c].img;
+        var checkEl = checkedImgs[c].checkEl;
+
+        // 방법 1: 이미지 자체 클릭 (수동 해제와 동일한 방식)
+        console.log('[Whisk Auto]   이미지 클릭으로 해제 시도');
+        simulateRealClick(imgEl);
+        totalCleared++;
+        await sleep(800);
 
         // 해제 확인
-        var recheck = findCheckmarkFor(checkedImgs[c].img);
+        var recheck = findCheckmarkFor(imgEl);
         if (recheck.checked) {
-          // 방법 2: 이미지 래퍼 클릭으로 토글 시도
-          console.log('[Whisk Auto]   체크마크 클릭 실패, 이미지 래퍼 클릭 시도');
-          var wrapper = checkedImgs[c].img.closest('[role="button"]') ||
-                        checkedImgs[c].img.closest('button') ||
-                        checkedImgs[c].img.parentElement;
-          if (wrapper) {
+          // 방법 2: 이미지 래퍼(button/role=button) 클릭
+          console.log('[Whisk Auto]   이미지 클릭 실패, 래퍼 클릭 시도');
+          var wrapper = imgEl.closest('[role="button"], [role="option"], button') ||
+                        imgEl.parentElement;
+          if (wrapper && wrapper !== imgEl) {
             simulateRealClick(wrapper);
             await sleep(800);
           }
         }
 
-        // 방법 2도 실패 시 → 방법 3: 이미지 자체 클릭
-        recheck = findCheckmarkFor(checkedImgs[c].img);
+        recheck = findCheckmarkFor(imgEl);
+        if (recheck.checked && checkEl) {
+          // 방법 3: 체크마크 요소 직접 클릭
+          console.log('[Whisk Auto]   래퍼 클릭 실패, 체크마크 클릭 시도');
+          simulateRealClick(checkEl);
+          await sleep(800);
+        }
+
+        recheck = findCheckmarkFor(imgEl);
         if (recheck.checked) {
-          console.log('[Whisk Auto]   래퍼 클릭도 실패, 이미지 직접 클릭 시도');
-          simulateRealClick(checkedImgs[c].img);
+          // 방법 4: dispatchEvent로 다양한 이벤트 시도
+          console.log('[Whisk Auto]   모든 클릭 실패, pointerdown+pointerup 시도');
+          var evtTarget = wrapper || imgEl;
+          evtTarget.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));
+          await sleep(100);
+          evtTarget.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true }));
           await sleep(800);
         }
       }
