@@ -2830,6 +2830,9 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
                 }
               }
 
+              // 업로드된 캐릭터 순서 기록 (setActiveCharacters에서 사용)
+              characterUploadOrder = charNames.map(function(n) { return n.trim(); });
+
               // 모든 업로드 완료 후 한번만 분석 대기 (스타일도 전환됐으면 추가 대기)
               var waitTime = (styleUploaded || stylePresetSwitched) ? 9000 : 7000;
               console.log(`[Whisk Auto] 전체 분석 대기 (${waitTime / 1000}초${stylePresetSwitched ? ', 스타일 포함' : ''})...`);
