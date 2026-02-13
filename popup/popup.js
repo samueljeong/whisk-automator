@@ -1997,33 +1997,11 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     return sections;
   }
 
-  // 섹션의 Y 범위 구하기
+  // 래퍼: 특정 라벨의 Y범위만 반환
   function getSectionYRange(labelText) {
-    var labelCandidates = sidebarRoot.querySelectorAll('h1,h2,h3,h4,h5,h6,span,div,label,p');
-    var labelToKey = { '피사체': 'subject', '장면': 'scene', '스타일': 'style' };
-    var allLabels = [];
-
-    for (var i = 0; i < labelCandidates.length; i++) {
-      var text = labelCandidates[i].textContent.trim();
-      if (!labelToKey[text]) continue;
-      var rect = labelCandidates[i].getBoundingClientRect();
-      if (rect.width === 0 || rect.left < 0) continue;
-      var dup = false;
-      for (var d = 0; d < allLabels.length; d++) {
-        if (allLabels[d].text === text) { dup = true; break; }
-      }
-      if (dup) continue;
-      allLabels.push({ text: text, top: rect.top });
-    }
-    allLabels.sort(function(a, b) { return a.top - b.top; });
-
-    for (var i = 0; i < allLabels.length; i++) {
-      if (allLabels[i].text === labelText) {
-        return {
-          top: allLabels[i].top,
-          end: (i + 1 < allLabels.length) ? allLabels[i + 1].top : allLabels[i].top + 500
-        };
-      }
+    var ranges = getSectionRanges();
+    for (var i = 0; i < ranges.length; i++) {
+      if (ranges[i].label === labelText) return { top: ranges[i].top, end: ranges[i].end };
     }
     return null;
   }
