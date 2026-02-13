@@ -331,15 +331,18 @@ async function scanCharacterFolder(rootHandle) {
     'style': 'style'
   };
 
+  const foundFolders = [];
   for await (const slotEntry of rootHandle.values()) {
     if (slotEntry.kind !== 'directory') continue;
 
     const slotName = slotEntry.name.normalize('NFC');
     const slotType = slotMap[slotName] || slotMap[slotName.toLowerCase()];
+    foundFolders.push(`${slotEntry.name}→${slotType || '무시'}`);
     if (!slotType) {
-      console.log(`[Whisk] 알 수 없는 폴더 무시: ${slotEntry.name}`);
+      console.log(`[Whisk] 알 수 없는 폴더 무시: ${slotEntry.name} (NFC: ${slotName})`);
       continue;
     }
+    console.log(`[Whisk] 슬롯 발견: ${slotName} → ${slotType}`);
 
     // 슬롯 폴더 안의 프로젝트 폴더 스캔
     for await (const projEntry of slotEntry.values()) {
