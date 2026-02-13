@@ -1497,14 +1497,14 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     });
   }
 
-  // 주기적으로 팝업 감시 (10초마다)
+  // 주기적으로 팝업 감시 (5초마다)
   var popupWatcher = setInterval(function() {
     if (!window.__whiskAutoRunning) {
       clearInterval(popupWatcher);
       return;
     }
     dismissPopups();
-  }, 10000);
+  }, 5000);
 
   // 시작 시 즉시 한 번 실행
   dismissPopups();
