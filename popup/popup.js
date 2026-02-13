@@ -1474,6 +1474,27 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         console.log('[Whisk Auto] 팝업 거절 버튼 클릭: "' + text + '"');
       }
     });
+    // 전략 4: "예상했던 내용이 아닌가요?" 피드백 팝업 닫기
+    document.querySelectorAll('div, section, dialog').forEach(function(el) {
+      var text = el.textContent || '';
+      if (text.includes('예상했던') || text.includes('not what you expected')) {
+        // 이 요소 내부의 X/닫기 버튼 찾기
+        var closeBtn = el.querySelector('button[aria-label*="close"], button[aria-label*="Close"], button[aria-label*="dismiss"]');
+        if (!closeBtn) {
+          // aria-label 없으면 SVG path가 있는 작은 버튼 (X 아이콘)
+          el.querySelectorAll('button, [role="button"]').forEach(function(btn) {
+            var r = btn.getBoundingClientRect();
+            if (r.width > 0 && r.width <= 50 && r.height <= 50 && btn.querySelector('svg')) {
+              closeBtn = btn;
+            }
+          });
+        }
+        if (closeBtn) {
+          closeBtn.click();
+          console.log('[Whisk Auto] "예상했던 내용" 피드백 팝업 닫기');
+        }
+      }
+    });
   }
 
   // 주기적으로 팝업 감시 (10초마다)
