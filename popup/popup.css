@@ -549,6 +549,27 @@ footer {
   color: #666;
 }
 
+/* Style Presets */
+.style-presets {
+  margin-top: 8px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+}
+
+.style-presets-label {
+  font-size: 11px;
+  color: #888;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.style-presets-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
