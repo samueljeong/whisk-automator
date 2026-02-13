@@ -347,7 +347,7 @@ async function scanCharacterFolder(rootHandle) {
     for await (const projEntry of slotDir.values()) {
       if (projEntry.kind !== 'directory') continue;
 
-      const projName = projEntry.name;
+      const projName = projEntry.name.normalize('NFC');
       let projectKey = findProjectKeyByName(projName);
 
       if (!projectKey) {
