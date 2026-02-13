@@ -2980,8 +2980,8 @@ function updateCharFolderHint() {
 
   if (folderCharCount > 0) {
     charFolderHint.textContent = `${folderCharCount}\uAC1C \uB85C\uB4DC\uB428 (폴더에서 가져옴)`;
-    refreshCharFolderBtn.hidden = false;
   }
+  refreshCharFolderBtn.hidden = false; // 항상 표시
 }
 
 loadCharFolderBtn.addEventListener('click', async () => {
