@@ -2295,8 +2295,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
   async function uploadImageToSlot(imageUrl, slotName, skipClear) {
     if (!imageUrl) return false;
 
-    var slotToLabel = { 'subject': '피사체', 'scene': '장면', 'style': '스타일' };
-    var labelText = slotToLabel[slotName];
+    var labelText = SLOT_TO_LABEL[slotName];
     var isBase64 = imageUrl.startsWith('data:');
     console.log('[Whisk Auto] ' + slotName + '(' + labelText + ') 업로드' + (skipClear ? ' (추가)' : '') + ':', isBase64 ? 'Base64' : imageUrl.substring(0, 80));
 
