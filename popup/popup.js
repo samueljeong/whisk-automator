@@ -84,8 +84,8 @@ function buildDefaultProjects() {
       scenes: yongaScenes,
       inheritCommon: true,
       styleImage: (typeof STYLE_REFERENCE_BASE64 !== 'undefined' && STYLE_REFERENCE_BASE64) || "", // 당소화 전신 스타일 레퍼런스
-      stylePrefix: "Premium Korean dark fantasy wuxia manhwa, Nano Machine art style. Razor-sharp linework with heavy bold outlines, intense cel-shading with extreme shadow depth, dark moody atmosphere with dramatic rim lighting, semi-realistic mature proportions with detailed muscular definition, sharp angular facial features with piercing intense eyes. ",
-      styleSuffix: ". Dark cinematic composition, deep blacks, vivid accent colors against dark backgrounds, powerful dynamic energy. CRITICAL: No text, no speech bubbles, no watermark, no logos."
+      stylePrefix: "Polished premium Korean wuxia manhwa, smooth detailed linework with bold outlines, rich vibrant cel-shading with warm cinematic lighting, expressive comic-book shading with soft gradients, semi-realistic mature proportions, detailed expressive faces. ",
+      styleSuffix: ". Clean high-quality digital illustration, vivid saturated colors, dramatic but warm atmosphere, dynamic energy. CRITICAL: No text, no speech bubbles, no watermark, no logos."
     },
     "church": {
       name: "교회묵상",
