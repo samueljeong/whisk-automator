@@ -6,6 +6,7 @@ let customDirHandle = null; // File System Access API handle
 let sortedPromptsCache = [];  // 리로드 후 재개용
 let automationParams = {};     // 재주입에 필요한 파라미터
 let completedOffset = 0;       // 리로드 전 완료 수 (진행바 보정)
+let promptIndexMap = [];        // 필터링된 인덱스 → 원본 prompts 인덱스 매핑
 
 // DOM Elements
 const connectionStatus = document.getElementById('connectionStatus');
