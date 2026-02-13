@@ -372,17 +372,16 @@ def generate_prompt_line(
             tag = " ".join(f"[{n}]" for n in top_two) + " "
             print(f"  🔗 {filename}: 배경+2인 감지 → {' '.join(f'[{n}]' for n in top_two)} 자동 태그")
 
-    # 장면 유형별 시각 스타일 키워드 보강
-    shot_type = scene.get("shot_type", "").lower()
+    # 장면 유형별 시각 스타일 키워드 보강 (한국 웹툰 화풍)
     style_boost = ""
     if any(kw in prompt.lower() for kw in ["action", "slash", "clash", "fight", "sword", "attack", "dodge", "leap", "kick", "block"]):
-        style_boost = ", speed lines, ink splash effects, motion blur streaks, explosive impact"
+        style_boost = ", speed lines, motion blur streaks, explosive impact sparks, dynamic angle"
     elif any(kw in prompt.lower() for kw in ["close-up", "extreme close", "face", "eyes", "portrait"]):
-        style_boost = ", sharp detailed linework, dramatic chiaroscuro lighting, intense eye detail"
+        style_boost = ", sharp detailed linework, dramatic side lighting, intense eye highlight, crisp edges"
     elif any(kw in prompt.lower() for kw in ["wide shot", "panoram", "landscape", "vista", "overhead", "bird"]):
-        style_boost = ", sweeping ink wash background, atmospheric perspective, layered depth"
+        style_boost = ", detailed background, atmospheric depth, strong color grading"
     elif any(kw in prompt.lower() for kw in ["dragon", "energy", "fire", "glow", "aura", "meridian", "poison"]):
-        style_boost = ", glowing energy effects, supernatural color contrast, ethereal particle effects"
+        style_boost = ", glowing energy effects, neon color contrast, particle effects, dark background"
 
     return f"[filename:{filename}] {tag}{prompt}{style_boost}. No text."
 
