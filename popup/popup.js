@@ -2187,17 +2187,29 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         var imgEl = checkedImgs[c].img;
         var checkEl = checkedImgs[c].checkEl;
 
-        // 방법 1: 이미지 자체 클릭 (수동 해제와 동일한 방식)
-        console.log('[Whisk Auto]   이미지 클릭으로 해제 시도');
-        simulateRealClick(imgEl);
-        totalCleared++;
-        await sleep(800);
+        // 방법 1: 체크마크 직접 클릭 (Whisk UI 업데이트 후 이미지 클릭 → 상세보기 팝업이므로)
+        if (checkEl) {
+          console.log('[Whisk Auto]   체크마크 직접 클릭으로 해제 시도');
+          simulateRealClick(checkEl);
+          totalCleared++;
+          await sleep(800);
+        }
 
-        // 해제 확인
         var recheck = findCheckmarkFor(imgEl);
         if (recheck.checked) {
-          // 방법 2: 이미지 래퍼(button/role=button) 클릭
-          console.log('[Whisk Auto]   이미지 클릭 실패, 래퍼 클릭 시도');
+          // 방법 2: 체크마크의 부모/SVG 클릭
+          console.log('[Whisk Auto]   체크마크 실패, 부모 요소 클릭 시도');
+          var checkParent = checkEl ? (checkEl.closest('[role="button"]') || checkEl.parentElement) : null;
+          if (checkParent) {
+            simulateRealClick(checkParent);
+            await sleep(800);
+          }
+        }
+
+        recheck = findCheckmarkFor(imgEl);
+        if (recheck.checked) {
+          // 방법 3: 이미지 래퍼 클릭 (구 방식 폴백)
+          console.log('[Whisk Auto]   체크 해제 실패, 래퍼 클릭 시도');
           var wrapper = imgEl.closest('[role="button"], [role="option"], button') ||
                         imgEl.parentElement;
           if (wrapper && wrapper !== imgEl) {
@@ -2207,18 +2219,10 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         }
 
         recheck = findCheckmarkFor(imgEl);
-        if (recheck.checked && checkEl) {
-          // 방법 3: 체크마크 요소 직접 클릭
-          console.log('[Whisk Auto]   래퍼 클릭 실패, 체크마크 클릭 시도');
-          simulateRealClick(checkEl);
-          await sleep(800);
-        }
-
-        recheck = findCheckmarkFor(imgEl);
         if (recheck.checked) {
           // 방법 4: dispatchEvent로 다양한 이벤트 시도
           console.log('[Whisk Auto]   모든 클릭 실패, pointerdown+pointerup 시도');
-          var evtTarget = wrapper || imgEl;
+          var evtTarget = checkEl || wrapper || imgEl;
           evtTarget.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));
           await sleep(100);
           evtTarget.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true }));
