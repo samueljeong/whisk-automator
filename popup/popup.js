@@ -3001,9 +3001,11 @@ loadCharFolderBtn.addEventListener('click', async () => {
   }
 
   try {
+    // 이전에 저장된 폴더가 있으면 그 위치에서 시작
+    const savedHandle = await loadCharFolderHandle();
     const handle = await window.showDirectoryPicker({
       mode: 'read',
-      startIn: 'downloads'
+      startIn: savedHandle || 'downloads'
     });
 
     loadCharFolderBtn.textContent = '\uBD88\uB7EC\uC624\uB294 \uC911...';
