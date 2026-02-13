@@ -2117,9 +2117,10 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       var checkInfo = findCheckmarkFor(subjectImgs[i]);
 
       if (shouldBeChecked && !checkInfo.checked) {
-        // 체크 안됨 → 활성화: 이미지/래퍼 클릭
+        // 체크 안됨 → 활성화: 체크마크 또는 래퍼 클릭
         console.log('[Whisk Auto]   ✓ ON: ' + charName + ' (index ' + i + ')');
-        var clickTarget = subjectImgs[i].closest('[role="button"]') ||
+        var clickTarget = checkInfo.el ||
+                          subjectImgs[i].closest('[role="button"]') ||
                           subjectImgs[i].closest('button') || subjectImgs[i].parentElement;
         if (clickTarget) {
           simulateRealClick(clickTarget);
