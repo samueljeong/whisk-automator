@@ -1347,10 +1347,11 @@ async function startAutomation() {
   // 캐릭터 맵 + 장면 맵 생성 (별명 포함)
   const characterMap = buildCharacterMap();
   const sceneMap = buildSceneMap();
+  const styleMap = buildStyleMap();
 
   // 리로드 후 재개용 캐시 저장
   sortedPromptsCache = promptsWithCharacters;
-  automationParams = { delayMs, shouldDownload, projectStyleImage, characterMap, savePath, sceneMap, useCustomDir: !!customDirHandle };
+  automationParams = { delayMs, shouldDownload, projectStyleImage, characterMap, savePath, sceneMap, styleMap, useCustomDir: !!customDirHandle };
   completedOffset = 0;
 
   // 직접 스크립트 주입
@@ -1358,7 +1359,7 @@ async function startAutomation() {
     await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: runWhiskAutomation,
-      args: [promptsWithCharacters, delayMs, shouldDownload, projectStyleImage, characterMap, savePath, sceneMap, !!customDirHandle]
+      args: [promptsWithCharacters, delayMs, shouldDownload, projectStyleImage, characterMap, savePath, sceneMap, styleMap, !!customDirHandle]
     });
   } catch (error) {
     console.error('[Popup] Script injection failed:', error);
