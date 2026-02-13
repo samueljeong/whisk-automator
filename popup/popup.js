@@ -459,10 +459,10 @@ async function loadState() {
             ...savedProj,
             characters: mergedChars,
             scenes: mergedScenes,
-            // 저장소에 비어있으면 DEFAULT 값 사용
-            styleImage: savedProj.styleImage || defaultProj.styleImage || '',
-            stylePrefix: savedProj.stylePrefix || defaultProj.stylePrefix || '',
-            styleSuffix: savedProj.styleSuffix || defaultProj.styleSuffix || ''
+            // 저장소에 명시적으로 저장된 값 우선, undefined일 때만 DEFAULT 사용
+            styleImage: savedProj.styleImage !== undefined ? savedProj.styleImage : (defaultProj.styleImage || ''),
+            stylePrefix: savedProj.stylePrefix !== undefined ? savedProj.stylePrefix : (defaultProj.stylePrefix || ''),
+            styleSuffix: savedProj.styleSuffix !== undefined ? savedProj.styleSuffix : (defaultProj.styleSuffix || '')
           };
         }
       }
