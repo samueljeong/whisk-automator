@@ -26,7 +26,14 @@ SCENES_DIR = WHISK_BASE / "yonga" / "scenes"
 STYLES_DIR = WHISK_BASE / "yonga" / "styles"
 
 # 스타일 레퍼런스 이미지 (Whisk 스타일 슬롯용)
-STYLE_REFERENCE = STYLES_DIR / "style_ref_v3.png"
+# styles 폴더에서 가장 최근 수정된 이미지를 자동 선택
+def find_style_reference():
+    if not STYLES_DIR.exists():
+        return None
+    images = [f for f in STYLES_DIR.iterdir() if f.suffix.lower() in IMAGE_EXTENSIONS]
+    if not images:
+        return None
+    return max(images, key=lambda f: f.stat().st_mtime)
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 
