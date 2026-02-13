@@ -2446,8 +2446,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
 
   // 슬롯에 에러 메시지가 표시되는지 확인 (업로드 실패 감지)
   function checkSlotError(slotName) {
-    var slotToLabel = { 'subject': '피사체', 'scene': '장면', 'style': '스타일' };
-    var labelText = slotToLabel[slotName];
+    var labelText = SLOT_TO_LABEL[slotName];
     if (!sidebarRoot) return false;
 
     // 에러 메시지 패턴: "미디어를 가져오는 중에 문제가 발생했습니다" 등
