@@ -1446,6 +1446,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
   let currentStyleTag = '';        // 현재 스타일 슬롯에 로드된 스타일 태그 (''=기본)
   let downloadedSrcs = new Set();  // 이미 다운로드한 이미지 src 추적
   let consecutiveFailures = 0;     // 연속 실패 카운터 (2회 연속 시 페이지 리로드)
+  let characterUploadOrder = [];   // 캐릭터 업로드 순서 (setActiveCharacters에서 참조)
 
   // 슬롯↔라벨 매핑 (한 번만 선언)
   var SLOT_TO_LABEL = { 'subject': '피사체', 'scene': '장면', 'style': '스타일' };
