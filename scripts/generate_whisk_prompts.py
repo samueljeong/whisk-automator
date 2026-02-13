@@ -110,9 +110,9 @@ MOOD_EXPRESSIONS = {
     "resolve": "jaw set with iron resolve, burning determination in eyes, fists clenched tight",
 }
 
-# CHARACTER_MAP에서 한글명 + aliases 집합 생성
+# CHARACTER_META에서 한글명 + aliases 집합 생성
 REGISTERED_NAMES: set[str] = set()
-for _key, (_name, _filename, _aliases, _desc) in CHARACTER_MAP.items():
+for _name, (_aliases, _desc) in CHARACTER_META.items():
     REGISTERED_NAMES.add(_name)
     REGISTERED_NAMES.update(_aliases)
 
