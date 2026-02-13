@@ -84,8 +84,8 @@ function buildDefaultProjects() {
       scenes: yongaScenes,
       inheritCommon: true,
       styleImage: (typeof STYLE_REFERENCE_BASE64 !== 'undefined' && STYLE_REFERENCE_BASE64) || "", // 당소화 전신 스타일 레퍼런스
-      stylePrefix: "Korean Wuxia Manhwa illustration, bold ink outlines, vivid cel-shaded coloring, dramatic ink wash splashes, high contrast lighting. ",
-      styleSuffix: ". Vibrant saturated colors, dynamic composition with strong diagonals, cinematic rim lighting, flowing hair and robes in wind. CRITICAL: No text, no speech bubbles, no watermark, no logos."
+      stylePrefix: "Korean webtoon style digital illustration, sharp clean linework, bold cel-shading with strong highlights, high contrast dramatic lighting, vivid saturated colors. ",
+      styleSuffix: ". Modern digital art, crisp edges, deep shadows, intense color contrast, cinematic composition. CRITICAL: No text, no speech bubbles, no watermark, no logos."
     },
     "church": {
       name: "교회묵상",
