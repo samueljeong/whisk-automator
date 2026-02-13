@@ -1956,10 +1956,21 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     var combinedClickables = Array.from(allClickables).concat(extraClickables);
     console.log('[Whisk Auto] 전체 clickable 요소:', allClickables.length, '+ cursor:pointer/dashed div:', extraClickables.length);
 
+    // 사이드바 너비 추정: 라벨의 X 위치 기준으로 사이드바 영역 결정
+    var sidebarMaxX = 260; // 기본값
+    if (sectionRanges.length > 0) {
+      // 라벨이 있는 X 위치 + 여유를 사이드바 경계로 사용
+      var labelX = sectionRanges[0].labelLeft || 18;
+      sidebarMaxX = Math.max(260, labelX + 250);
+    }
+    console.log('[Whisk Auto] 사이드바 X 경계: ' + sidebarMaxX + 'px');
+
     var matched = 0;
     for (var b = 0; b < combinedClickables.length; b++) {
       var rect = combinedClickables[b].getBoundingClientRect();
       if (rect.width < 80 || rect.height < 80 || rect.left < 0) continue;
+      // 사이드바 영역 밖의 요소는 제외 (메인 영역 생성 이미지 등)
+      if (rect.left > sidebarMaxX) continue;
 
       var midY = rect.top + rect.height / 2;
 
