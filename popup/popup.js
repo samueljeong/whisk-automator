@@ -341,10 +341,8 @@ async function scanCharacterFolder(rootHandle) {
       continue;
     }
 
-    const slotDir = await rootHandle.getDirectoryHandle(slotEntry.name);
-
     // 슬롯 폴더 안의 프로젝트 폴더 스캔
-    for await (const projEntry of slotDir.values()) {
+    for await (const projEntry of slotEntry.values()) {
       if (projEntry.kind !== 'directory') continue;
 
       const projName = projEntry.name.normalize('NFC');
