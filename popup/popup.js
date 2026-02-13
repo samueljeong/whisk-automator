@@ -3037,6 +3037,7 @@ refreshCharFolderBtn.addEventListener('click', async () => {
     saveState();
     renderProjectTabs();
     renderCharacterList();
+    renderStyleSettings();
     charFolderHint.textContent = `${count}\uAC1C \uB85C\uB4DC \uC644\uB8CC`;
     refreshCharFolderBtn.textContent = '\uD83D\uDD04 \uC0C8\uB85C\uACE0\uCE68';
     refreshCharFolderBtn.disabled = false;
