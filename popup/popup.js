@@ -500,7 +500,7 @@ async function loadState() {
             styleSuffix: savedProj.styleSuffix !== undefined ? savedProj.styleSuffix : (defaultProj.styleSuffix || '')
           };
           // 마이그레이션: 옛날 스타일 텍스트가 저장되어 있으면 기본값으로 강제 교체
-          if (PROJECTS[key].stylePrefix && PROJECTS[key].stylePrefix.includes('wuxia')) {
+          if (PROJECTS[key].stylePrefix && PROJECTS[key].stylePrefix.toLowerCase().includes('wuxia')) {
             console.log('[Whisk] 마이그레이션: stylePrefix wuxia → murim (' + key + ')');
             PROJECTS[key].stylePrefix = defaultProj.stylePrefix || '';
           }
