@@ -1122,11 +1122,22 @@ async function startAutomation() {
     return;
   }
 
+  // 완료되지 않은 프롬프트만 필터링
+  const pendingPrompts = prompts
+    .map((p, i) => ({ ...p, originalIndex: i }))
+    .filter(p => p.status !== 'completed');
+
+  if (pendingPrompts.length === 0) {
+    alert('모든 프롬프트가 이미 완료되었습니다.\n새 프롬프트를 추가하거나 "전체 삭제" 후 다시 시도하세요.');
+    return;
+  }
+
   isRunning = true;
   currentIndex = 0;
-  prompts.forEach(p => p.status = '');
+  // 미완료 프롬프트만 상태 초기화 (에러 상태도 재시도 가능)
+  pendingPrompts.forEach(p => { prompts[p.originalIndex].status = ''; });
   progressSection.hidden = false;
-  totalCountEl.textContent = prompts.length;
+  totalCountEl.textContent = pendingPrompts.length;
   currentIndexEl.textContent = '0';
   progressFill.style.width = '0%';
   currentPromptEl.textContent = '시작 준비 중...';
@@ -1134,7 +1145,9 @@ async function startAutomation() {
 
   const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
   const tab = tabs[0];
-  const promptTexts = prompts.map(p => p.text);
+  const promptTexts = pendingPrompts.map(p => p.text);
+  // 원본 인덱스 매핑 (PROGRESS_UPDATE에서 올바른 프롬프트에 상태 반영)
+  const indexMap = pendingPrompts.map(p => p.originalIndex);
   const delayMs = parseInt(delayInput.value) * 1000;
   const shouldDownload = autoDownload.checked;
   const savePath = saveLocation.value.trim() || 'whisk-images';
