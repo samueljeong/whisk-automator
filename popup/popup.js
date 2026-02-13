@@ -504,7 +504,7 @@ async function loadState() {
             console.log('[Whisk] 마이그레이션: stylePrefix wuxia → murim (' + key + ')');
             PROJECTS[key].stylePrefix = defaultProj.stylePrefix || '';
           }
-          if (PROJECTS[key].styleSuffix && PROJECTS[key].styleSuffix.includes('ink wash')) {
+          if (PROJECTS[key].styleSuffix && PROJECTS[key].styleSuffix.toLowerCase().includes('ink wash')) {
             console.log('[Whisk] 마이그레이션: styleSuffix 옛날 스타일 교체 (' + key + ')');
             PROJECTS[key].styleSuffix = defaultProj.styleSuffix || '';
           }
