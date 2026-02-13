@@ -1320,6 +1320,20 @@ async function startAutomation() {
       character = charNames.join(',');
     }
 
+    // 2-1. 자동 스타일 결정: [style:] 태그 없고 캐릭터 있으면 매핑에서 결정
+    if (!style && charNames.length > 0) {
+      const styleTypes = new Set(
+        charNames.map(n => CHARACTER_STYLE_TYPES[n]).filter(Boolean)
+      );
+      if (styleTypes.size === 1) {
+        style = [...styleTypes][0];
+        console.log(`[스타일 자동] ${charNames.join('+')} → ${style}`);
+      } else if (styleTypes.size > 1) {
+        style = MIXED_STYLE_PRESET;
+        console.log(`[스타일 자동] ${charNames.join('+')} → 혼합 → ${style}`);
+      }
+    }
+
     // 3. 스타일 접두어/접미어 적용 (이미 포함되어 있지 않으면)
     let finalPrompt = cleanPrompt;
     if (projectStylePrefix && !cleanPrompt.toLowerCase().startsWith(projectStylePrefix.toLowerCase().trim())) {
