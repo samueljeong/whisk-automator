@@ -1320,12 +1320,21 @@ async function startAutomation() {
     };
   });
 
-  // 캐릭터 조합별 그룹핑 (같은 조합끼리 모아서 분석 대기 최소화)
-  // [용아] → [용아] → [소소] → [소소] → [용아,소연] → [용아,소연] → [배경]
+  // 스타일별 → 캐릭터 조합별 그룹핑 (스타일 전환 > 캐릭터 전환 비용)
+  // [style:male][용아] → [style:male][소소] → [style:female][소연] → [배경]
   promptsWithCharacters.sort((a, b) => {
+    // 1. 스타일 태그로 먼저 그룹핑
+    const styleA = a.style || '';
+    const styleB = b.style || '';
+    if (styleA !== styleB) {
+      // 스타일 있는 것 먼저, 같은 스타일끼리 묶기
+      if (styleA && !styleB) return -1;
+      if (!styleA && styleB) return 1;
+      return styleA.localeCompare(styleB);
+    }
+    // 2. 같은 스타일 내에서 캐릭터 조합별 그룹핑
     const grpA = a.characterGroup || '';
     const grpB = b.characterGroup || '';
-    // 캐릭터 있는 것 먼저, 같은 조합끼리 묶기, 배경은 맨 뒤
     if (grpA && !grpB) return -1;
     if (!grpA && grpB) return 1;
     if (grpA !== grpB) return grpA.localeCompare(grpB);
