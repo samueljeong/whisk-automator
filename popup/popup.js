@@ -405,7 +405,16 @@ async function scanCharacterFolder(rootHandle) {
     }
   }
 
+  console.log(`[Whisk] 폴더 스캔 결과: ${foundFolders.join(', ')}`);
   console.log(`[Whisk] 폴더에서 ${totalCount}개 로드 완료`);
+
+  if (totalCount === 0 && foundFolders.length > 0) {
+    const matched = foundFolders.filter(f => !f.endsWith('→무시'));
+    if (matched.length === 0) {
+      alert('이 폴더에 피사체/장면/스타일 하위 폴더가 없습니다.\n\n올바른 폴더 구조:\n📁 선택할 폴더/\n  ├── 피사체/프로젝트명/이미지.png\n  ├── 장면/프로젝트명/이미지.png\n  └── 스타일/프로젝트명/이미지.png');
+    }
+  }
+
   return totalCount;
 }
 
