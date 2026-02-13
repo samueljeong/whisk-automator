@@ -2663,6 +2663,43 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
 
       while (retryCount <= MAX_RETRIES && !success) {
         try {
+          // --- 스타일(Style) 슬롯 전환 (프리셋 기반) — 캐릭터보다 먼저! ---
+          var stylePresetSwitched = false;
+          const styleTag = item.style || '';
+          if (styleTag !== currentStyleTag) {
+            const stylePresetUrl = styles ? styles[styleTag] : null;
+
+            if (styleTag && stylePresetUrl) {
+              console.log(`[Whisk Auto] 스타일 전환: ${currentStyleTag || '기본'} → ${styleTag}`);
+              var styleSwapOk = await uploadImageToSlot(stylePresetUrl, 'style');
+              await sleep(1500); // 업로드 UI 반응 대기 (분석은 캐릭터와 함께 대기)
+
+              // 업로드 후 에러 확인
+              if (!styleSwapOk || checkSlotError('style')) {
+                console.log(`[Whisk Auto] 스타일 업로드 실패 감지, 재시도...`);
+                await sleep(2000);
+                await uploadImageToSlot(stylePresetUrl, 'style');
+                await sleep(1500);
+                if (checkSlotError('style')) {
+                  throw new Error(`스타일 "${styleTag}" 업로드 실패 — 슬롯 에러`);
+                }
+              }
+              stylePresetSwitched = true;
+            } else if (!styleTag && currentStyleTag) {
+              // 스타일 태그 없으면 기본 스타일로 복원
+              if (styleImageUrl) {
+                console.log(`[Whisk Auto] 스타일 복원: ${currentStyleTag} → 기본`);
+                await uploadImageToSlot(styleImageUrl, 'style');
+                await sleep(1500);
+              }
+              stylePresetSwitched = true;
+            } else if (styleTag && !stylePresetUrl) {
+              console.log(`[Whisk Auto] 스타일 "${styleTag}" 이미지 미등록, 건너뜀`);
+            }
+
+            currentStyleTag = styleTag;
+          }
+
           const charGroup = item.characterGroup || ''; // 정렬된 캐릭터 조합 키
 
           // 캐릭터 조합이 바뀌었는지 확인 (재시도 시 이미 같은 캐릭터이므로 자연스럽게 건너뜀)
@@ -2707,15 +2744,23 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
                 }
               }
 
-              // 모든 업로드 완료 후 한번만 분석 대기
-              var waitTime = styleUploaded ? 8000 : 7000; // 스타일도 처음이면 좀 더 대기
-              console.log(`[Whisk Auto] 전체 분석 대기 (${waitTime / 1000}초)...`);
+              // 모든 업로드 완료 후 한번만 분석 대기 (스타일도 전환됐으면 추가 대기)
+              var waitTime = (styleUploaded || stylePresetSwitched) ? 9000 : 7000;
+              console.log(`[Whisk Auto] 전체 분석 대기 (${waitTime / 1000}초${stylePresetSwitched ? ', 스타일 포함' : ''})...`);
               await sleep(waitTime);
-              styleUploaded = false; // 스타일은 한번만 추가 대기
+              styleUploaded = false;
               console.log('[Whisk Auto] 분석 완료, 생성 시작');
+            } else if (stylePresetSwitched) {
+              // 캐릭터 없는데 스타일만 전환된 경우 → 스타일 분석 대기
+              console.log('[Whisk Auto] 스타일 분석 대기 (6초)...');
+              await sleep(6000);
             }
 
             currentCharacterGroup = charGroup;
+          } else if (stylePresetSwitched) {
+            // 캐릭터는 그대로인데 스타일만 전환된 경우 → 스타일 분석 대기
+            console.log('[Whisk Auto] 스타일 분석 대기 (6초)...');
+            await sleep(6000);
           }
 
           // --- 장면(Scene) 슬롯 전환 ---
@@ -2748,40 +2793,6 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
             }
 
             currentScene = sceneTag;
-          }
-
-          // --- 스타일(Style) 슬롯 전환 (프리셋 기반) ---
-          const styleTag = item.style || '';
-          if (styleTag !== currentStyleTag) {
-            const stylePresetUrl = styles ? styles[styleTag] : null;
-
-            if (styleTag && stylePresetUrl) {
-              console.log(`[Whisk Auto] 스타일 전환: ${currentStyleTag || '기본'} → ${styleTag}`);
-              var styleSwapOk = await uploadImageToSlot(stylePresetUrl, 'style');
-              await sleep(3000); // 스타일 분석 대기
-
-              // 업로드 후 에러 확인
-              if (!styleSwapOk || checkSlotError('style')) {
-                console.log(`[Whisk Auto] 스타일 업로드 실패 감지, 재시도...`);
-                await sleep(2000);
-                await uploadImageToSlot(stylePresetUrl, 'style');
-                await sleep(3000);
-                if (checkSlotError('style')) {
-                  throw new Error(`스타일 "${styleTag}" 업로드 실패 — 슬롯 에러`);
-                }
-              }
-            } else if (!styleTag && currentStyleTag) {
-              // 스타일 태그 없으면 기본 스타일로 복원
-              if (styleImageUrl) {
-                console.log(`[Whisk Auto] 스타일 복원: ${currentStyleTag} → 기본`);
-                await uploadImageToSlot(styleImageUrl, 'style');
-                await sleep(3000);
-              }
-            } else if (styleTag && !stylePresetUrl) {
-              console.log(`[Whisk Auto] 스타일 "${styleTag}" 이미지 미등록, 건너뜀`);
-            }
-
-            currentStyleTag = styleTag;
           }
 
           await findAndFillPrompt(prompt);
