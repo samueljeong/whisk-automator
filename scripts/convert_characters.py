@@ -268,18 +268,19 @@ def main():
     scenes = convert_scenes()
     print(f"총 {len(scenes)}개 장면 등록 완료")
 
-    # 스타일 레퍼런스 변환
+    # 스타일 레퍼런스 변환 (폴더에서 최신 이미지 자동 선택)
     style_image = ""
-    print(f"\n스타일 레퍼런스: {STYLE_REFERENCE}")
-    if STYLE_REFERENCE.exists():
-        style_image = image_to_base64(STYLE_REFERENCE) or ""
+    style_ref = find_style_reference()
+    print(f"\n스타일 레퍼런스: {style_ref or '(없음)'}")
+    if style_ref:
+        style_image = image_to_base64(style_ref) or ""
         if style_image:
             size_kb = len(style_image) // 1024
             print(f"  OK ({size_kb}KB)")
         else:
             print("  SKIP")
     else:
-        print("  파일 없음, 건너뜀")
+        print("  styles 폴더에 이미지 없음, 건너뜀")
 
     generate_js_module(characters, scenes, style_image, output_path)
 
