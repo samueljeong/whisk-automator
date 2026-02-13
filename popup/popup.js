@@ -1285,6 +1285,7 @@ async function startAutomation() {
       character: character,           // 원본: "용아,소연"
       characterGroup: characterGroup, // 정렬: "소연,용아" (그룹핑용)
       scene: scene,                   // 장면 태그: "무림맹" (null=없음)
+      style: style,                   // 스타일 태그: "male" (null=없음)
       prompt: finalPrompt,
       originalPrompt: cleanPrompt,
       index: index
