@@ -2003,17 +2003,43 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     return result;
   }
 
-  // 이미지의 체크마크(✓) 요소 찾기 + 체크 여부 판단
+  // 이미지의 체크/선택 여부 판단 + 클릭 대상 요소 찾기
   function findCheckmarkFor(img) {
     var imgRect = img.getBoundingClientRect();
-    var allSmall = sidebarRoot.querySelectorAll('button, [role="button"], div, span, svg');
 
+    // 방법 A: 이미지 래퍼의 aria/data 속성으로 선택 여부 확인
+    var wrapper = img.closest('[role="button"], [role="option"], [aria-selected], [data-selected], button');
+    if (wrapper) {
+      var ariaSelected = wrapper.getAttribute('aria-selected');
+      var ariaChecked = wrapper.getAttribute('aria-checked');
+      var dataSelected = wrapper.getAttribute('data-selected');
+      if (ariaSelected === 'true' || ariaChecked === 'true' || dataSelected === 'true') {
+        return { el: wrapper, checked: true };
+      }
+    }
+
+    // 방법 B: 이미지 테두리(border/outline)로 선택 여부 확인
+    var ancestors = [img, img.parentElement, img.parentElement && img.parentElement.parentElement].filter(Boolean);
+    for (var a = 0; a < ancestors.length; a++) {
+      try {
+        var style = getComputedStyle(ancestors[a]);
+        var border = style.outline || style.border || '';
+        var boxShadow = style.boxShadow || '';
+        // 파란/하얀 테두리 또는 box-shadow가 있으면 선택된 상태
+        if ((border && border.indexOf('rgb') >= 0 && border.indexOf('0px') < 0) ||
+            (boxShadow && boxShadow !== 'none' && boxShadow.indexOf('rgba(0, 0, 0, 0)') < 0)) {
+          return { el: ancestors[a], checked: true };
+        }
+      } catch(e) {}
+    }
+
+    // 방법 C: 기존 방식 - 이미지 우상단의 작은 체크마크 요소 탐색
+    var allSmall = sidebarRoot.querySelectorAll('button, [role="button"], div, span, svg');
     for (var j = 0; j < allSmall.length; j++) {
       var sr = allSmall[j].getBoundingClientRect();
-      // 이미지 우상단의 작은 원형 요소
-      if (sr.width >= 12 && sr.width <= 40 && sr.height >= 12 && sr.height <= 40 &&
-          sr.top >= imgRect.top - 5 && sr.top <= imgRect.top + imgRect.height * 0.5 &&
-          sr.left >= imgRect.left + imgRect.width * 0.5 && sr.left <= imgRect.right + 5) {
+      if (sr.width >= 10 && sr.width <= 50 && sr.height >= 10 && sr.height <= 50 &&
+          sr.top >= imgRect.top - 10 && sr.top <= imgRect.top + imgRect.height * 0.6 &&
+          sr.left >= imgRect.left + imgRect.width * 0.4 && sr.left <= imgRect.right + 10) {
         var el = allSmall[j];
         var bg = '';
         try { bg = getComputedStyle(el).backgroundColor; } catch(e) {}
