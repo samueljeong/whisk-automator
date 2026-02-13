@@ -768,6 +768,34 @@ function buildSceneMap() {
   return map;
 }
 
+// Build flat style map for automation (name/alias -> image)
+function buildStyleMap() {
+  const map = {};
+
+  // 공통 스타일 프리셋 먼저
+  if (PROJECTS.common && PROJECTS.common.stylePresets) {
+    for (const [name, data] of Object.entries(PROJECTS.common.stylePresets)) {
+      map[name] = data.image;
+      if (data.aliases) {
+        data.aliases.forEach(alias => { map[alias] = data.image; });
+      }
+    }
+  }
+
+  // 현재 프로젝트 스타일 프리셋 (덮어쓰기)
+  const project = PROJECTS[currentProject];
+  if (project && project.stylePresets) {
+    for (const [name, data] of Object.entries(project.stylePresets)) {
+      map[name] = data.image;
+      if (data.aliases) {
+        data.aliases.forEach(alias => { map[alias] = data.image; });
+      }
+    }
+  }
+
+  return map;
+}
+
 // Switch project
 function switchProject(projectKey) {
   if (PROJECTS[projectKey]) {
