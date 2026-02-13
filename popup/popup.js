@@ -1152,6 +1152,7 @@ async function startAutomation() {
   const delayMs = parseInt(delayInput.value) * 1000;
   const shouldDownload = autoDownload.checked;
   const savePath = saveLocation.value.trim() || 'whisk-images';
+  promptIndexMap = indexMap; // PROGRESS_UPDATE 핸들러에서 사용
 
   // 프로젝트 스타일 설정 가져오기
   const project = PROJECTS[currentProject] || {};
