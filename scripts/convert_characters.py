@@ -26,7 +26,7 @@ SCENES_DIR = WHISK_BASE / "yonga" / "scenes"
 STYLES_DIR = WHISK_BASE / "yonga" / "styles"
 
 # 스타일 레퍼런스 이미지 (Whisk 스타일 슬롯용)
-STYLE_REFERENCE = STYLES_DIR / "당소화_전신.png"
+STYLE_REFERENCE = STYLES_DIR / "style_ref_v3.png"
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 
