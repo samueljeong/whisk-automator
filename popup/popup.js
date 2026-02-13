@@ -1078,10 +1078,21 @@ function loadFromFile(event) {
   const reader = new FileReader();
   reader.onload = (e) => {
     const text = e.target.result;
-    const newPrompts = text.split('\n')
-      .map(line => line.trim())
-      .filter(line => line.length > 0)
-      .map(text => ({ text, status: '' }));
+    const existingFilenames = new Set(
+      prompts.map(p => extractFilename(p.text)).filter(Boolean)
+    );
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    let skipped = 0;
+    const newPrompts = [];
+    for (const line of lines) {
+      const fn = extractFilename(line);
+      if (fn && existingFilenames.has(fn)) {
+        skipped++;
+        continue;
+      }
+      newPrompts.push({ text: line, status: '' });
+      if (fn) existingFilenames.add(fn);
+    }
 
     prompts.push(...newPrompts);
     saveState();
