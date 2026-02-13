@@ -1487,8 +1487,8 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         console.log('[Whisk Auto] 팝업 거절 버튼 클릭: "' + text + '"');
       }
     });
-    // 전략 4: "예상했던 내용이 아닌가요?" 피드백 팝업 닫기
-    document.querySelectorAll('div, section, dialog').forEach(function(el) {
+    // 전략 4: "예상했던 내용이 아닌가요?" 피드백 팝업 닫기 (구체적 셀렉터로 범위 축소)
+    document.querySelectorAll('[role="dialog"], [class*="dialog"], [class*="modal"], [class*="popup"], [class*="feedback"], [class*="snackbar"], [class*="toast"], dialog, section').forEach(function(el) {
       var text = el.textContent || '';
       if (text.includes('예상했던') || text.includes('not what you expected')) {
         // 이 요소 내부의 X/닫기 버튼 찾기
