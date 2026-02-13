@@ -1029,18 +1029,42 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+// 프롬프트에서 [filename:...] 추출
+function extractFilename(text) {
+  const m = text.match(/\[filename:(.+?)\]/);
+  return m ? m[1] : null;
+}
+
 // Add prompts from textarea
 function addPrompts() {
   const text = promptInput.value.trim();
   if (!text) return;
 
-  const newPrompts = text.split('\n')
-    .map(line => line.trim())
-    .filter(line => line.length > 0)
-    .map(text => ({ text, status: '' }));
+  // 기존 대기열의 filename 수집
+  const existingFilenames = new Set(
+    prompts.map(p => extractFilename(p.text)).filter(Boolean)
+  );
 
-  prompts.push(...newPrompts);
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  let skipped = 0;
+  const newPrompts = [];
+  for (const line of lines) {
+    const fn = extractFilename(line);
+    if (fn && existingFilenames.has(fn)) {
+      skipped++;
+      continue;
+    }
+    newPrompts.push({ text: line, status: '' });
+    if (fn) existingFilenames.add(fn);
+  }
+
+  if (newPrompts.length > 0) {
+    prompts.push(...newPrompts);
+  }
   promptInput.value = '';
+  if (skipped > 0) {
+    charFolderHint.textContent = `${newPrompts.length}개 추가, ${skipped}개 중복 제외`;
+  }
   saveState();
   updateUI();
   checkConnection();
