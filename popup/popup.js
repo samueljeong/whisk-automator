@@ -1341,8 +1341,8 @@ async function startAutomation() {
     return a.index - b.index; // 같은 조합 내에서는 원래 순서 유지
   });
 
-  console.log('[Popup] 캐릭터 조합별 그룹핑:',
-    promptsWithCharacters.map(p => `[씬${p.index + 1}]${p.character || '배경'}`).join(', '));
+  console.log('[Popup] 스타일→캐릭터 그룹핑:',
+    promptsWithCharacters.map(p => `[씬${p.index + 1}]${p.style ? `{${p.style}}` : ''}${p.character || '배경'}`).join(', '));
 
   // 캐릭터 맵 + 장면 맵 생성 (별명 포함)
   const characterMap = buildCharacterMap();
