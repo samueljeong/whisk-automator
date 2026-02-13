@@ -1918,7 +1918,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       }
       if (dup) continue;
       console.log('[Whisk Auto] 라벨 "' + text + '" (' + labelCandidates[i].tagName + ') pos:' + Math.round(rect.left) + ',' + Math.round(rect.top));
-      sectionRanges.push({ key: key, top: rect.top });
+      sectionRanges.push({ key: key, top: rect.top, labelLeft: rect.left });
     }
 
     sectionRanges.sort(function(a, b) { return a.top - b.top; });
