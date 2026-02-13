@@ -631,6 +631,27 @@ function renderStyleSettings() {
   styleUrl.value = project.styleImage || '';
   stylePrefix.value = project.stylePrefix || '';
   styleSuffix.value = project.styleSuffix || '';
+  renderStylePresets();
+}
+
+// Render style presets for current project
+function renderStylePresets() {
+  const presetList = document.getElementById('stylePresetList');
+  const presetTags = document.getElementById('stylePresetTags');
+  if (!presetList || !presetTags) return;
+
+  const project = PROJECTS[currentProject];
+  const presets = project && project.stylePresets ? Object.keys(project.stylePresets) : [];
+
+  if (presets.length === 0) {
+    presetList.hidden = true;
+    return;
+  }
+
+  presetList.hidden = false;
+  presetTags.innerHTML = presets.map(name =>
+    `<span class="character-tag local" title="[style:${name}]">${name}</span>`
+  ).join('');
 }
 
 // Save style settings for current project
