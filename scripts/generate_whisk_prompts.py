@@ -21,9 +21,9 @@ from collections import Counter
 from pathlib import Path
 from typing import Optional
 
-# convert_characters.py에서 CHARACTER_MAP import
+# convert_characters.py에서 메타데이터 import
 sys.path.insert(0, str(Path(__file__).parent))
-from convert_characters import CHARACTER_MAP
+from convert_characters import CHARACTER_META
 
 # 경로 설정
 FACTORY_BASE = Path.home() / "Projects/코딩/youtube-factory"
