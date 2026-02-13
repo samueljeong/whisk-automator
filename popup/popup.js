@@ -292,8 +292,9 @@ function readFileAsDataUrl(file) {
 
 // 프로젝트 이름으로 키 찾기
 function findProjectKeyByName(name) {
+  const normalized = name.normalize('NFC');
   for (const [key, proj] of Object.entries(PROJECTS)) {
-    if (proj.name === name || key === name) return key;
+    if (proj.name === normalized || key === normalized) return key;
   }
   return null;
 }
