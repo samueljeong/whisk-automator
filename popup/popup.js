@@ -2150,8 +2150,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
   // 해제 후 검증 → 실패 시 재시도 (최대 5회)
   // 모두 해제 실패 시 에러 throw
   async function clearSlotImages(slotName) {
-    var slotToLabel = { 'subject': '피사체', 'scene': '장면', 'style': '스타일' };
-    var labelText = slotToLabel[slotName];
+    var labelText = SLOT_TO_LABEL[slotName];
 
     var totalCleared = 0;
     var maxRetries = 5;
