@@ -2076,6 +2076,45 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     return { el: null, checked: false };
   }
 
+  // 이미지의 체크마크를 토글 (4단계 폴백)
+  // 반환: 토글 성공 여부
+  async function toggleCheckmark(imgEl) {
+    var checkInfo = findCheckmarkFor(imgEl);
+
+    // 방법 1: 체크마크 직접 클릭
+    if (checkInfo.el) {
+      simulateRealClick(checkInfo.el);
+      await sleep(800);
+      if (findCheckmarkFor(imgEl).checked !== checkInfo.checked) return true;
+    }
+
+    // 방법 2: 체크마크 부모 클릭
+    if (checkInfo.el) {
+      var parent = checkInfo.el.closest('[role="button"]') || checkInfo.el.parentElement;
+      if (parent) {
+        simulateRealClick(parent);
+        await sleep(800);
+        if (findCheckmarkFor(imgEl).checked !== checkInfo.checked) return true;
+      }
+    }
+
+    // 방법 3: 래퍼 클릭 (구 방식 폴백)
+    var wrapper = imgEl.closest('[role="button"], [role="option"], button') || imgEl.parentElement;
+    if (wrapper && wrapper !== imgEl) {
+      simulateRealClick(wrapper);
+      await sleep(800);
+      if (findCheckmarkFor(imgEl).checked !== checkInfo.checked) return true;
+    }
+
+    // 방법 4: pointerdown/pointerup
+    var evtTarget = checkInfo.el || wrapper || imgEl;
+    evtTarget.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));
+    await sleep(100);
+    evtTarget.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true }));
+    await sleep(800);
+    return findCheckmarkFor(imgEl).checked !== checkInfo.checked;
+  }
+
   // 특정 캐릭터들만 활성화 (체크마크 토글)
   // characterUploadOrder에 저장된 순서와 이미지 Y위치를 매칭
   async function setActiveCharacters(targetNames) {
