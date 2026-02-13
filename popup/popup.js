@@ -1447,6 +1447,10 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
   let downloadedSrcs = new Set();  // 이미 다운로드한 이미지 src 추적
   let consecutiveFailures = 0;     // 연속 실패 카운터 (2회 연속 시 페이지 리로드)
 
+  // 슬롯↔라벨 매핑 (한 번만 선언)
+  var SLOT_TO_LABEL = { 'subject': '피사체', 'scene': '장면', 'style': '스타일' };
+  var LABEL_TO_KEY = { '피사체': 'subject', '장면': 'scene', '스타일': 'style' };
+
   async function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
