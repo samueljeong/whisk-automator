@@ -364,9 +364,7 @@ async function scanCharacterFolder(rootHandle) {
         };
       }
 
-      const projDir = await slotDir.getDirectoryHandle(projName);
-
-      for await (const fileEntry of projDir.values()) {
+      for await (const fileEntry of projEntry.values()) {
         if (fileEntry.kind !== 'file') continue;
         const ext = fileEntry.name.substring(fileEntry.name.lastIndexOf('.')).toLowerCase();
         if (!imageExts.includes(ext)) continue;
