@@ -21,7 +21,7 @@ from typing import Optional
 WHISK_BASE = Path.home() / "Projects/코딩/youtube-factory/outputs/whisk"
 
 # 기본 디렉토리
-DEFAULT_CHARACTERS_DIR = WHISK_BASE / "피사체" / "용아"
+DEFAULT_CHARACTERS_DIR = WHISK_BASE / "yonga" / "characters"
 SCENES_DIR = WHISK_BASE / "yonga" / "scenes"
 STYLES_DIR = WHISK_BASE / "yonga" / "styles"
 
