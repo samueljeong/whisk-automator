@@ -3004,6 +3004,7 @@ loadCharFolderBtn.addEventListener('click', async () => {
     saveState();
     renderProjectTabs();
     renderCharacterList();
+    renderStyleSettings();
 
     loadCharFolderBtn.textContent = '\uD83D\uDCC1 \uD3F4\uB354\uC5D0\uC11C \uBD88\uB7EC\uC624\uAE30';
     loadCharFolderBtn.disabled = false;
