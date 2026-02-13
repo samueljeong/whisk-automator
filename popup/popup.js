@@ -3085,8 +3085,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (adjustedTotal) {
         totalCountEl.textContent = adjustedTotal;
       }
-      if (message.status && prompts[message.promptIndex]) {
-        prompts[message.promptIndex].status = message.status;
+      // 필터링된 인덱스를 원본 인덱스로 변환
+      const origIdx = promptIndexMap.length > 0 ? promptIndexMap[message.promptIndex] : message.promptIndex;
+      if (message.status && origIdx !== undefined && prompts[origIdx]) {
+        prompts[origIdx].status = message.status;
       }
       // 진행 바 + 현재 프롬프트 즉시 업데이트 (offset 보정)
       if (adjustedTotal > 0) {
