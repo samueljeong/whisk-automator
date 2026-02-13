@@ -3116,8 +3116,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     case 'AUTOMATION_ERROR':
       console.error('Automation error:', message.error);
-      if (message.promptIndex !== undefined && prompts[message.promptIndex]) {
-        prompts[message.promptIndex].status = 'error';
+      const errorOrigIdx = promptIndexMap.length > 0 ? promptIndexMap[message.promptIndex] : message.promptIndex;
+      if (errorOrigIdx !== undefined && prompts[errorOrigIdx]) {
+        prompts[errorOrigIdx].status = 'error';
       }
       saveState();
       updateUI();
