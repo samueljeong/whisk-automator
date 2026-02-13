@@ -1370,7 +1370,7 @@ async function startAutomation() {
 }
 
 // 주입될 자동화 함수
-function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleImageUrl, characters, savePath, scenes, useCustomDir) {
+function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleImageUrl, characters, savePath, scenes, styles, useCustomDir) {
   // 중복 실행 방지
   if (window.__whiskAutoRunning) {
     console.log('[Whisk Auto] 이미 실행 중, 중복 실행 방지');
