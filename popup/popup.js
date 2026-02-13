@@ -334,7 +334,8 @@ async function scanCharacterFolder(rootHandle) {
   for await (const slotEntry of rootHandle.values()) {
     if (slotEntry.kind !== 'directory') continue;
 
-    const slotType = slotMap[slotEntry.name] || slotMap[slotEntry.name.toLowerCase()];
+    const slotName = slotEntry.name.normalize('NFC');
+    const slotType = slotMap[slotName] || slotMap[slotName.toLowerCase()];
     if (!slotType) {
       console.log(`[Whisk] 알 수 없는 폴더 무시: ${slotEntry.name}`);
       continue;
