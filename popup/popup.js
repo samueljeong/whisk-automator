@@ -104,6 +104,19 @@ const DEFAULT_PROJECTS = buildDefaultProjects();
 let PROJECTS = { ...DEFAULT_PROJECTS };
 let currentProject = "yonga";
 
+// 캐릭터명 → 스타일 프리셋 매핑 (성별/나이별 스타일 이미지 자동 결정)
+const CHARACTER_STYLE_TYPES = {
+  '용아': 'style_ref_male', '염창': 'style_ref_male', '철무영': 'style_ref_male',
+  '독련': 'style_ref_male', '뇌황': 'style_ref_male', '흑염교주': 'style_ref_male',
+  '암영': 'style_ref_male', '당무결': 'style_ref_male', '독랑': 'style_ref_male',
+  '혈영': 'style_ref_male', '제갈명': 'style_ref_male',
+  '소연': 'style_ref_female', '당소화': 'style_ref_female',
+  '취광도인': 'style_ref_elder', '당천로': 'style_ref_elder', '제갈휘': 'style_ref_elder',
+  '석이': 'style_ref_boy',
+  '소소': 'style_ref_girl',
+};
+const MIXED_STYLE_PRESET = '용아 스타일';
+
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
   await loadState();
