@@ -2236,34 +2236,38 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     return totalCleared;
   }
 
-  // 섹션 헤더의 ⊕(추가) 버튼 찾기
+  // 섹션 헤더의 ⊕(추가) 버튼 찾기 (getSectionRanges 활용)
   function findSectionAddButton(labelText) {
-    var candidates = sidebarRoot.querySelectorAll('h1,h2,h3,h4,h5,h6,span,div,label,p');
-    for (var i = 0; i < candidates.length; i++) {
-      if (candidates[i].textContent.trim() !== labelText) continue;
-      var rect = candidates[i].getBoundingClientRect();
-      if (rect.width === 0 || rect.left < 0) continue;
+    var ranges = getSectionRanges();
+    var targetRange = null;
+    for (var r = 0; r < ranges.length; r++) {
+      if (ranges[r].label === labelText) { targetRange = ranges[r]; break; }
+    }
+    if (!targetRange || !targetRange.el) {
+      console.log('[Whisk Auto] ⊕ 버튼 미발견 (' + labelText + '): 라벨 없음');
+      return null;
+    }
 
-      // 라벨과 같은 줄에 있는 작은 버튼 찾기
-      var allBtns = sidebarRoot.querySelectorAll('button, [role="button"], svg');
-      var rowButtons = [];
-      for (var b = 0; b < allBtns.length; b++) {
-        var br = allBtns[b].getBoundingClientRect();
-        // 같은 줄 (Y 차이 < 25), 작은 크기, 라벨 오른쪽
-        if (Math.abs(br.top + br.height / 2 - rect.top - rect.height / 2) < 25 &&
-            br.width >= 15 && br.width <= 50 && br.height >= 15 && br.height <= 50 &&
-            br.left > rect.left) {
-          rowButtons.push({ el: allBtns[b], left: br.left });
-        }
+    var rect = targetRange.el.getBoundingClientRect();
+    // 라벨과 같은 줄에 있는 작은 버튼 찾기
+    var allBtns = sidebarRoot.querySelectorAll('button, [role="button"], svg');
+    var rowButtons = [];
+    for (var b = 0; b < allBtns.length; b++) {
+      var br = allBtns[b].getBoundingClientRect();
+      // 같은 줄 (Y 차이 < 25), 작은 크기, 라벨 오른쪽
+      if (Math.abs(br.top + br.height / 2 - rect.top - rect.height / 2) < 25 &&
+          br.width >= 15 && br.width <= 50 && br.height >= 15 && br.height <= 50 &&
+          br.left > rect.left) {
+        rowButtons.push({ el: allBtns[b], left: br.left });
       }
-      // 가장 오른쪽 버튼 = ⊕ (추가 버튼)
-      rowButtons.sort(function(a, b) { return a.left - b.left; });
-      if (rowButtons.length > 0) {
-        var addBtn = rowButtons[rowButtons.length - 1];
-        console.log('[Whisk Auto] ⊕ 버튼 발견 (' + labelText + '): ' + addBtn.el.tagName +
-          ' at(' + Math.round(addBtn.left) + ',' + Math.round(addBtn.el.getBoundingClientRect().top) + ')');
-        return addBtn.el;
-      }
+    }
+    // 가장 오른쪽 버튼 = ⊕ (추가 버튼)
+    rowButtons.sort(function(a, b) { return a.left - b.left; });
+    if (rowButtons.length > 0) {
+      var addBtn = rowButtons[rowButtons.length - 1];
+      console.log('[Whisk Auto] ⊕ 버튼 발견 (' + labelText + '): ' + addBtn.el.tagName +
+        ' at(' + Math.round(addBtn.left) + ',' + Math.round(addBtn.el.getBoundingClientRect().top) + ')');
+      return addBtn.el;
     }
     console.log('[Whisk Auto] ⊕ 버튼 미발견 (' + labelText + ')');
     return null;
