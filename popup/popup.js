@@ -2421,23 +2421,17 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     var labelText = SLOT_TO_LABEL[slotName];
     if (!sidebarRoot) return false;
 
-    // 에러 메시지 패턴: "미디어를 가져오는 중에 문제가 발생했습니다" 등
-    var allText = sidebarRoot.querySelectorAll('span, p, div');
-    var sections = findWhiskSlots();
-    var slotElements = sections[slotName] || [];
+    var range = getSectionYRange(labelText);
+    if (!range) return false;
 
+    var allText = sidebarRoot.querySelectorAll('span, p, div');
     for (var el of allText) {
       var text = el.textContent.trim();
       if (text.includes('문제가 발생') || text.includes('error') || text.includes('실패') || text.includes('problem')) {
-        // 해당 슬롯 영역 내에 있는지 확인
-        if (slotElements.length > 0) {
-          var slotRect = slotElements[0].getBoundingClientRect();
-          var elRect = el.getBoundingClientRect();
-          // 슬롯 근처(위아래 100px)에 있는 에러 메시지
-          if (Math.abs(elRect.top - slotRect.top) < 150) {
-            console.log(`[Whisk Auto] ${slotName} 슬롯에 에러 감지: "${text}"`);
-            return true;
-          }
+        var elRect = el.getBoundingClientRect();
+        if (elRect.top >= range.top && elRect.top < range.end) {
+          console.log('[Whisk Auto] ' + slotName + ' 슬롯에 에러 감지: "' + text + '"');
+          return true;
         }
       }
     }
@@ -2446,13 +2440,16 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
 
   // 슬롯에 실제 이미지가 로드되었는지 확인
   function verifySlotHasImage(slotName) {
-    var sections = findWhiskSlots();
-    var slotElements = sections[slotName] || [];
-    if (slotElements.length === 0) return false;
+    var labelText = SLOT_TO_LABEL[slotName];
+    var range = getSectionYRange(labelText);
+    if (!range) return false;
 
-    for (var slot of slotElements) {
-      var img = slot.querySelector('img');
-      if (img && img.src && img.naturalWidth > 0) return true;
+    var imgs = sidebarRoot.querySelectorAll('img');
+    for (var i = 0; i < imgs.length; i++) {
+      var ir = imgs[i].getBoundingClientRect();
+      if (ir.top >= range.top && ir.top < range.end && ir.width > 50 && imgs[i].src && imgs[i].naturalWidth > 0) {
+        return true;
+      }
     }
     return false;
   }
