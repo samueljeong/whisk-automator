@@ -1094,7 +1094,12 @@ function loadFromFile(event) {
       if (fn) existingFilenames.add(fn);
     }
 
-    prompts.push(...newPrompts);
+    if (newPrompts.length > 0) {
+      prompts.push(...newPrompts);
+    }
+    if (skipped > 0) {
+      alert(`${newPrompts.length}개 추가, ${skipped}개 중복 제외`);
+    }
     saveState();
     updateUI();
     checkConnection();
