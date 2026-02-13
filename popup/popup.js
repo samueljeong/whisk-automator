@@ -2690,9 +2690,6 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
   }
 
   async function run() {
-    // 캐릭터 업로드 순서 기록 (setActiveCharacters에서 참조)
-    var characterUploadOrder = [];
-
     // 스타일 이미지 설정 (한 번만, 분석 대기는 첫 캐릭터와 함께)
     var styleUploaded = false;
     if (styleImageUrl) {
