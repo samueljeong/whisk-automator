@@ -2131,43 +2131,44 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     return null;
   }
 
-  // 이미지의 선택 상태를 토글 (3단계 폴백)
-  // Whisk UI: 선택된 이미지를 클릭하면 선택 해제됨
-  // 반환: 토글 성공 여부
+  // 이미지의 선택 상태를 토글
+  // "이미지 선택" 버튼(aria-label)에 네이티브 .click() 호출
+  // 선택 상태는 버튼 배경색으로 판별: rgb(250, 212, 0) = 선택됨
   async function toggleCheckmark(imgEl) {
-    var checkInfo = findCheckmarkFor(imgEl);
-
-    // 방법 1: 이미지 자체를 직접 클릭 (Whisk UI에서 이미지 클릭 = 선택 토글)
-    console.log('[Whisk Auto] 토글: 이미지 직접 클릭');
-    simulateRealClick(imgEl);
-    await sleep(1000);
-    dismissPopups();
-    await sleep(500);
-    if (findCheckmarkFor(imgEl).checked !== checkInfo.checked) return true;
-
-    // 방법 2: role="button" 래퍼 클릭
-    var wrapper = imgEl.closest('[role="button"]') || imgEl.closest('button') || imgEl.parentElement;
-    if (wrapper && wrapper !== imgEl) {
-      console.log('[Whisk Auto] 토글: 래퍼 클릭 (' + wrapper.tagName + ')');
-      simulateRealClick(wrapper);
-      await sleep(1000);
-      dismissPopups();
-      await sleep(500);
-      if (findCheckmarkFor(imgEl).checked !== checkInfo.checked) return true;
+    var imgRect = imgEl.getBoundingClientRect();
+    var selectBtns = sidebarRoot.querySelectorAll('[aria-label="이미지 선택"]');
+    var closest = null;
+    var closestDist = Infinity;
+    for (var i = 0; i < selectBtns.length; i++) {
+      var br = selectBtns[i].getBoundingClientRect();
+      var dist = Math.abs(br.top - imgRect.top);
+      if (dist < closestDist) {
+        closestDist = dist;
+        closest = selectBtns[i];
+      }
     }
 
-    // 방법 3: 체크마크 버튼 (aria-label="이미지 선택") 직접 찾아서 클릭
-    var smallCheck = findSmallCheckmark(imgEl);
-    if (smallCheck) {
-      console.log('[Whisk Auto] 토글: 체크마크 버튼 클릭');
-      simulateRealClick(smallCheck);
-      await sleep(1000);
-      dismissPopups();
-      await sleep(500);
-      if (findCheckmarkFor(imgEl).checked !== checkInfo.checked) return true;
+    if (!closest || closestDist > 100) {
+      console.log('[Whisk Auto] 토글: 선택 버튼 미발견 (거리: ' + closestDist + ')');
+      return false;
     }
 
-    console.log('[Whisk Auto] 토글: 모든 방법 실패');
+    var beforeBg = window.getComputedStyle(closest).backgroundColor;
+    var wasSelected = beforeBg === 'rgb(250, 212, 0)';
+
+    console.log('[Whisk Auto] 토글: .click() (현재: ' + (wasSelected ? 'ON' : 'OFF') + ')');
+    closest.click();
+    await sleep(800);
+
+    var afterBg = window.getComputedStyle(closest).backgroundColor;
+    var isNowSelected = afterBg === 'rgb(250, 212, 0)';
+
+    if (wasSelected !== isNowSelected) {
+      console.log('[Whisk Auto] 토글 성공: ' + (wasSelected ? 'ON→OFF' : 'OFF→ON'));
+      return true;
+    }
+
+    console.log('[Whisk Auto] 토글 실패: 상태 변화 없음');
     return false;
   }
 
