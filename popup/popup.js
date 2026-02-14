@@ -2434,6 +2434,8 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
           if (uploadSuccess) {
             document.documentElement.removeAttribute('data-whisk-upload-done');
             console.log('[Whisk Auto] 전략B(슬롯+MAIN) 성공!');
+            await sleep(500);
+            debugSectionLayout('업로드후:' + slotName);
             return true;
           }
         }
