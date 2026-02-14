@@ -2131,67 +2131,44 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     return null;
   }
 
-  // 이미지의 체크마크를 토글 (4단계 폴백)
+  // 이미지의 선택 상태를 토글 (3단계 폴백)
+  // Whisk UI: 선택된 이미지를 클릭하면 선택 해제됨
   // 반환: 토글 성공 여부
   async function toggleCheckmark(imgEl) {
     var checkInfo = findCheckmarkFor(imgEl);
 
-    // 방법 1: findSmallCheckmark로 체크마크 요소 찾아서 클릭
-    var smallCheck = findSmallCheckmark(imgEl);
-    if (smallCheck) {
-      simulateRealClick(smallCheck);
-      await sleep(800);
-      if (findCheckmarkFor(imgEl).checked !== checkInfo.checked) return true;
-      // 실패 시 부모도 시도
-      var parent = smallCheck.closest('[role="button"]') || smallCheck.parentElement;
-      if (parent && parent !== imgEl.parentElement) {
-        simulateRealClick(parent);
-        await sleep(800);
-        dismissPopups();
-        await sleep(500);
-        if (findCheckmarkFor(imgEl).checked !== checkInfo.checked) return true;
-      }
-    }
-
-    // 방법 2: 이미지 우상단 좌표에 직접 클릭 이벤트 발사 (체크마크 위치)
-    var imgRect = imgEl.getBoundingClientRect();
-    var checkX = imgRect.right - 18;
-    var checkY = imgRect.top + 18;
-    var coordOpts = { bubbles: true, cancelable: true, view: window, clientX: checkX, clientY: checkY };
-    document.elementFromPoint(checkX, checkY); // ensure rendering
-    window.dispatchEvent(new PointerEvent('pointerdown', coordOpts));
-    await sleep(50);
-    var clickTarget = document.elementFromPoint(checkX, checkY) || imgEl;
-    clickTarget.dispatchEvent(new PointerEvent('pointerdown', Object.assign({}, coordOpts, { pointerId: 1 })));
-    clickTarget.dispatchEvent(new MouseEvent('mousedown', coordOpts));
-    clickTarget.dispatchEvent(new MouseEvent('mouseup', coordOpts));
-    clickTarget.dispatchEvent(new MouseEvent('click', coordOpts));
-    clickTarget.dispatchEvent(new PointerEvent('pointerup', Object.assign({}, coordOpts, { pointerId: 1 })));
-    console.log('[Whisk Auto] 방법2: 좌표 클릭 (' + Math.round(checkX) + ',' + Math.round(checkY) + ') → ' + clickTarget.tagName);
-    await sleep(800);
+    // 방법 1: 이미지 자체를 직접 클릭 (Whisk UI에서 이미지 클릭 = 선택 토글)
+    console.log('[Whisk Auto] 토글: 이미지 직접 클릭');
+    simulateRealClick(imgEl);
+    await sleep(1000);
     dismissPopups();
     await sleep(500);
     if (findCheckmarkFor(imgEl).checked !== checkInfo.checked) return true;
 
-    // 방법 3: 래퍼 클릭 (구 방식 폴백 — 다이얼로그 열릴 수 있음)
-    var wrapper = imgEl.closest('[role="button"], [role="option"], button') || imgEl.parentElement;
+    // 방법 2: role="button" 래퍼 클릭
+    var wrapper = imgEl.closest('[role="button"]') || imgEl.closest('button') || imgEl.parentElement;
     if (wrapper && wrapper !== imgEl) {
+      console.log('[Whisk Auto] 토글: 래퍼 클릭 (' + wrapper.tagName + ')');
       simulateRealClick(wrapper);
-      await sleep(800);
+      await sleep(1000);
       dismissPopups();
       await sleep(500);
       if (findCheckmarkFor(imgEl).checked !== checkInfo.checked) return true;
     }
 
-    // 방법 4: pointerdown/pointerup
-    var evtTarget = smallCheck || wrapper || imgEl;
-    evtTarget.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));
-    await sleep(100);
-    evtTarget.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true }));
-    await sleep(800);
-    dismissPopups();
-    await sleep(300);
-    return findCheckmarkFor(imgEl).checked !== checkInfo.checked;
+    // 방법 3: 체크마크 버튼 (aria-label="이미지 선택") 직접 찾아서 클릭
+    var smallCheck = findSmallCheckmark(imgEl);
+    if (smallCheck) {
+      console.log('[Whisk Auto] 토글: 체크마크 버튼 클릭');
+      simulateRealClick(smallCheck);
+      await sleep(1000);
+      dismissPopups();
+      await sleep(500);
+      if (findCheckmarkFor(imgEl).checked !== checkInfo.checked) return true;
+    }
+
+    console.log('[Whisk Auto] 토글: 모든 방법 실패');
+    return false;
   }
 
   // 특정 캐릭터들만 활성화 (체크마크 토글)
