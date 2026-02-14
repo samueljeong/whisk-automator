@@ -2383,30 +2383,79 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         if (!dataUrl) return;
         document.documentElement.removeAttribute('data-whisk-upload');
 
+        // base64 data URL → Blob (fetch 없이 직접 변환 — CSP 우회)
+        function _dataUrlToBlob(url) {
+          try {
+            var parts = url.split(',');
+            var mime = parts[0].match(/:(.*?);/)[1];
+            var bstr = atob(parts[1]);
+            var n = bstr.length;
+            var u8 = new Uint8Array(n);
+            while (n--) u8[n] = bstr.charCodeAt(n);
+            return new Blob([u8], { type: mime });
+          } catch(e) {
+            console.error('[Whisk Auto MAIN] dataUrl→Blob 변환 실패:', e);
+            return null;
+          }
+        }
+
+        function _createMockHandle(file) {
+          return {
+            kind: 'file',
+            name: file.name,
+            getFile: function() { return Promise.resolve(file); },
+            createWritable: function() { return Promise.reject(new Error('read-only')); },
+            queryPermission: function() { return Promise.resolve('granted'); },
+            requestPermission: function() { return Promise.resolve('granted'); }
+          };
+        }
+
         // === 방법 1: showOpenFilePicker 가로채기 (최신 Whisk) ===
         if (window.showOpenFilePicker) {
-          var origPicker = window.showOpenFilePicker.bind(window);
-          window.showOpenFilePicker = function() {
+          var origPicker = window.showOpenFilePicker;
+          var interceptFn = function() {
             console.log('[Whisk Auto MAIN] showOpenFilePicker 가로채기 성공!');
-            window.showOpenFilePicker = origPicker; // 즉시 복원
-            return fetch(dataUrl)
-              .then(function(r) { return r.blob(); })
-              .then(function(blob) {
-                var file = new File([blob], 'upload.png', { type: 'image/png' });
-                // FileSystemFileHandle mock
-                var handle = {
-                  kind: 'file',
-                  name: 'upload.png',
-                  getFile: function() { return Promise.resolve(file); },
-                  createWritable: function() { return Promise.reject(new Error('read-only')); }
-                };
-                document.documentElement.setAttribute('data-whisk-upload-done', 'true');
-                console.log('[Whisk Auto MAIN] showOpenFilePicker 파일 주입 완료');
-                return [handle];
+            // 즉시 원본 복원
+            window.showOpenFilePicker = origPicker;
+            try {
+              Object.defineProperty(window, 'showOpenFilePicker', {
+                value: origPicker, writable: true, configurable: true
               });
+            } catch(e) {}
+
+            var blob = _dataUrlToBlob(dataUrl);
+            if (!blob) {
+              document.documentElement.setAttribute('data-whisk-upload-done', 'error');
+              return Promise.reject(new Error('blob 변환 실패'));
+            }
+            var file = new File([blob], 'upload.png', { type: 'image/png' });
+            var handle = _createMockHandle(file);
+            document.documentElement.setAttribute('data-whisk-upload-done', 'true');
+            console.log('[Whisk Auto MAIN] showOpenFilePicker 파일 주입 완료 (' + file.size + ' bytes)');
+            return Promise.resolve([handle]);
           };
+
+          // 직접 할당 + defineProperty 양쪽 모두 (캐시된 참조 대응)
+          window.showOpenFilePicker = interceptFn;
+          try {
+            Object.defineProperty(window, 'showOpenFilePicker', {
+              get: function() { return interceptFn; },
+              set: function(v) { origPicker = v; },
+              configurable: true
+            });
+          } catch(e) {
+            console.log('[Whisk Auto MAIN] defineProperty 실패 (무시):', e.message);
+          }
+
           // 10초 후 자동 정리 (안전장치)
-          setTimeout(function() { window.showOpenFilePicker = origPicker; }, 10000);
+          setTimeout(function() {
+            window.showOpenFilePicker = origPicker;
+            try {
+              Object.defineProperty(window, 'showOpenFilePicker', {
+                value: origPicker, writable: true, configurable: true
+              });
+            } catch(e) {}
+          }, 10000);
         }
 
         // === 방법 2: input[type=file] click 가로채기 (구형 fallback) ===
@@ -2415,7 +2464,8 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
           if (this.type === 'file') {
             console.log('[Whisk Auto MAIN] file input click 가로채기 성공!');
             HTMLInputElement.prototype.click = origClick;
-            fetch(dataUrl).then(function(r) { return r.blob(); }).then(function(blob) {
+            var blob = _dataUrlToBlob(dataUrl);
+            if (blob) {
               var file = new File([blob], 'upload.png', { type: 'image/png' });
               var dt = new DataTransfer();
               dt.items.add(file);
@@ -2423,7 +2473,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
               this.dispatchEvent(new Event('change', { bubbles: true }));
               document.documentElement.setAttribute('data-whisk-upload-done', 'true');
               console.log('[Whisk Auto MAIN] file input 파일 주입 완료');
-            }.bind(this));
+            }
             return;
           }
           return origClick.call(this);
