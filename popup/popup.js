@@ -2724,6 +2724,21 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     // 시작 시 정지 플래그 초기화
     document.documentElement.removeAttribute('data-whisk-stop');
 
+    // 시작 시 장면 슬롯 강제 초기화 (수동 잔여 레퍼런스 제거)
+    console.log('[Whisk Auto] 시작 전 장면 슬롯 초기화...');
+    await clearSlotImages('scene');
+    await sleep(500);
+
+    // 미등록 캐릭터 사전 검사
+    const allCharTags = new Set(promptsWithCharacters.flatMap(p =>
+      (p.character || '').split(',').map(c => c.trim()).filter(Boolean)
+    ));
+    const missingChars = [...allCharTags].filter(name => characters && !characters[name]);
+    if (missingChars.length > 0) {
+      console.warn(`[Whisk Auto] ⚠️ 미등록 캐릭터 ${missingChars.length}건: ${missingChars.join(', ')}`);
+      console.warn('[Whisk Auto] → 해당 캐릭터는 레퍼런스 없이 생성됩니다');
+    }
+
     for (let i = 0; i < promptsWithCharacters.length; i++) {
       // 정지 플래그 확인 (DOM 속성 기반 — 모든 월드에서 공유)
       if (isStopRequested()) {
