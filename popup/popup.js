@@ -1349,6 +1349,7 @@ async function startAutomation() {
   // 리로드 후 재개용 캐시 저장
   sortedPromptsCache = promptsWithCharacters;
   automationParams = { delayMs, shouldDownload, projectStyleImage, characterMap, savePath, sceneMap, useCustomDir: !!customDirHandle };
+
   completedOffset = 0;
 
   // 이전 실행 플래그 초기화 (확장 리로드 시 ISOLATED world에 잔존 방지)
