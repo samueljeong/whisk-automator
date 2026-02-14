@@ -328,6 +328,28 @@ async function scanCharacterFolder(rootHandle) {
       for await (const fileEntry of projEntry.values()) {
         if (fileEntry.kind !== 'file') continue;
         const ext = fileEntry.name.substring(fileEntry.name.lastIndexOf('.')).toLowerCase();
+
+        // style.txt 파일 처리 (스타일 슬롯에서만)
+        if (slotType === 'style' && fileEntry.name.toLowerCase() === 'style.txt') {
+          try {
+            const file = await fileEntry.getFile();
+            const text = await file.text();
+            const parsed = parseStyleTxt(text);
+            if (parsed.prefix) {
+              PROJECTS[projectKey].stylePrefix = parsed.prefix;
+              PROJECTS[projectKey].stylePrefixFromFolder = true;
+            }
+            if (parsed.suffix) {
+              PROJECTS[projectKey].styleSuffix = parsed.suffix;
+              PROJECTS[projectKey].styleSuffixFromFolder = true;
+            }
+            console.log(`[Whisk] style.txt 로드: ${projName}`, parsed);
+          } catch (e) {
+            console.error(`[Whisk] style.txt 읽기 실패: ${projName}`, e);
+          }
+          continue;
+        }
+
         if (!imageExts.includes(ext)) continue;
 
         const name = fileEntry.name.substring(0, fileEntry.name.lastIndexOf('.'));
