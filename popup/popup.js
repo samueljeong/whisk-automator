@@ -2724,9 +2724,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     // 시작 시 정지 플래그 초기화
     document.documentElement.removeAttribute('data-whisk-stop');
 
-    // 수동 잔여 장면 레퍼런스 제거: 센티넬 값 설정
-    // → 첫 프롬프트에서 sceneTag('')와 불일치 → 기존 루프가 자동 정리
-    currentScene = '__manual__';
+    // currentScene은 ''로 유지 (기본값)
 
     // 미등록 캐릭터 사전 검사
     try {
