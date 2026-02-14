@@ -1151,35 +1151,6 @@ function deletePrompt(index) {
   checkConnection();
 }
 
-// Demo preset prompts
-const DEMO_PRESETS = {
-  "용아 데모 (10장)": [
-    "[filename:demo_01_yonga_cliff] [용아] A young warrior sitting cross-legged on a cliff edge at sunrise, meditating with eyes closed. Wind blowing his hair and robes. Mountain peaks and sea of clouds below.",
-    "[filename:demo_02_yonga_sword] [용아] A young warrior drawing a sword with his left hand in a dark bamboo forest at night. Moonlight cutting through the bamboo. Intense determined expression. Leaves falling around him.",
-    "[filename:demo_03_soyeon_training] [소연] A young swordswoman mid-sword strike pose, sword creating a sharp wind arc. Fallen leaves scattering around her. Morning sunlight behind her. Fierce focused eyes.",
-    "[filename:demo_04_soyeon_worried] [소연] A young swordswoman standing on a village rooftop at dusk, looking toward distant mountains with worried expression. Orange sunset behind her. Upper body portrait.",
-    "[filename:demo_05_dokryeon_lotus] [독련] A dangerous beautiful woman holding a glowing violet lotus flower that emits faint mist. Seductive smile. Standing in a dark misty forest at night. Moonlight from above.",
-    "[filename:demo_06_dokryeon_tree] [독련] A dangerous woman sitting elegantly on a high tree branch, looking down with a predatory smile, holding a folding fan. Dappled sunlight through leaves. Bird's eye composition.",
-    "[filename:demo_07_yeomchang_battle] [염창] A muscular warrior thrusting a long spear forward with flame effects erupting from the tip. Bold battle cry expression. Dusty battlefield background with smoke.",
-    "[filename:demo_08_yeomchang_defeat] [염창] A muscular warrior kneeling on broken ground, fierce but defeated eyes. His red armor is cracked and damaged, broken spear beside him. Rain falling heavily.",
-    "[filename:demo_09_soso_stream] [소소] A small girl standing in a shallow stream catching fish with bare hands, big innocent happy smile. Sunny day, green forest background, sparkling water.",
-    "[filename:demo_10_soso_worried] [소소] A small girl with big teary eyes, worried expression, holding someone's hand tightly. Dim candlelight interior at night. Close-up portrait."
-  ]
-};
-
-// Load demo preset
-function loadPreset(presetName) {
-  if (isRunning) return;
-  const presetPrompts = DEMO_PRESETS[presetName];
-  if (!presetPrompts) return;
-
-  const newPrompts = presetPrompts.map(text => ({ text, status: '' }));
-  prompts.push(...newPrompts);
-  saveState();
-  updateUI();
-  checkConnection();
-}
-
 // Clear all prompts
 function clearQueue() {
   if (isRunning) return;
