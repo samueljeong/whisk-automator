@@ -2382,10 +2382,12 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       interceptScript.remove();
 
       // Step 5: 전략 A - ⊕ 버튼 클릭
+      debugSectionLayout('업로드전:' + slotName);
       var uploadSuccess = false;
       var addBtn = findSectionAddButton(labelText);
       if (addBtn) {
-        console.log('[Whisk Auto] 전략A: ⊕ 버튼 클릭 (MAIN world 가로채기)');
+        var addBtnR = addBtn.getBoundingClientRect();
+        console.log('[Whisk Auto] 전략A: ⊕ 버튼 클릭 (' + slotName + ') pos=(' + Math.round(addBtnR.left) + ',' + Math.round(addBtnR.top) + ')');
         addBtn.click();
         // MAIN world에서 파일 주입 완료 대기
         for (var wait = 0; wait < 10; wait++) {
