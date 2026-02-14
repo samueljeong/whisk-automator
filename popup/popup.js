@@ -2372,7 +2372,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         reader.readAsDataURL(blob);
       });
 
-      // Step 4: MAIN world에 파일 입력 가로채기 스크립트 주입
+      // Step 4: MAIN world에 파일 업로드 가로채기 스크립트 주입
       // DOM attribute로 ISOLATED↔MAIN 통신 (DOM은 양쪽 world에서 공유됨)
       document.documentElement.setAttribute('data-whisk-upload', dataUrl);
       document.documentElement.removeAttribute('data-whisk-upload-done');
@@ -2383,6 +2383,33 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         if (!dataUrl) return;
         document.documentElement.removeAttribute('data-whisk-upload');
 
+        // === 방법 1: showOpenFilePicker 가로채기 (최신 Whisk) ===
+        if (window.showOpenFilePicker) {
+          var origPicker = window.showOpenFilePicker.bind(window);
+          window.showOpenFilePicker = function() {
+            console.log('[Whisk Auto MAIN] showOpenFilePicker 가로채기 성공!');
+            window.showOpenFilePicker = origPicker; // 즉시 복원
+            return fetch(dataUrl)
+              .then(function(r) { return r.blob(); })
+              .then(function(blob) {
+                var file = new File([blob], 'upload.png', { type: 'image/png' });
+                // FileSystemFileHandle mock
+                var handle = {
+                  kind: 'file',
+                  name: 'upload.png',
+                  getFile: function() { return Promise.resolve(file); },
+                  createWritable: function() { return Promise.reject(new Error('read-only')); }
+                };
+                document.documentElement.setAttribute('data-whisk-upload-done', 'true');
+                console.log('[Whisk Auto MAIN] showOpenFilePicker 파일 주입 완료');
+                return [handle];
+              });
+          };
+          // 10초 후 자동 정리 (안전장치)
+          setTimeout(function() { window.showOpenFilePicker = origPicker; }, 10000);
+        }
+
+        // === 방법 2: input[type=file] click 가로채기 (구형 fallback) ===
         var origClick = HTMLInputElement.prototype.click;
         HTMLInputElement.prototype.click = function() {
           if (this.type === 'file') {
@@ -2395,7 +2422,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
               this.files = dt.files;
               this.dispatchEvent(new Event('change', { bubbles: true }));
               document.documentElement.setAttribute('data-whisk-upload-done', 'true');
-              console.log('[Whisk Auto MAIN] 파일 주입 완료');
+              console.log('[Whisk Auto MAIN] file input 파일 주입 완료');
             }.bind(this));
             return;
           }
