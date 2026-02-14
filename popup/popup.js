@@ -2025,7 +2025,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     var matched = 0;
     for (var b = 0; b < combinedClickables.length; b++) {
       var rect = combinedClickables[b].getBoundingClientRect();
-      if (rect.width < 80 || rect.height < 80 || rect.left < 0) continue;
+      if (rect.width < 55 || rect.height < 55 || rect.left < 0) continue;
       // 사이드바 영역 밖의 요소는 제외 (메인 영역 생성 이미지 등)
       if (rect.left > sidebarMaxX) continue;
 
