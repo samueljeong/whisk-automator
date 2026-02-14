@@ -2136,25 +2136,42 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
   async function toggleCheckmark(imgEl) {
     var checkInfo = findCheckmarkFor(imgEl);
 
-    // 방법 1: 작은 체크마크 아이콘 직접 클릭 (다이얼로그 열리지 않음)
+    // 방법 1: findSmallCheckmark로 체크마크 요소 찾아서 클릭
     var smallCheck = findSmallCheckmark(imgEl);
     if (smallCheck) {
       simulateRealClick(smallCheck);
       await sleep(800);
       if (findCheckmarkFor(imgEl).checked !== checkInfo.checked) return true;
-    }
-
-    // 방법 2: 체크마크 부모 클릭
-    if (smallCheck) {
+      // 실패 시 부모도 시도
       var parent = smallCheck.closest('[role="button"]') || smallCheck.parentElement;
-      if (parent) {
+      if (parent && parent !== imgEl.parentElement) {
         simulateRealClick(parent);
         await sleep(800);
-        dismissPopups(); // 다이얼로그가 열렸을 수 있으므로 즉시 닫기
+        dismissPopups();
         await sleep(500);
         if (findCheckmarkFor(imgEl).checked !== checkInfo.checked) return true;
       }
     }
+
+    // 방법 2: 이미지 우상단 좌표에 직접 클릭 이벤트 발사 (체크마크 위치)
+    var imgRect = imgEl.getBoundingClientRect();
+    var checkX = imgRect.right - 18;
+    var checkY = imgRect.top + 18;
+    var coordOpts = { bubbles: true, cancelable: true, view: window, clientX: checkX, clientY: checkY };
+    document.elementFromPoint(checkX, checkY); // ensure rendering
+    window.dispatchEvent(new PointerEvent('pointerdown', coordOpts));
+    await sleep(50);
+    var clickTarget = document.elementFromPoint(checkX, checkY) || imgEl;
+    clickTarget.dispatchEvent(new PointerEvent('pointerdown', Object.assign({}, coordOpts, { pointerId: 1 })));
+    clickTarget.dispatchEvent(new MouseEvent('mousedown', coordOpts));
+    clickTarget.dispatchEvent(new MouseEvent('mouseup', coordOpts));
+    clickTarget.dispatchEvent(new MouseEvent('click', coordOpts));
+    clickTarget.dispatchEvent(new PointerEvent('pointerup', Object.assign({}, coordOpts, { pointerId: 1 })));
+    console.log('[Whisk Auto] 방법2: 좌표 클릭 (' + Math.round(checkX) + ',' + Math.round(checkY) + ') → ' + clickTarget.tagName);
+    await sleep(800);
+    dismissPopups();
+    await sleep(500);
+    if (findCheckmarkFor(imgEl).checked !== checkInfo.checked) return true;
 
     // 방법 3: 래퍼 클릭 (구 방식 폴백 — 다이얼로그 열릴 수 있음)
     var wrapper = imgEl.closest('[role="button"], [role="option"], button') || imgEl.parentElement;
@@ -2166,7 +2183,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       if (findCheckmarkFor(imgEl).checked !== checkInfo.checked) return true;
     }
 
-    // 방법 4: pointerdown/pointerup (체크마크 우선, 래퍼 폴백)
+    // 방법 4: pointerdown/pointerup
     var evtTarget = smallCheck || wrapper || imgEl;
     evtTarget.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));
     await sleep(100);
