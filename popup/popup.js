@@ -1402,7 +1402,6 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
 
   let currentCharacterGroup = ''; // 현재 피사체에 로드된 캐릭터 조합 (정렬된 키, ''=없음)
   let currentScene = '';           // 현재 장면 슬롯에 로드된 장면 (''=없음)
-  let currentStyleTag = '';        // 현재 스타일 슬롯에 로드된 스타일 태그 (''=기본)
   let downloadedSrcs = new Set();  // 이미 다운로드한 이미지 src 추적
   let consecutiveFailures = 0;     // 연속 실패 카운터 (2회 연속 시 페이지 리로드)
   let characterUploadOrder = [];   // 캐릭터 업로드 순서 (setActiveCharacters에서 참조)
