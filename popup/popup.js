@@ -1434,6 +1434,19 @@ async function startAutomation() {
   automationParams = { delayMs, shouldDownload, projectStyleImage, characterMap, savePath, sceneMap, styleMap, useCustomDir: !!customDirHandle };
   completedOffset = 0;
 
+  // 이전 실행 플래그 초기화 (확장 리로드 시 ISOLATED world에 잔존 방지)
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => {
+        window.__whiskAutoRunning = false;
+        document.documentElement.removeAttribute('data-whisk-stop');
+      }
+    });
+  } catch (e) {
+    console.log('[Popup] 플래그 초기화 실패 (무시):', e);
+  }
+
   // 직접 스크립트 주입
   try {
     await chrome.scripting.executeScript({
