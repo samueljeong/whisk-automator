@@ -3410,6 +3410,52 @@ async function handleHardReset(completedCount) {
     // 남은 프롬프트로 재주입
     const p = automationParams;
     console.log(`[Popup] 재주입: ${remaining.length}개 프롬프트`);
+
+    // MAIN world interceptor 재설치 (페이지 리로드로 소실됐을 수 있음)
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        world: 'MAIN',
+        func: () => {
+          if (window.__whiskAutoInterceptorInstalled) return;
+          window.__whiskAutoInterceptorInstalled = true;
+          const origPicker = window.showOpenFilePicker;
+          window.showOpenFilePicker = async function(...args) {
+            const dataUrl = document.documentElement.getAttribute('data-whisk-upload');
+            if (dataUrl) {
+              document.documentElement.removeAttribute('data-whisk-upload');
+              console.log('[Whisk Auto MAIN] showOpenFilePicker 가로채기 (재주입)');
+              try {
+                var parts = dataUrl.split(',');
+                var mime = parts[0].match(/:(.*?);/)[1];
+                var bstr = atob(parts[1]);
+                var u8 = new Uint8Array(bstr.length);
+                for (var i = 0; i < bstr.length; i++) u8[i] = bstr.charCodeAt(i);
+                var blob = new Blob([u8], { type: mime });
+                var file = new File([blob], 'upload.png', { type: 'image/png' });
+                var handle = {
+                  kind: 'file', name: file.name,
+                  getFile: function() { return Promise.resolve(file); },
+                  createWritable: function() { return Promise.reject(new Error('read-only')); },
+                  queryPermission: function() { return Promise.resolve('granted'); },
+                  requestPermission: function() { return Promise.resolve('granted'); }
+                };
+                document.documentElement.setAttribute('data-whisk-upload-done', 'true');
+                return [handle];
+              } catch (e) {
+                document.documentElement.setAttribute('data-whisk-upload-done', 'error');
+                return origPicker.apply(this, args);
+              }
+            }
+            return origPicker.apply(this, args);
+          };
+          console.log('[Whisk Auto MAIN] persistent interceptor 재설치 완료');
+        }
+      });
+    } catch (e) {
+      console.warn('[Popup] MAIN world interceptor 재주입 실패:', e.message);
+    }
+
     await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: runWhiskAutomation,
