@@ -2506,18 +2506,34 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         // MAIN world에서 파일 주입 완료 대기
         for (var wait = 0; wait < 10; wait++) {
           await sleep(500);
-          if (document.documentElement.getAttribute('data-whisk-upload-done') === 'true') {
+          var doneAttr = document.documentElement.getAttribute('data-whisk-upload-done');
+          if (doneAttr === 'true') {
             uploadSuccess = true;
+            break;
+          }
+          if (doneAttr === 'error') {
+            console.error('[Whisk Auto] 전략A: MAIN world에서 변환 오류');
             break;
           }
         }
         if (uploadSuccess) {
           document.documentElement.removeAttribute('data-whisk-upload-done');
           console.log('[Whisk Auto] 전략A(⊕+MAIN) 성공!');
-          // 업로드 후 검증: 의도한 슬롯에 실제로 이미지가 들어갔는지
           await sleep(500);
           debugSectionLayout('업로드후:' + slotName);
           return true;
+        }
+        // 전략A 실패 → ⊕ 클릭으로 생긴 빈 슬롯 정리
+        console.log('[Whisk Auto] 전략A 실패 → 빈 슬롯 정리 시도...');
+        document.documentElement.removeAttribute('data-whisk-upload-done');
+        try {
+          var emptyCleared = await clearSlotImages(slotName);
+          if (emptyCleared > 0) {
+            console.log('[Whisk Auto] 빈 슬롯 ' + emptyCleared + '개 정리 완료');
+            await sleep(500);
+          }
+        } catch(cleanErr) {
+          console.warn('[Whisk Auto] 빈 슬롯 정리 실패:', cleanErr.message);
         }
         console.log('[Whisk Auto] 전략A 실패, 전략B로...');
       }
