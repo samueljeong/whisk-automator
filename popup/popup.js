@@ -1303,8 +1303,8 @@ async function startAutomation() {
 
     // 2-1. 자동 스타일 결정: [style:] 태그 없고 캐릭터 있으면 프로젝트별 매핑에서 결정
     if (!style && charNames.length > 0) {
-      const charStyleMap = (proj && proj.characterStyleMap) || {};
-      const mixedPreset = (proj && proj.mixedStylePreset) || '';
+      const charStyleMap = (project && project.characterStyleMap) || {};
+      const mixedPreset = (project && project.mixedStylePreset) || '';
       const styleTypes = new Set(
         charNames.map(n => charStyleMap[n]).filter(Boolean)
       );
