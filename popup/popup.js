@@ -2435,6 +2435,16 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       document.head.appendChild(interceptScript);
       interceptScript.remove();
 
+      // Step 4.5: ⊕ 클릭 직전 대상 섹션으로 재스크롤 (clearing 중 이동 방지)
+      var preClickRanges = getSectionRanges();
+      for (var psi = 0; psi < preClickRanges.length; psi++) {
+        if (preClickRanges[psi].label === labelText && preClickRanges[psi].el) {
+          preClickRanges[psi].el.scrollIntoView({ block: 'start', behavior: 'instant' });
+          await sleep(300);
+          break;
+        }
+      }
+
       // Step 5: 전략 A - ⊕ 버튼 클릭
       debugSectionLayout('업로드전:' + slotName);
       var uploadSuccess = false;
