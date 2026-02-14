@@ -407,8 +407,8 @@ async function scanCharacterFolder(rootHandle) {
             };
             totalCount++;
           } else if (slotType === 'style') {
-            // 첫 번째 이미지를 기본 styleImage로 설정
-            if (!PROJECTS[projectKey].styleImage) {
+            // style.* 파일만 인식 (style.png, style.jpg 등)
+            if (name.toLowerCase() === 'style') {
               PROJECTS[projectKey].styleImage = dataUrl;
               PROJECTS[projectKey].styleFromFolder = true;
               totalCount++;
