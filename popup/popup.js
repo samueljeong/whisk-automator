@@ -2658,7 +2658,19 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       console.log('[Whisk Auto] 스타일 이미지 업로드 완료 (분석은 캐릭터와 함께 대기)');
     }
 
+    // 시작 시 정지 플래그 초기화
+    window.__whiskAutoStop = false;
+
     for (let i = 0; i < promptsWithCharacters.length; i++) {
+      // 정지 플래그 확인
+      if (window.__whiskAutoStop) {
+        console.log('[Whisk Auto] 사용자 정지 요청 — 자동화 중단');
+        try {
+          chrome.runtime.sendMessage({ action: 'AUTOMATION_STOPPED' });
+        } catch(e) {}
+        return;
+      }
+
       const item = promptsWithCharacters[i];
       const prompt = item.prompt;
       const character = item.character;
