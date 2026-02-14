@@ -2767,7 +2767,29 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     // 시작 시 정지 플래그 초기화
     document.documentElement.removeAttribute('data-whisk-stop');
 
-    // currentScene은 ''로 유지 (기본값)
+    // 시작 전 레이아웃 진단
+    console.log('[Whisk Auto] ====== 자동화 시작 전 레이아웃 진단 ======');
+    debugSectionLayout('시작전');
+
+    // 시작 시 장면/피사체 슬롯 강제 초기화 (수동 잔여 레퍼런스 제거)
+    try {
+      var preSceneCleared = await clearSlotImages('scene');
+      if (preSceneCleared > 0) {
+        console.log('[Whisk Auto] 장면 슬롯 사전 초기화: ' + preSceneCleared + '개 삭제');
+        await sleep(2000); // DOM 안정화 대기
+      }
+      var preSubjectCleared = await clearSlotImages('subject');
+      if (preSubjectCleared > 0) {
+        console.log('[Whisk Auto] 피사체 슬롯 사전 초기화: ' + preSubjectCleared + '개 삭제');
+        await sleep(2000); // DOM 안정화 대기
+      }
+      if (preSceneCleared > 0 || preSubjectCleared > 0) {
+        console.log('[Whisk Auto] 초기화 후 레이아웃 재확인');
+        debugSectionLayout('초기화후');
+      }
+    } catch (clearErr) {
+      console.warn('[Whisk Auto] 슬롯 사전 초기화 실패 (무시):', clearErr.message);
+    }
 
     // 미등록 캐릭터 사전 검사
     try {
