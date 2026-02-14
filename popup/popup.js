@@ -2898,6 +2898,12 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
             await sleep(delayMs);
           }
         } catch (error) {
+          // 정지 요청에 의한 중단
+          if (error.message === '__STOPPED__' || window.__whiskAutoStop) {
+            console.log('[Whisk Auto] 사용자 정지 요청 — 자동화 중단');
+            try { chrome.runtime.sendMessage({ action: 'AUTOMATION_STOPPED' }); } catch(e) {}
+            return;
+          }
           retryCount++;
           if (retryCount <= MAX_RETRIES) {
             console.log(`[Whisk Auto] 재시도 ${retryCount}/${MAX_RETRIES} (씬${origIndex + 1})... ${error.message}`);
