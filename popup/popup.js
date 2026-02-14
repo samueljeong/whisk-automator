@@ -2325,6 +2325,17 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         return false;
       }
 
+      // Step 1.5: 대상 섹션이 보이도록 사이드바 스크롤
+      var scrollRanges = getSectionRanges();
+      for (var si = 0; si < scrollRanges.length; si++) {
+        if (scrollRanges[si].label === labelText && scrollRanges[si].el) {
+          scrollRanges[si].el.scrollIntoView({ block: 'start', behavior: 'instant' });
+          await sleep(300); // 스크롤 완료 대기
+          console.log('[Whisk Auto] ' + labelText + ' 섹션으로 스크롤 완료');
+          break;
+        }
+      }
+
       // Step 2: 기존 이미지 선택 해제 (skipClear=true면 건너뜀 - 다중 캐릭터 추가 시)
       if (!skipClear) {
         var clearedCount = await clearSlotImages(slotName);
