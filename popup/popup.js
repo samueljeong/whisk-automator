@@ -3324,7 +3324,7 @@ stylePrefix.addEventListener('change', saveStyleSettings);
 styleSuffix.addEventListener('change', saveStyleSettings);
 
 // 스타일 이미지 캡처
-captureStyleBtn.addEventListener('click', captureStyleFromWhisk);
+if (captureStyleBtn) captureStyleBtn.addEventListener('click', captureStyleFromWhisk);
 
 // Delete button delegation
 promptQueue.addEventListener('click', (e) => {
