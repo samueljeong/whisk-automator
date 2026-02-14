@@ -2295,108 +2295,129 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         }
       }
 
-      // Step 3: 이미지 → File 객체
+      // Step 3: 이미지 → base64 Data URL (MAIN world 전달용)
       var res = await fetch(imageUrl);
       var blob = await res.blob();
-      var file = new File([blob], 'character.png', { type: 'image/png' });
+      var dataUrl = await new Promise(function(resolve, reject) {
+        var reader = new FileReader();
+        reader.onload = function() { resolve(reader.result); };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
 
-      // Step 3: file input 가로채기 준비
-      var uploadSuccess = false;
+      // Step 4: MAIN world에 파일 입력 가로채기 스크립트 주입
+      // DOM attribute로 ISOLATED↔MAIN 통신 (DOM은 양쪽 world에서 공유됨)
+      document.documentElement.setAttribute('data-whisk-upload', dataUrl);
+      document.documentElement.removeAttribute('data-whisk-upload-done');
 
-      var originalClick = HTMLInputElement.prototype.click;
-      HTMLInputElement.prototype.click = function() {
-        if (this.type === 'file') {
-          console.log('[Whisk Auto] file input click 가로채기 성공!');
-          uploadSuccess = true;
-          var dt = new DataTransfer();
-          dt.items.add(file);
-          this.files = dt.files;
-          this.dispatchEvent(new Event('change', { bubbles: true }));
-          HTMLInputElement.prototype.click = originalClick;
-          return;
-        }
-        return originalClick.call(this);
-      };
+      var interceptScript = document.createElement('script');
+      interceptScript.textContent = '(' + function() {
+        var dataUrl = document.documentElement.getAttribute('data-whisk-upload');
+        if (!dataUrl) return;
+        document.documentElement.removeAttribute('data-whisk-upload');
 
-      var observer = new MutationObserver(function(mutations) {
-        if (uploadSuccess) return;
-        for (var m = 0; m < mutations.length; m++) {
-          for (var n = 0; n < mutations[m].addedNodes.length; n++) {
-            var node = mutations[m].addedNodes[n];
-            if (node.tagName === 'INPUT' && node.type === 'file') {
-              console.log('[Whisk Auto] MutationObserver: file input 감지!');
-              uploadSuccess = true;
+        var origClick = HTMLInputElement.prototype.click;
+        HTMLInputElement.prototype.click = function() {
+          if (this.type === 'file') {
+            console.log('[Whisk Auto MAIN] file input click 가로채기 성공!');
+            HTMLInputElement.prototype.click = origClick;
+            fetch(dataUrl).then(function(r) { return r.blob(); }).then(function(blob) {
+              var file = new File([blob], 'upload.png', { type: 'image/png' });
               var dt = new DataTransfer();
               dt.items.add(file);
-              node.files = dt.files;
-              node.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-            if (node.querySelector) {
-              var fi = node.querySelector('input[type="file"]');
-              if (fi) {
-                console.log('[Whisk Auto] MutationObserver: 자식 file input 감지!');
-                uploadSuccess = true;
-                var dt2 = new DataTransfer();
-                dt2.items.add(file);
-                fi.files = dt2.files;
-                fi.dispatchEvent(new Event('change', { bubbles: true }));
-              }
-            }
+              this.files = dt.files;
+              this.dispatchEvent(new Event('change', { bubbles: true }));
+              document.documentElement.setAttribute('data-whisk-upload-done', 'true');
+              console.log('[Whisk Auto MAIN] 파일 주입 완료');
+            }.bind(this));
+            return;
           }
-        }
-      });
-      observer.observe(document.body, { childList: true, subtree: true });
+          return origClick.call(this);
+        };
 
-      // Step 4: 전략 A - ⊕ 버튼 클릭 (이미지가 있어도 교체 가능)
+        // 10초 후 자동 정리 (안전장치)
+        setTimeout(function() { HTMLInputElement.prototype.click = origClick; }, 10000);
+      } + ')()';
+      document.head.appendChild(interceptScript);
+      interceptScript.remove();
+
+      // Step 5: 전략 A - ⊕ 버튼 클릭
+      var uploadSuccess = false;
       var addBtn = findSectionAddButton(labelText);
       if (addBtn) {
-        console.log('[Whisk Auto] 전략A: ⊕ 버튼 클릭 (.click())');
+        console.log('[Whisk Auto] 전략A: ⊕ 버튼 클릭 (MAIN world 가로채기)');
         addBtn.click();
-        await sleep(2000);
-
+        // MAIN world에서 파일 주입 완료 대기
+        for (var wait = 0; wait < 10; wait++) {
+          await sleep(500);
+          if (document.documentElement.getAttribute('data-whisk-upload-done') === 'true') {
+            uploadSuccess = true;
+            break;
+          }
+        }
         if (uploadSuccess) {
-          HTMLInputElement.prototype.click = originalClick;
-          observer.disconnect();
-          console.log('[Whisk Auto] 전략A(⊕) 성공!');
+          document.documentElement.removeAttribute('data-whisk-upload-done');
+          console.log('[Whisk Auto] 전략A(⊕+MAIN) 성공!');
           return true;
         }
-        console.log('[Whisk Auto] 전략A(⊕) 실패, 전략B로...');
+        console.log('[Whisk Auto] 전략A 실패, 전략B로...');
       }
 
-      // Step 5: 전략 B - 빈 슬롯 클릭 (이미지가 없는 경우)
-      var sections = findWhiskSlots();
-      var slots = sections[slotName] || [];
-      if (slots.length > 0) {
-        var targetSlot = slots[0];
-        console.log('[Whisk Auto] 전략B: 슬롯 클릭 (.click())');
-        targetSlot.click();
-        await sleep(2000);
+      // Step 6: 전략 B - 빈 슬롯 클릭
+      if (!uploadSuccess) {
+        var sections = findWhiskSlots();
+        var slots = sections[slotName] || [];
+        if (slots.length > 0) {
+          // MAIN world 가로채기 재설정
+          document.documentElement.setAttribute('data-whisk-upload', dataUrl);
+          document.documentElement.removeAttribute('data-whisk-upload-done');
+          var interceptScript2 = document.createElement('script');
+          interceptScript2.textContent = interceptScript.textContent;
+          document.head.appendChild(interceptScript2);
+          interceptScript2.remove();
 
-        if (uploadSuccess) {
-          HTMLInputElement.prototype.click = originalClick;
-          observer.disconnect();
-          console.log('[Whisk Auto] 전략B(슬롯클릭) 성공!');
-          return true;
+          console.log('[Whisk Auto] 전략B: 슬롯 클릭 (MAIN world 가로채기)');
+          slots[0].click();
+          for (var wait2 = 0; wait2 < 10; wait2++) {
+            await sleep(500);
+            if (document.documentElement.getAttribute('data-whisk-upload-done') === 'true') {
+              uploadSuccess = true;
+              break;
+            }
+          }
+          if (uploadSuccess) {
+            document.documentElement.removeAttribute('data-whisk-upload-done');
+            console.log('[Whisk Auto] 전략B(슬롯+MAIN) 성공!');
+            return true;
+          }
         }
       }
 
-      // Step 6: 전략 C - 드래그앤드롭
-      if (slots.length > 0 && !uploadSuccess) {
-        var dropTarget = slots[0];
-        console.log('[Whisk Auto] 전략C: 드래그앤드롭');
-        var dtDrop = new DataTransfer();
-        dtDrop.items.add(file);
-        dropTarget.dispatchEvent(new DragEvent('dragenter', { bubbles: true, dataTransfer: dtDrop }));
-        await sleep(100);
-        dropTarget.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dtDrop }));
-        await sleep(100);
-        dropTarget.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dtDrop }));
-        await sleep(1500);
+      // Step 7: 전략 C - 숨겨진 file input 직접 조작
+      if (!uploadSuccess) {
+        console.log('[Whisk Auto] 전략C: 숨겨진 file input 직접 조작');
+        var fileInputs = document.querySelectorAll('input[type="file"]');
+        if (fileInputs.length > 0) {
+          var file = new File([blob], 'upload.png', { type: 'image/png' });
+          var dt = new DataTransfer();
+          dt.items.add(file);
+          // 마지막 file input 사용 (가장 최근 생성된 것)
+          var fi = fileInputs[fileInputs.length - 1];
+          fi.files = dt.files;
+          fi.dispatchEvent(new Event('change', { bubbles: true }));
+          await sleep(2000);
+          // 업로드 성공 여부 확인 (슬롯에 이미지가 생겼는지)
+          uploadSuccess = verifySlotHasImage(slotName);
+          if (uploadSuccess) {
+            console.log('[Whisk Auto] 전략C(직접조작) 성공!');
+            return true;
+          }
+        }
       }
 
       // 정리
-      HTMLInputElement.prototype.click = originalClick;
-      observer.disconnect();
+      document.documentElement.removeAttribute('data-whisk-upload');
+      document.documentElement.removeAttribute('data-whisk-upload-done');
       console.log('[Whisk Auto] 업로드 완료 (success=' + uploadSuccess + ')');
       return uploadSuccess;
     } catch (e) {
