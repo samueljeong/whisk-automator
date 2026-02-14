@@ -2724,10 +2724,9 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     // 시작 시 정지 플래그 초기화
     document.documentElement.removeAttribute('data-whisk-stop');
 
-    // 시작 시 장면 슬롯 강제 초기화 (수동 잔여 레퍼런스 제거)
-    console.log('[Whisk Auto] 시작 전 장면 슬롯 초기화...');
-    await clearSlotImages('scene');
-    await sleep(500);
+    // 수동 잔여 장면 레퍼런스 제거: 센티넬 값 설정
+    // → 첫 프롬프트에서 sceneTag('')와 불일치 → 기존 루프가 자동 정리
+    currentScene = '__manual__';
 
     // 미등록 캐릭터 사전 검사
     const allCharTags = new Set(promptsWithCharacters.flatMap(p =>
