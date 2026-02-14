@@ -2216,6 +2216,16 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     var totalDeleted = 0;
     var maxAttempts = 10;
 
+    // 대상 섹션이 보이도록 스크롤
+    var scrollRanges = getSectionRanges();
+    for (var si = 0; si < scrollRanges.length; si++) {
+      if (scrollRanges[si].label === labelText && scrollRanges[si].el) {
+        scrollRanges[si].el.scrollIntoView({ block: 'start', behavior: 'instant' });
+        await sleep(300);
+        break;
+      }
+    }
+
     for (var attempt = 0; attempt < maxAttempts; attempt++) {
       var range = getSectionYRange(labelText);
       if (!range) {
