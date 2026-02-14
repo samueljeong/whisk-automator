@@ -2263,6 +2263,44 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     return totalDeleted;
   }
 
+  // 섹션 내 "이미지 업로드" 버튼 찾기 (showOpenFilePicker를 직접 트리거하는 버튼)
+  function findSectionUploadButton(labelText) {
+    var ranges = getSectionRanges();
+    var targetRange = null;
+    for (var r = 0; r < ranges.length; r++) {
+      if (ranges[r].label === labelText) { targetRange = ranges[r]; break; }
+    }
+    if (!targetRange) {
+      console.log('[Whisk Auto] 업로드 버튼 미발견 (' + labelText + '): 라벨 없음');
+      return null;
+    }
+
+    // 섹션 Y범위 내에서 "이미지 업로드" 버튼 찾기
+    var allBtns = sidebarRoot.querySelectorAll('button');
+    var uploadBtns = [];
+    for (var b = 0; b < allBtns.length; b++) {
+      var txt = allBtns[b].textContent.trim();
+      if (txt.indexOf('이미지 업로드') >= 0) {
+        var br = allBtns[b].getBoundingClientRect();
+        if (br.width > 0 && br.top >= targetRange.top && br.top < targetRange.end) {
+          uploadBtns.push({ el: allBtns[b], top: br.top, left: br.left });
+        }
+      }
+    }
+
+    if (uploadBtns.length > 0) {
+      // 가장 위에 있는 업로드 버튼 선택
+      uploadBtns.sort(function(a, b) { return a.top - b.top; });
+      console.log('[Whisk Auto] "이미지 업로드" 버튼 발견 (' + labelText + '): ' +
+        uploadBtns.length + '개 중 첫번째 at(' + Math.round(uploadBtns[0].left) + ',' + Math.round(uploadBtns[0].top) + ')');
+      return uploadBtns[0].el;
+    }
+
+    console.log('[Whisk Auto] "이미지 업로드" 버튼 없음 (' + labelText + '), Y범위=' +
+      Math.round(targetRange.top) + '~' + Math.round(targetRange.end));
+    return null;
+  }
+
   // 섹션 헤더의 ⊕(추가) 버튼 찾기 (getSectionRanges 활용)
   function findSectionAddButton(labelText) {
     var ranges = getSectionRanges();
@@ -2290,7 +2328,6 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     }
 
     // 우선순위: aria-label="새 카테고리 추가" 버튼 (실제 ⊕ 추가 버튼)
-    // "가장 오른쪽" 방식은 keyboard_arrow_left 등 비관련 버튼을 잘못 선택함
     var addBtn = null;
     for (var ab = 0; ab < rowButtons.length; ab++) {
       if (rowButtons[ab].aria === '새 카테고리 추가') {
