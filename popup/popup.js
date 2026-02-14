@@ -2077,42 +2077,74 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     return { el: null, checked: false };
   }
 
+  // 이미지 우상단의 작은 체크마크 아이콘 찾기 (클릭 전용)
+  // findCheckmarkFor의 method A/B는 래퍼를 반환 → 클릭 시 다이얼로그 열림
+  // 이 함수는 method C 로직으로 실제 클릭 가능한 작은 요소만 반환
+  function findSmallCheckmark(imgEl) {
+    var imgRect = imgEl.getBoundingClientRect();
+    var allSmall = sidebarRoot.querySelectorAll('button, [role="button"], div, span, svg');
+    for (var j = 0; j < allSmall.length; j++) {
+      var sr = allSmall[j].getBoundingClientRect();
+      if (sr.width >= 10 && sr.width <= 50 && sr.height >= 10 && sr.height <= 50 &&
+          sr.top >= imgRect.top - 10 && sr.top <= imgRect.top + imgRect.height * 0.6 &&
+          sr.left >= imgRect.left + imgRect.width * 0.4 && sr.left <= imgRect.right + 10) {
+        var el = allSmall[j];
+        var bg = '';
+        try { bg = getComputedStyle(el).backgroundColor; } catch(e) {}
+        var hasVisibleBg = bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent';
+        var hasSvg = el.tagName === 'svg' || el.tagName === 'SVG' ||
+                     (el.querySelector && el.querySelector('svg, path'));
+        if (hasVisibleBg || hasSvg) {
+          return el;
+        }
+      }
+    }
+    return null;
+  }
+
   // 이미지의 체크마크를 토글 (4단계 폴백)
   // 반환: 토글 성공 여부
   async function toggleCheckmark(imgEl) {
     var checkInfo = findCheckmarkFor(imgEl);
 
-    // 방법 1: 체크마크 직접 클릭
-    if (checkInfo.el) {
-      simulateRealClick(checkInfo.el);
+    // 방법 1: 작은 체크마크 아이콘 직접 클릭 (다이얼로그 열리지 않음)
+    var smallCheck = findSmallCheckmark(imgEl);
+    if (smallCheck) {
+      simulateRealClick(smallCheck);
       await sleep(800);
       if (findCheckmarkFor(imgEl).checked !== checkInfo.checked) return true;
     }
 
     // 방법 2: 체크마크 부모 클릭
-    if (checkInfo.el) {
-      var parent = checkInfo.el.closest('[role="button"]') || checkInfo.el.parentElement;
+    if (smallCheck) {
+      var parent = smallCheck.closest('[role="button"]') || smallCheck.parentElement;
       if (parent) {
         simulateRealClick(parent);
         await sleep(800);
+        dismissPopups(); // 다이얼로그가 열렸을 수 있으므로 즉시 닫기
+        await sleep(500);
         if (findCheckmarkFor(imgEl).checked !== checkInfo.checked) return true;
       }
     }
 
-    // 방법 3: 래퍼 클릭 (구 방식 폴백)
+    // 방법 3: 래퍼 클릭 (구 방식 폴백 — 다이얼로그 열릴 수 있음)
     var wrapper = imgEl.closest('[role="button"], [role="option"], button') || imgEl.parentElement;
     if (wrapper && wrapper !== imgEl) {
       simulateRealClick(wrapper);
       await sleep(800);
+      dismissPopups();
+      await sleep(500);
       if (findCheckmarkFor(imgEl).checked !== checkInfo.checked) return true;
     }
 
-    // 방법 4: pointerdown/pointerup
-    var evtTarget = checkInfo.el || wrapper || imgEl;
+    // 방법 4: pointerdown/pointerup (체크마크 우선, 래퍼 폴백)
+    var evtTarget = smallCheck || wrapper || imgEl;
     evtTarget.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));
     await sleep(100);
     evtTarget.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true }));
     await sleep(800);
+    dismissPopups();
+    await sleep(300);
     return findCheckmarkFor(imgEl).checked !== checkInfo.checked;
   }
 
