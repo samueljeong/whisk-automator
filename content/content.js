@@ -11,15 +11,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'CHECK_CONNECTION') {
     sendResponse({ connected: true });
   } else if (message.action === 'STOP_AUTOMATION') {
-    // 주입된 자동화 코드에 정지 신호 전달 (window 변수 경유)
-    window.__whiskAutoStop = true;
-    // 페이지 컨텍스트에도 설정 (executeScript로 주입된 코드용)
-    const script = document.createElement('script');
-    script.textContent = 'window.__whiskAutoStop = true;';
-    document.documentElement.appendChild(script);
-    script.remove();
+    // DOM 속성으로 정지 신호 전달 (ISOLATED/MAIN 모든 월드에서 읽기 가능)
+    document.documentElement.setAttribute('data-whisk-stop', 'true');
     sendResponse({ stopped: true });
-    console.log('[Whisk Automator] 정지 신호 전달됨');
+    console.log('[Whisk Automator] 정지 신호 전달됨 (DOM attribute)');
   }
   return true;
 });
