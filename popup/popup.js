@@ -3501,6 +3501,21 @@ refreshCharFolderBtn.addEventListener('click', async () => {
   }
 });
 
+// 프로젝트 초기화 버튼
+const resetProjectsBtn = document.getElementById('resetProjectsBtn');
+if (resetProjectsBtn) {
+  resetProjectsBtn.addEventListener('click', async () => {
+    if (!confirm('저장된 모든 프로젝트를 삭제하고 "공통"만 남깁니다.\n폴더에서 다시 불러올 수 있습니다.\n\n계속할까요?')) return;
+    PROJECTS = { ...DEFAULT_PROJECTS };
+    currentProject = 'common';
+    await chrome.storage.local.set({ projects: PROJECTS, currentProject });
+    renderProjectTabs();
+    renderCharacterList();
+    renderStyleSettings();
+    charFolderHint.textContent = '초기화 완료. 폴더에서 불러오기로 프로젝트를 추가하세요.';
+  });
+}
+
 // Listen for messages from content script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   switch (message.action) {
