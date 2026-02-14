@@ -2418,7 +2418,8 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
           document.head.appendChild(interceptScript2);
           interceptScript2.remove();
 
-          console.log('[Whisk Auto] 전략B: 슬롯 클릭 (MAIN world 가로채기)');
+          var slotR = slots[0].getBoundingClientRect();
+          console.log('[Whisk Auto] 전략B: 슬롯[0] 클릭 (' + slotName + ') pos=(' + Math.round(slotR.left) + ',' + Math.round(slotR.top) + ') size=' + Math.round(slotR.width) + 'x' + Math.round(slotR.height));
           slots[0].click();
           for (var wait2 = 0; wait2 < 10; wait2++) {
             await sleep(500);
