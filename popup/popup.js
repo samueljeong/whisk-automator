@@ -407,20 +407,12 @@ async function scanCharacterFolder(rootHandle) {
             };
             totalCount++;
           } else if (slotType === 'style') {
-            // stylePresets 맵에 모든 스타일 이미지 저장
-            if (!PROJECTS[projectKey].stylePresets) PROJECTS[projectKey].stylePresets = {};
-            PROJECTS[projectKey].stylePresets[name] = {
-              image: dataUrl,
-              aliases: [name],
-              isLocal: true,
-              fromFolder: true
-            };
-            // 첫 번째 이미지는 기본 styleImage로도 설정 (하위호환)
+            // 첫 번째 이미지를 기본 styleImage로 설정
             if (!PROJECTS[projectKey].styleImage) {
               PROJECTS[projectKey].styleImage = dataUrl;
+              PROJECTS[projectKey].styleFromFolder = true;
+              totalCount++;
             }
-            PROJECTS[projectKey].styleFromFolder = true;
-            totalCount++;
           }
         } catch (e) {
           console.error(`[Whisk] 파일 읽기 실패: ${slotEntry.name}/${projName}/${fileEntry.name}`, e);
