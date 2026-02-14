@@ -2847,7 +2847,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
                 var charName = charNames[ci].trim();
                 var charImageUrl = characters[charName];
                 if (!charImageUrl) {
-                  console.log(`[Whisk Auto] 캐릭터 "${charName}" 이미지 미등록, 건너뜀`);
+                  console.warn(`[Whisk Auto] ⚠️ 캐릭터 "${charName}" 미등록 — 레퍼런스 없이 생성`);
                   continue;
                 }
 
