@@ -533,9 +533,12 @@ async function loadState() {
             saveLocation.value = '\uD83D\uDCC1 ' + savedHandle.name;
             saveLocation.readOnly = true;
           } else {
-            // Permission lost, clear
+            // Permission lost — 커스텀 폴더만 해제, 텍스트 경로는 유지
             await clearDirHandle();
-            saveLocation.value = 'whisk-images';
+            // result.saveLocation이 📁로 시작하면 기본값 복원, 아니면 유지
+            if (!result.saveLocation || result.saveLocation.startsWith('\uD83D\uDCC1')) {
+              saveLocation.value = 'whisk-images';
+            }
             saveLocation.readOnly = false;
           }
         }
