@@ -1452,6 +1452,10 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
   var SLOT_TO_LABEL = { 'subject': '피사체', 'scene': '장면', 'style': '스타일' };
   var LABEL_TO_KEY = { '피사체': 'subject', '장면': 'scene', '스타일': 'style' };
 
+  function isStopRequested() {
+    return document.documentElement.getAttribute('data-whisk-stop') === 'true';
+  }
+
   async function sleep(ms) {
     // 긴 대기 중 정지 신호를 빠르게 감지하기 위해 500ms 단위로 체크
     if (ms <= 500) {
@@ -1459,7 +1463,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     }
     var elapsed = 0;
     while (elapsed < ms) {
-      if (window.__whiskAutoStop) throw new Error('__STOPPED__');
+      if (isStopRequested()) throw new Error('__STOPPED__');
       var chunk = Math.min(500, ms - elapsed);
       await new Promise(resolve => setTimeout(resolve, chunk));
       elapsed += chunk;
