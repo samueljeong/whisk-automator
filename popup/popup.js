@@ -1415,7 +1415,6 @@ async function startAutomation() {
   try {
     await chrome.scripting.executeScript({
       target: { tabId: tab.id },
-      world: 'MAIN',
       func: runWhiskAutomation,
       args: [promptsWithCharacters, delayMs, shouldDownload, projectStyleImage, characterMap, savePath, sceneMap, styleMap, !!customDirHandle]
     });
