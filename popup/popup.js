@@ -2586,22 +2586,32 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         console.log('[Whisk Auto] "이미지 업로드" 버튼 미발견, 전략B로...');
       }
 
-      // Step 6: 전략 B - 빈 슬롯 클릭
+      // Step 6: 전략 B - 재스크롤 후 "이미지 업로드" 버튼 재탐색
       if (!uploadSuccess) {
-        var sections = findWhiskSlots();
-        var slots = sections[slotName] || [];
-        if (slots.length > 0) {
-          // MAIN world 가로채기 재설정
-          document.documentElement.setAttribute('data-whisk-upload', dataUrl);
-          document.documentElement.removeAttribute('data-whisk-upload-done');
-          var interceptScript2 = document.createElement('script');
-          interceptScript2.textContent = interceptScript.textContent;
-          document.head.appendChild(interceptScript2);
-          interceptScript2.remove();
+        // 사이드바 재스크롤 (전략A 중 스크롤 변경 대비)
+        var retryRanges = getSectionRanges();
+        for (var rri = 0; rri < retryRanges.length; rri++) {
+          if (retryRanges[rri].label === labelText && retryRanges[rri].el) {
+            retryRanges[rri].el.scrollIntoView({ block: 'start', behavior: 'instant' });
+            await sleep(300);
+            break;
+          }
+        }
 
-          var slotR = slots[0].getBoundingClientRect();
-          console.log('[Whisk Auto] 전략B: 슬롯[0] 클릭 (' + slotName + ') pos=(' + Math.round(slotR.left) + ',' + Math.round(slotR.top) + ') size=' + Math.round(slotR.width) + 'x' + Math.round(slotR.height));
-          slots[0].click();
+        // MAIN world 가로채기 재설정
+        document.documentElement.setAttribute('data-whisk-upload', dataUrl);
+        document.documentElement.removeAttribute('data-whisk-upload-done');
+        var interceptScript2 = document.createElement('script');
+        interceptScript2.textContent = interceptScript.textContent;
+        document.head.appendChild(interceptScript2);
+        interceptScript2.remove();
+
+        // "이미지 업로드" 버튼 재탐색
+        var retryUploadBtn = findSectionUploadButton(labelText);
+        if (retryUploadBtn) {
+          var retryR = retryUploadBtn.getBoundingClientRect();
+          console.log('[Whisk Auto] 전략B: "이미지 업로드" 재탐색 성공 (' + slotName + ') pos=(' + Math.round(retryR.left) + ',' + Math.round(retryR.top) + ')');
+          retryUploadBtn.click();
           for (var wait2 = 0; wait2 < 10; wait2++) {
             await sleep(500);
             if (document.documentElement.getAttribute('data-whisk-upload-done') === 'true') {
@@ -2611,10 +2621,42 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
           }
           if (uploadSuccess) {
             document.documentElement.removeAttribute('data-whisk-upload-done');
-            console.log('[Whisk Auto] 전략B(슬롯+MAIN) 성공!');
+            console.log('[Whisk Auto] 전략B(재탐색+MAIN) 성공!');
             await sleep(500);
             debugSectionLayout('업로드후:' + slotName);
             return true;
+          }
+        }
+
+        // fallback: findWhiskSlots 기반 큰 슬롯 클릭
+        if (!uploadSuccess) {
+          var sections = findWhiskSlots();
+          var slots = sections[slotName] || [];
+          if (slots.length > 0) {
+            // 가로채기 재설정 (이전 시도에서 소모됐을 수 있음)
+            document.documentElement.setAttribute('data-whisk-upload', dataUrl);
+            document.documentElement.removeAttribute('data-whisk-upload-done');
+            var interceptScript3 = document.createElement('script');
+            interceptScript3.textContent = interceptScript.textContent;
+            document.head.appendChild(interceptScript3);
+            interceptScript3.remove();
+
+            var slotR = slots[0].getBoundingClientRect();
+            console.log('[Whisk Auto] 전략B-fallback: 슬롯 클릭 (' + slotName + ') pos=(' + Math.round(slotR.left) + ',' + Math.round(slotR.top) + ') size=' + Math.round(slotR.width) + 'x' + Math.round(slotR.height));
+            slots[0].click();
+            for (var wait3 = 0; wait3 < 10; wait3++) {
+              await sleep(500);
+              if (document.documentElement.getAttribute('data-whisk-upload-done') === 'true') {
+                uploadSuccess = true;
+                break;
+              }
+            }
+            if (uploadSuccess) {
+              document.documentElement.removeAttribute('data-whisk-upload-done');
+              console.log('[Whisk Auto] 전략B-fallback 성공!');
+              await sleep(500);
+              return true;
+            }
           }
         }
       }
