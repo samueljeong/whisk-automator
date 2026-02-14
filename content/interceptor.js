@@ -122,5 +122,7 @@
   }, true); // capture phase
 
   window.__whiskAutoInterceptorInstalled = true;
+  // DOM 속성으로도 표시 (ISOLATED world에서 확인 가능)
+  document.documentElement.setAttribute('data-whisk-interceptor-ready', 'true');
   console.log('[Whisk Interceptor] document_start 설치 완료: showOpenFilePicker + input[type=file] + click 캡처');
 })();
