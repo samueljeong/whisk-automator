@@ -2729,13 +2729,22 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     currentScene = '__manual__';
 
     // 미등록 캐릭터 사전 검사
-    const allCharTags = new Set(promptsWithCharacters.flatMap(p =>
-      (p.character || '').split(',').map(c => c.trim()).filter(Boolean)
-    ));
-    const missingChars = [...allCharTags].filter(name => characters && !characters[name]);
-    if (missingChars.length > 0) {
-      console.warn(`[Whisk Auto] ⚠️ 미등록 캐릭터 ${missingChars.length}건: ${missingChars.join(', ')}`);
-      console.warn('[Whisk Auto] → 해당 캐릭터는 레퍼런스 없이 생성됩니다');
+    try {
+      var allCharNames = [];
+      for (var ci = 0; ci < promptsWithCharacters.length; ci++) {
+        var ch = (promptsWithCharacters[ci].character || '').split(',');
+        for (var cj = 0; cj < ch.length; cj++) {
+          var cn = ch[cj].trim();
+          if (cn && allCharNames.indexOf(cn) === -1) allCharNames.push(cn);
+        }
+      }
+      var missingChars = allCharNames.filter(function(name) { return characters && !characters[name]; });
+      if (missingChars.length > 0) {
+        console.warn('[Whisk Auto] ⚠️ 미등록 캐릭터 ' + missingChars.length + '건: ' + missingChars.join(', '));
+        console.warn('[Whisk Auto] → 해당 캐릭터는 레퍼런스 없이 생성됩니다');
+      }
+    } catch (preCheckErr) {
+      console.error('[Whisk Auto] 미등록 캐릭터 검사 오류 (무시):', preCheckErr);
     }
 
     for (let i = 0; i < promptsWithCharacters.length; i++) {
