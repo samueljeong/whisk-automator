@@ -3003,15 +3003,24 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
 
 // Stop automation
 async function stopAutomation() {
-  try {
-    const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-    const tab = tabs[0];
+  const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+  const tab = tabs[0];
 
-    await chrome.tabs.sendMessage(tab.id, {
-      action: 'STOP_AUTOMATION'
-    });
+  try {
+    await chrome.tabs.sendMessage(tab.id, { action: 'STOP_AUTOMATION' });
   } catch (error) {
-    console.error('Failed to stop automation:', error);
+    console.warn('sendMessage 실패, executeScript fallback:', error.message);
+  }
+
+  // Fallback: 직접 DOM 속성 설정 (content.js 미로드 시에도 동작)
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => document.documentElement.setAttribute('data-whisk-stop', 'true'),
+      world: 'MAIN'
+    });
+  } catch (e) {
+    console.error('executeScript fallback도 실패:', e);
   }
 
   isRunning = false;
