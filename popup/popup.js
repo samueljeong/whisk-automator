@@ -523,7 +523,11 @@ async function loadState() {
       try {
         const savedHandle = await loadDirHandle();
         if (savedHandle) {
-          const perm = await savedHandle.queryPermission({ mode: 'readwrite' });
+          let perm = await savedHandle.queryPermission({ mode: 'readwrite' });
+          if (perm === 'prompt') {
+            // 사이드 패널 로드 시 권한 재요청 시도
+            perm = await savedHandle.requestPermission({ mode: 'readwrite' });
+          }
           if (perm === 'granted') {
             customDirHandle = savedHandle;
             saveLocation.value = '\uD83D\uDCC1 ' + savedHandle.name;
