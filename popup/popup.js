@@ -2077,12 +2077,36 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     return { el: null, checked: false };
   }
 
-  // 이미지 우상단의 작은 체크마크 아이콘 찾기 (클릭 전용)
-  // findCheckmarkFor의 method A/B는 래퍼를 반환 → 클릭 시 다이얼로그 열림
-  // 이 함수는 method C 로직으로 실제 클릭 가능한 작은 요소만 반환
+  // 이미지 우상단의 체크마크 요소 찾기 (클릭 전용)
+  // 전략 1: elementFromPoint로 체크마크 좌표에 있는 요소 직접 찾기
+  // 전략 2: DOM 탐색 폴백 (기존 method C)
   function findSmallCheckmark(imgEl) {
     var imgRect = imgEl.getBoundingClientRect();
-    var allSmall = sidebarRoot.querySelectorAll('button, [role="button"], div, span, svg');
+
+    // 전략 1: elementFromPoint — 이미지 우상단 체크마크 위치에서 요소 직접 찾기
+    var checkPositions = [
+      { x: imgRect.right - 18, y: imgRect.top + 18 },   // 우상단 18px 안쪽
+      { x: imgRect.right - 12, y: imgRect.top + 12 },   // 우상단 12px 안쪽
+      { x: imgRect.right - 25, y: imgRect.top + 25 },   // 우상단 25px 안쪽
+    ];
+    for (var p = 0; p < checkPositions.length; p++) {
+      var hitEl = document.elementFromPoint(checkPositions[p].x, checkPositions[p].y);
+      if (hitEl && hitEl !== imgEl && hitEl !== document.body && hitEl !== document.documentElement) {
+        // 이미지 자체나 이미지 부모가 아닌, 체크마크 관련 요소인지 확인
+        if (hitEl.tagName === 'IMG') continue; // 이미지 자체 스킵
+        var hitRect = hitEl.getBoundingClientRect();
+        // 작은 요소(체크마크)이거나 SVG/path인 경우
+        if (hitRect.width <= 60 && hitRect.height <= 60) {
+          console.log('[Whisk Auto] findSmallCheckmark: elementFromPoint 발견 — ' +
+            hitEl.tagName + ' ' + Math.round(hitRect.width) + 'x' + Math.round(hitRect.height) +
+            ' at(' + Math.round(hitRect.left) + ',' + Math.round(hitRect.top) + ')');
+          return hitEl;
+        }
+      }
+    }
+
+    // 전략 2: DOM 탐색 폴백
+    var allSmall = sidebarRoot.querySelectorAll('button, [role="button"], div, span, svg, input, label');
     for (var j = 0; j < allSmall.length; j++) {
       var sr = allSmall[j].getBoundingClientRect();
       if (sr.width >= 10 && sr.width <= 50 && sr.height >= 10 && sr.height <= 50 &&
@@ -2095,10 +2119,15 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         var hasSvg = el.tagName === 'svg' || el.tagName === 'SVG' ||
                      (el.querySelector && el.querySelector('svg, path'));
         if (hasVisibleBg || hasSvg) {
+          console.log('[Whisk Auto] findSmallCheckmark: DOM탐색 발견 — ' +
+            el.tagName + ' ' + Math.round(sr.width) + 'x' + Math.round(sr.height));
           return el;
         }
       }
     }
+    console.log('[Whisk Auto] findSmallCheckmark: 체크마크 미발견 (img at ' +
+      Math.round(imgRect.left) + ',' + Math.round(imgRect.top) + ' ' +
+      Math.round(imgRect.width) + 'x' + Math.round(imgRect.height) + ')');
     return null;
   }
 
