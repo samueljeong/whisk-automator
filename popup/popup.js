@@ -259,6 +259,29 @@ function findProjectKeyByName(name) {
   return null;
 }
 
+// style.txt 파싱: [접두어] / [접미어] 섹션으로 구분
+function parseStyleTxt(text) {
+  const result = { prefix: '', suffix: '' };
+  let currentSection = null;
+  for (const line of text.split('\n')) {
+    const trimmed = line.trim();
+    if (trimmed === '[접두어]' || trimmed === '[prefix]') {
+      currentSection = 'prefix';
+      continue;
+    }
+    if (trimmed === '[접미어]' || trimmed === '[suffix]') {
+      currentSection = 'suffix';
+      continue;
+    }
+    // #으로 시작하는 줄은 주석
+    if (trimmed.startsWith('#')) continue;
+    if (currentSection && trimmed) {
+      result[currentSection] += (result[currentSection] ? ' ' : '') + trimmed;
+    }
+  }
+  return result;
+}
+
 // 폴더에서 캐릭터 스캔
 // 구조: rootFolder/ → 프로젝트폴더/ → 캐릭터이미지.jpg
 // 폴더 구조: whisk / 피사체|장면|스타일 / 프로젝트명 / 이미지.jpg
