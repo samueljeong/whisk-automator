@@ -2946,23 +2946,15 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
               // 업로드된 캐릭터 순서 기록 (setActiveCharacters에서 사용)
               characterUploadOrder = charNames.map(function(n) { return n.trim(); });
 
-              // 모든 업로드 완료 후 한번만 분석 대기 (스타일도 전환됐으면 추가 대기)
-              var waitTime = (styleUploaded || stylePresetSwitched) ? 9000 : 7000;
-              console.log(`[Whisk Auto] 전체 분석 대기 (${waitTime / 1000}초${stylePresetSwitched ? ', 스타일 포함' : ''})...`);
+              // 모든 업로드 완료 후 한번만 분석 대기
+              var waitTime = styleUploaded ? 9000 : 7000;
+              console.log(`[Whisk Auto] 전체 분석 대기 (${waitTime / 1000}초)...`);
               await sleep(waitTime);
               styleUploaded = false;
               console.log('[Whisk Auto] 분석 완료, 생성 시작');
-            } else if (stylePresetSwitched) {
-              // 캐릭터 없는데 스타일만 전환된 경우 → 스타일 분석 대기
-              console.log('[Whisk Auto] 스타일 분석 대기 (6초)...');
-              await sleep(6000);
             }
 
             currentCharacterGroup = charGroup;
-          } else if (stylePresetSwitched) {
-            // 캐릭터는 그대로인데 스타일만 전환된 경우 → 스타일 분석 대기
-            console.log('[Whisk Auto] 스타일 분석 대기 (6초)...');
-            await sleep(6000);
           }
 
           // --- 장면(Scene) 슬롯 전환 ---
