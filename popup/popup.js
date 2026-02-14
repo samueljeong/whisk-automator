@@ -2400,6 +2400,9 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         if (uploadSuccess) {
           document.documentElement.removeAttribute('data-whisk-upload-done');
           console.log('[Whisk Auto] 전략A(⊕+MAIN) 성공!');
+          // 업로드 후 검증: 의도한 슬롯에 실제로 이미지가 들어갔는지
+          await sleep(500);
+          debugSectionLayout('업로드후:' + slotName);
           return true;
         }
         console.log('[Whisk Auto] 전략A 실패, 전략B로...');
