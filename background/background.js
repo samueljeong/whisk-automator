@@ -22,6 +22,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ success: true });
       break;
 
+    case 'INJECT_INTERCEPTOR':
+      injectFileInterceptor(sender.tab?.id || message.tabId)
+        .then(() => sendResponse({ success: true }))
+        .catch(e => sendResponse({ success: false, error: e.message }));
+      return true; // async response
+
     // Forward progress messages from content script to popup
     case 'PROGRESS_UPDATE':
     case 'AUTOMATION_COMPLETE':
