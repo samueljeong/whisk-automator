@@ -2828,6 +2828,9 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
 
           const charGroup = item.characterGroup || ''; // 정렬된 캐릭터 조합 키
 
+          // [진단] 캐릭터 업로드 판단 로그
+          console.log('[Whisk Auto] [DIAG] charGroup="' + charGroup + '" current="' + currentCharacterGroup + '" character="' + (item.character || '') + '" hasChars=' + (characters ? Object.keys(characters).length : 'null'));
+
           // 캐릭터 조합이 바뀌었는지 확인 (재시도 시 이미 같은 캐릭터이므로 자연스럽게 건너뜀)
           if (charGroup !== currentCharacterGroup) {
             // 1. 기존 피사체 모두 해제
