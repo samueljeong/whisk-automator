@@ -3384,8 +3384,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     case 'SAVE_IMAGE_DATA':
       // File System Access API로 커스텀 폴더에 저장
-      if (customDirHandle) {
-        (async () => {
+      (async () => {
+        if (customDirHandle) {
           try {
             const dataUrl = message.dataUrl;
             const base64 = dataUrl.split(',')[1];
@@ -3399,11 +3399,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             await writable.write(bytes);
             await writable.close();
             console.log('[Whisk] 파일 저장 완료:', message.filename);
+            return;
           } catch (e) {
-            console.error('[Whisk] 파일 저장 실패:', e);
+            console.error('[Whisk] 커스텀 폴더 저장 실패, 다운로드 폴백:', e);
           }
-        })();
-      }
+        }
+        // 폴백: customDirHandle 없거나 저장 실패 시 chrome.downloads로 저장
+        try {
+          const savePath = saveLocation.value.trim() || 'whisk-images';
+          const fullPath = savePath.replace(/^[\uD83D\uDCC1]\s*/, '') + '/' + message.filename;
+          chrome.runtime.sendMessage({
+            action: 'DOWNLOAD_IMAGE',
+            url: message.dataUrl,
+            filename: fullPath
+          });
+          console.log('[Whisk] 다운로드 폴백 사용:', fullPath);
+        } catch (e2) {
+          console.error('[Whisk] 다운로드 폴백도 실패:', e2);
+        }
+      })();
       break;
   }
 });
