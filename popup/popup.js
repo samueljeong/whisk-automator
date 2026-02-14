@@ -2829,6 +2829,12 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
             // 2. 새 캐릭터 조합 업로드 (배경이면 비우기만)
             if (charGroup && characters) {
               var charNames = charGroup.split(',');
+              // Whisk precise mode 에셋 제한: 피사체 최대 2개 (스타일/장면 슬롯 포함 시 초과 방지)
+              var MAX_SUBJECTS = 2;
+              if (charNames.length > MAX_SUBJECTS) {
+                console.log(`[Whisk Auto] ⚠️ 캐릭터 ${charNames.length}명 → 상위 ${MAX_SUBJECTS}명만 업로드 (precise mode 제한)`);
+                charNames = charNames.slice(0, MAX_SUBJECTS);
+              }
               console.log(`[Whisk Auto] 캐릭터 ${charNames.length}명 빠른 업로드: ${charNames.join(', ')}`);
 
               // 모든 캐릭터 빠르게 업로드 (개별 분석 대기 없음)
