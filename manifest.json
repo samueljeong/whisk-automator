@@ -33,6 +33,16 @@
         "https://labs.google.com/*",
         "https://*.google.com/*whisk*"
       ],
+      "js": ["content/interceptor.js"],
+      "world": "MAIN",
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "https://labs.google/*",
+        "https://labs.google.com/*",
+        "https://*.google.com/*whisk*"
+      ],
       "js": ["content/content.js"]
     }
   ],
