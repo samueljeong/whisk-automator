@@ -2282,8 +2282,22 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     rowButtons.sort(function(a, b) { return a.left - b.left; });
     if (rowButtons.length > 0) {
       var addBtn = rowButtons[rowButtons.length - 1];
+      var abr = addBtn.el.getBoundingClientRect();
+      // 이 버튼이 실제로 어느 섹션 범위에 있는지 검증
+      var ranges = getSectionRanges();
+      var actualSection = '범위밖';
+      for (var v = 0; v < ranges.length; v++) {
+        if (abr.top >= ranges[v].top && abr.top < ranges[v].end) {
+          actualSection = ranges[v].key;
+          break;
+        }
+      }
       console.log('[Whisk Auto] ⊕ 버튼 발견 (' + labelText + '): ' + addBtn.el.tagName +
-        ' at(' + Math.round(addBtn.left) + ',' + Math.round(addBtn.el.getBoundingClientRect().top) + ')');
+        ' at(' + Math.round(addBtn.left) + ',' + Math.round(abr.top) + ')' +
+        ' 실제섹션=' + actualSection);
+      if (actualSection !== LABEL_TO_KEY[labelText]) {
+        console.error('[Whisk Auto] ⚠️ ⊕ 버튼 위치 불일치! 요청=' + labelText + ' 실제=' + actualSection);
+      }
       return addBtn.el;
     }
     console.log('[Whisk Auto] ⊕ 버튼 미발견 (' + labelText + ')');
