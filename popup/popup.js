@@ -301,6 +301,14 @@ async function scanCharacterFolder(rootHandle) {
       proj.styleImage = '';
       proj.styleFromFolder = false;
     }
+    if (proj.stylePrefixFromFolder) {
+      proj.stylePrefix = '';
+      proj.stylePrefixFromFolder = false;
+    }
+    if (proj.styleSuffixFromFolder) {
+      proj.styleSuffix = '';
+      proj.styleSuffixFromFolder = false;
+    }
   }
 
   // 슬롯 폴더명 → 타입 매핑
