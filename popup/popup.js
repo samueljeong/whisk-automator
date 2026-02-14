@@ -1346,11 +1346,9 @@ async function startAutomation() {
   // 캐릭터 맵 + 장면 맵 생성 (별명 포함)
   const characterMap = buildCharacterMap();
   const sceneMap = buildSceneMap();
-  const styleMap = buildStyleMap();
-
   // 리로드 후 재개용 캐시 저장
   sortedPromptsCache = promptsWithCharacters;
-  automationParams = { delayMs, shouldDownload, projectStyleImage, characterMap, savePath, sceneMap, styleMap, useCustomDir: !!customDirHandle };
+  automationParams = { delayMs, shouldDownload, projectStyleImage, characterMap, savePath, sceneMap, useCustomDir: !!customDirHandle };
   completedOffset = 0;
 
   // 이전 실행 플래그 초기화 (확장 리로드 시 ISOLATED world에 잔존 방지)
