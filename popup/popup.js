@@ -2060,6 +2060,32 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     return null;
   }
 
+  // 디버그: 현재 섹션 레이아웃 전체 출력
+  function debugSectionLayout(tag) {
+    var prefix = '[Whisk Auto] [LAYOUT' + (tag ? ':' + tag : '') + '] ';
+    var ranges = getSectionRanges();
+    console.log(prefix + '=== 섹션 Y좌표 ===');
+    for (var i = 0; i < ranges.length; i++) {
+      console.log(prefix + ranges[i].key + '("' + ranges[i].label + '"): Y=' +
+        Math.round(ranges[i].top) + '~' + Math.round(ranges[i].end) +
+        ' (X=' + Math.round(ranges[i].labelLeft) + ')');
+    }
+    // 각 슬롯의 이미지 삭제 버튼 위치
+    var delBtns = sidebarRoot.querySelectorAll('[aria-label="이미지 삭제"]');
+    for (var d = 0; d < delBtns.length; d++) {
+      var r = delBtns[d].getBoundingClientRect();
+      var sec = '범위밖';
+      for (var ri = 0; ri < ranges.length; ri++) {
+        if (r.top >= ranges[ri].top && r.top < ranges[ri].end) {
+          sec = ranges[ri].key;
+          break;
+        }
+      }
+      console.log(prefix + '삭제버튼[' + d + ']: Y=' + Math.round(r.top) + ' X=' + Math.round(r.left) + ' → ' + sec);
+    }
+    return ranges;
+  }
+
   // 피사체 섹션 이미지를 Y위치 순으로 가져오기
   function getSubjectImages() {
     var range = getSectionYRange('피사체');
