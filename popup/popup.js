@@ -84,7 +84,7 @@ function buildDefaultProjects() {
       scenes: yongaScenes,
       inheritCommon: true,
       styleImage: (typeof STYLE_REFERENCE_BASE64 !== 'undefined' && STYLE_REFERENCE_BASE64) || "", // v3 분위기 스타일 레퍼런스
-      stylePrefix: "Polished premium Korean murim manhwa, smooth detailed linework with bold outlines, rich vibrant cel-shading with warm cinematic lighting, expressive comic-book shading with soft gradients, semi-realistic mature proportions, detailed expressive faces. ",
+      stylePrefix: "Polished premium Korean murim manhwa, Joseon-era Korean martial arts world, hanok architecture with curved giwa tile roofs, Korean pine trees and rocky granite mountains, characters wearing dopo and durumagi robes with sangtu topknot hairstyles, smooth detailed linework with bold outlines, rich vibrant cel-shading with warm cinematic lighting, expressive comic-book shading with soft gradients, semi-realistic mature proportions, detailed expressive faces. ",
       styleSuffix: ". Clean high-quality digital illustration, vivid saturated colors, dramatic but warm atmosphere, dynamic energy. CRITICAL: No text, no speech bubbles, no watermark, no logos."
     },
     "church": {
