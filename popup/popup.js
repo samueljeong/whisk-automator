@@ -1453,7 +1453,17 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
   var LABEL_TO_KEY = { '피사체': 'subject', '장면': 'scene', '스타일': 'style' };
 
   async function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    // 긴 대기 중 정지 신호를 빠르게 감지하기 위해 500ms 단위로 체크
+    if (ms <= 500) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    var elapsed = 0;
+    while (elapsed < ms) {
+      if (window.__whiskAutoStop) throw new Error('__STOPPED__');
+      var chunk = Math.min(500, ms - elapsed);
+      await new Promise(resolve => setTimeout(resolve, chunk));
+      elapsed += chunk;
+    }
   }
 
   // Whisk 팝업/모달 자동 닫기 (Discord 초대, 피드백 등)
