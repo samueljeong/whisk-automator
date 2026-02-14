@@ -2673,11 +2673,11 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     }
 
     // 시작 시 정지 플래그 초기화
-    window.__whiskAutoStop = false;
+    document.documentElement.removeAttribute('data-whisk-stop');
 
     for (let i = 0; i < promptsWithCharacters.length; i++) {
-      // 정지 플래그 확인
-      if (window.__whiskAutoStop) {
+      // 정지 플래그 확인 (DOM 속성 기반 — 모든 월드에서 공유)
+      if (isStopRequested()) {
         console.log('[Whisk Auto] 사용자 정지 요청 — 자동화 중단');
         try {
           chrome.runtime.sendMessage({ action: 'AUTOMATION_STOPPED' });
