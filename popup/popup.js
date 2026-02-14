@@ -2532,14 +2532,35 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         }
       }
 
-      // Step 5: 전략 A - ⊕ 버튼 클릭
+      // Step 5: 전략 A - "이미지 업로드" 버튼 직접 클릭 (showOpenFilePicker 트리거)
       debugSectionLayout('업로드전:' + slotName);
       var uploadSuccess = false;
-      var addBtn = findSectionAddButton(labelText);
-      if (addBtn) {
-        var addBtnR = addBtn.getBoundingClientRect();
-        console.log('[Whisk Auto] 전략A: ⊕ 버튼 클릭 (' + slotName + ') pos=(' + Math.round(addBtnR.left) + ',' + Math.round(addBtnR.top) + ')');
-        addBtn.click();
+      var uploadBtn = findSectionUploadButton(labelText);
+
+      // "이미지 업로드" 버튼이 없으면 ⊕ 클릭으로 새 슬롯 생성 후 재탐색
+      if (!uploadBtn) {
+        console.log('[Whisk Auto] "이미지 업로드" 버튼 없음, ⊕로 새 슬롯 생성...');
+        var addBtn = findSectionAddButton(labelText);
+        if (addBtn) {
+          addBtn.click();
+          await sleep(1500); // 새 슬롯 렌더링 대기
+          // 대상 섹션으로 재스크롤
+          var postAddRanges = getSectionRanges();
+          for (var par = 0; par < postAddRanges.length; par++) {
+            if (postAddRanges[par].label === labelText && postAddRanges[par].el) {
+              postAddRanges[par].el.scrollIntoView({ block: 'start', behavior: 'instant' });
+              await sleep(300);
+              break;
+            }
+          }
+          uploadBtn = findSectionUploadButton(labelText);
+        }
+      }
+
+      if (uploadBtn) {
+        var uploadBtnR = uploadBtn.getBoundingClientRect();
+        console.log('[Whisk Auto] 전략A: "이미지 업로드" 클릭 (' + slotName + ') pos=(' + Math.round(uploadBtnR.left) + ',' + Math.round(uploadBtnR.top) + ')');
+        uploadBtn.click();
         // MAIN world에서 파일 주입 완료 대기
         for (var wait = 0; wait < 10; wait++) {
           await sleep(500);
@@ -2555,24 +2576,14 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         }
         if (uploadSuccess) {
           document.documentElement.removeAttribute('data-whisk-upload-done');
-          console.log('[Whisk Auto] 전략A(⊕+MAIN) 성공!');
+          console.log('[Whisk Auto] 전략A(이미지업로드+MAIN) 성공!');
           await sleep(500);
           debugSectionLayout('업로드후:' + slotName);
           return true;
         }
-        // 전략A 실패 → ⊕ 클릭으로 생긴 빈 슬롯 정리
-        console.log('[Whisk Auto] 전략A 실패 → 빈 슬롯 정리 시도...');
-        document.documentElement.removeAttribute('data-whisk-upload-done');
-        try {
-          var emptyCleared = await clearSlotImages(slotName);
-          if (emptyCleared > 0) {
-            console.log('[Whisk Auto] 빈 슬롯 ' + emptyCleared + '개 정리 완료');
-            await sleep(500);
-          }
-        } catch(cleanErr) {
-          console.warn('[Whisk Auto] 빈 슬롯 정리 실패:', cleanErr.message);
-        }
         console.log('[Whisk Auto] 전략A 실패, 전략B로...');
+      } else {
+        console.log('[Whisk Auto] "이미지 업로드" 버튼 미발견, 전략B로...');
       }
 
       // Step 6: 전략 B - 빈 슬롯 클릭
