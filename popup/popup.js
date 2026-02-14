@@ -2414,14 +2414,32 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         reader.readAsDataURL(blob);
       });
 
-      // Step 4: MAIN world persistent interceptor용 데이터 설정
-      // (interceptor는 popup.js에서 chrome.scripting.executeScript world:'MAIN'으로 사전 주입됨)
-      // DOM attribute로 ISOLATED↔MAIN 통신 (DOM은 양쪽 world에서 공유됨)
+      // Step 4: 인터셉터 존재 확인 + 자동 주입
+      var interceptorReady = document.documentElement.getAttribute('data-whisk-interceptor-ready') === 'true';
+      console.log('[Whisk Auto] interceptor 상태:', interceptorReady ? '설치됨' : '미설치');
+
+      if (!interceptorReady) {
+        console.warn('[Whisk Auto] interceptor 미설치! background에 주입 요청...');
+        try {
+          await new Promise(function(resolve) {
+            chrome.runtime.sendMessage({ action: 'INJECT_INTERCEPTOR' }, function(resp) {
+              console.log('[Whisk Auto] interceptor 주입 응답:', resp);
+              resolve(resp);
+            });
+          });
+          await sleep(500);
+          interceptorReady = document.documentElement.getAttribute('data-whisk-interceptor-ready') === 'true';
+          console.log('[Whisk Auto] interceptor 재주입 결과:', interceptorReady ? '성공' : '실패');
+        } catch (e) {
+          console.error('[Whisk Auto] interceptor 주입 요청 실패:', e.message);
+        }
+      }
+
+      // Step 4.5: 데이터 설정 + 섹션 스크롤
       document.documentElement.setAttribute('data-whisk-upload', dataUrl);
       document.documentElement.removeAttribute('data-whisk-upload-done');
       console.log('[Whisk Auto] data-whisk-upload 설정 완료 (길이: ' + dataUrl.length + ')');
 
-      // Step 4.5: ⊕ 클릭 직전 대상 섹션으로 재스크롤 (clearing 중 이동 방지)
       var preClickRanges = getSectionRanges();
       for (var psi = 0; psi < preClickRanges.length; psi++) {
         if (preClickRanges[psi].label === labelText && preClickRanges[psi].el) {
@@ -2431,19 +2449,17 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         }
       }
 
-      // Step 5: 전략 A - "이미지 업로드" 버튼 직접 클릭 (showOpenFilePicker 트리거)
+      // Step 5: "이미지 업로드" 버튼 찾기
       debugSectionLayout('업로드전:' + slotName);
       var uploadSuccess = false;
       var uploadBtn = findSectionUploadButton(labelText);
 
-      // "이미지 업로드" 버튼이 없으면 ⊕ 클릭으로 새 슬롯 생성 후 재탐색
       if (!uploadBtn) {
         console.log('[Whisk Auto] "이미지 업로드" 버튼 없음, ⊕로 새 슬롯 생성...');
         var addBtn = findSectionAddButton(labelText);
         if (addBtn) {
           addBtn.click();
-          await sleep(1500); // 새 슬롯 렌더링 대기
-          // 대상 섹션으로 재스크롤
+          await sleep(1500);
           var postAddRanges = getSectionRanges();
           for (var par = 0; par < postAddRanges.length; par++) {
             if (postAddRanges[par].label === labelText && postAddRanges[par].el) {
@@ -2456,11 +2472,12 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         }
       }
 
+      // Step 6: 전략 A - 버튼 클릭 + interceptor 대기
       if (uploadBtn) {
         var uploadBtnR = uploadBtn.getBoundingClientRect();
         console.log('[Whisk Auto] 전략A: "이미지 업로드" 클릭 (' + slotName + ') pos=(' + Math.round(uploadBtnR.left) + ',' + Math.round(uploadBtnR.top) + ')');
         uploadBtn.click();
-        // MAIN world에서 파일 주입 완료 대기
+
         for (var wait = 0; wait < 10; wait++) {
           await sleep(500);
           var doneAttr = document.documentElement.getAttribute('data-whisk-upload-done');
@@ -2469,25 +2486,33 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
             break;
           }
           if (doneAttr === 'error') {
-            console.error('[Whisk Auto] 전략A: MAIN world에서 변환 오류');
+            console.error('[Whisk Auto] 전략A: 변환 오류');
             break;
           }
         }
         if (uploadSuccess) {
           document.documentElement.removeAttribute('data-whisk-upload-done');
-          console.log('[Whisk Auto] 전략A(이미지업로드+MAIN) 성공!');
+          console.log('[Whisk Auto] 전략A 성공!');
           await sleep(500);
           debugSectionLayout('업로드후:' + slotName);
           return true;
         }
-        console.log('[Whisk Auto] 전략A 실패, 전략B로...');
-      } else {
-        console.log('[Whisk Auto] "이미지 업로드" 버튼 미발견, 전략B로...');
+        console.log('[Whisk Auto] 전략A 실패 (5초 대기 초과), 전략B로...');
       }
 
-      // Step 6: 전략 B - 재스크롤 후 "이미지 업로드" 버튼 재탐색
+      // Step 7: 전략 B - 재스크롤 + 재주입 + 재시도
       if (!uploadSuccess) {
-        // 사이드바 재스크롤 (전략A 중 스크롤 변경 대비)
+        console.log('[Whisk Auto] 전략B: interceptor 재주입 후 재시도');
+
+        // 재주입 요청
+        try {
+          await new Promise(function(resolve) {
+            chrome.runtime.sendMessage({ action: 'INJECT_INTERCEPTOR' }, resolve);
+          });
+          await sleep(300);
+        } catch(e) {}
+
+        // 재스크롤
         var retryRanges = getSectionRanges();
         for (var rri = 0; rri < retryRanges.length; rri++) {
           if (retryRanges[rri].label === labelText && retryRanges[rri].el) {
@@ -2497,19 +2522,13 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
           }
         }
 
-        // MAIN world 가로채기 재설정
+        // 데이터 재설정 (이전 시도에서 소모됐을 수 있음)
         document.documentElement.setAttribute('data-whisk-upload', dataUrl);
         document.documentElement.removeAttribute('data-whisk-upload-done');
-        var interceptScript2 = document.createElement('script');
-        interceptScript2.textContent = interceptScript.textContent;
-        document.head.appendChild(interceptScript2);
-        interceptScript2.remove();
 
-        // "이미지 업로드" 버튼 재탐색
         var retryUploadBtn = findSectionUploadButton(labelText);
         if (retryUploadBtn) {
-          var retryR = retryUploadBtn.getBoundingClientRect();
-          console.log('[Whisk Auto] 전략B: "이미지 업로드" 재탐색 성공 (' + slotName + ') pos=(' + Math.round(retryR.left) + ',' + Math.round(retryR.top) + ')');
+          console.log('[Whisk Auto] 전략B: 재시도 클릭');
           retryUploadBtn.click();
           for (var wait2 = 0; wait2 < 10; wait2++) {
             await sleep(500);
@@ -2520,63 +2539,41 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
           }
           if (uploadSuccess) {
             document.documentElement.removeAttribute('data-whisk-upload-done');
-            console.log('[Whisk Auto] 전략B(재탐색+MAIN) 성공!');
+            console.log('[Whisk Auto] 전략B 성공!');
             await sleep(500);
-            debugSectionLayout('업로드후:' + slotName);
             return true;
-          }
-        }
-
-        // fallback: findWhiskSlots 기반 큰 슬롯 클릭
-        if (!uploadSuccess) {
-          var sections = findWhiskSlots();
-          var slots = sections[slotName] || [];
-          if (slots.length > 0) {
-            // 가로채기 재설정 (이전 시도에서 소모됐을 수 있음)
-            document.documentElement.setAttribute('data-whisk-upload', dataUrl);
-            document.documentElement.removeAttribute('data-whisk-upload-done');
-            var interceptScript3 = document.createElement('script');
-            interceptScript3.textContent = interceptScript.textContent;
-            document.head.appendChild(interceptScript3);
-            interceptScript3.remove();
-
-            var slotR = slots[0].getBoundingClientRect();
-            console.log('[Whisk Auto] 전략B-fallback: 슬롯 클릭 (' + slotName + ') pos=(' + Math.round(slotR.left) + ',' + Math.round(slotR.top) + ') size=' + Math.round(slotR.width) + 'x' + Math.round(slotR.height));
-            slots[0].click();
-            for (var wait3 = 0; wait3 < 10; wait3++) {
-              await sleep(500);
-              if (document.documentElement.getAttribute('data-whisk-upload-done') === 'true') {
-                uploadSuccess = true;
-                break;
-              }
-            }
-            if (uploadSuccess) {
-              document.documentElement.removeAttribute('data-whisk-upload-done');
-              console.log('[Whisk Auto] 전략B-fallback 성공!');
-              await sleep(500);
-              return true;
-            }
           }
         }
       }
 
-      // Step 7: 전략 C - 숨겨진 file input 직접 조작
+      // Step 8: 전략 C - 숨겨진 file input 직접 조작 (interceptor 우회)
       if (!uploadSuccess) {
-        console.log('[Whisk Auto] 전략C: 숨겨진 file input 직접 조작');
+        console.log('[Whisk Auto] 전략C: input[type=file] 직접 조작');
+        // 먼저 버튼 클릭으로 file input이 생성되게 한 후 찾기
+        var fileInputsBefore = document.querySelectorAll('input[type="file"]').length;
+        var btn3 = findSectionUploadButton(labelText);
+        if (btn3) {
+          // data-whisk-upload 설정해둔 상태에서 클릭 → interceptor가 잡을 수도 있음
+          document.documentElement.setAttribute('data-whisk-upload', dataUrl);
+          document.documentElement.removeAttribute('data-whisk-upload-done');
+          btn3.click();
+          await sleep(1000);
+        }
+
         var fileInputs = document.querySelectorAll('input[type="file"]');
         if (fileInputs.length > 0) {
+          console.log('[Whisk Auto] 전략C: file input ' + fileInputs.length + '개 발견');
           var file = new File([blob], 'upload.png', { type: 'image/png' });
           var dt = new DataTransfer();
           dt.items.add(file);
-          // 마지막 file input 사용 (가장 최근 생성된 것)
           var fi = fileInputs[fileInputs.length - 1];
           fi.files = dt.files;
           fi.dispatchEvent(new Event('change', { bubbles: true }));
+          fi.dispatchEvent(new Event('input', { bubbles: true }));
           await sleep(2000);
-          // 업로드 성공 여부 확인 (슬롯에 이미지가 생겼는지)
           uploadSuccess = verifySlotHasImage(slotName);
           if (uploadSuccess) {
-            console.log('[Whisk Auto] 전략C(직접조작) 성공!');
+            console.log('[Whisk Auto] 전략C 성공!');
             return true;
           }
         }
