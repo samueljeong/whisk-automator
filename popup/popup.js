@@ -2350,8 +2350,8 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       // Step 4: 전략 A - ⊕ 버튼 클릭 (이미지가 있어도 교체 가능)
       var addBtn = findSectionAddButton(labelText);
       if (addBtn) {
-        console.log('[Whisk Auto] 전략A: ⊕ 버튼 클릭');
-        simulateRealClick(addBtn);
+        console.log('[Whisk Auto] 전략A: ⊕ 버튼 클릭 (.click())');
+        addBtn.click();
         await sleep(2000);
 
         if (uploadSuccess) {
@@ -2368,26 +2368,15 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       var slots = sections[slotName] || [];
       if (slots.length > 0) {
         var targetSlot = slots[0];
-        var slotRect = targetSlot.getBoundingClientRect();
-        // 슬롯에 이미 이미지가 있는지 확인
-        var hasImg = targetSlot.querySelector('img');
-        console.log('[Whisk Auto] 전략B: 슬롯 클릭 (' + (hasImg ? '이미지 있음' : '빈 슬롯') + ')');
+        console.log('[Whisk Auto] 전략B: 슬롯 클릭 (.click())');
+        targetSlot.click();
+        await sleep(2000);
 
-        if (!hasImg) {
-          // 빈 슬롯 → 직접 클릭
-          if (slotRect.left >= 0 && slotRect.top >= 0) {
-            simulateRealClick(targetSlot);
-          } else {
-            targetSlot.click();
-          }
-          await sleep(2000);
-
-          if (uploadSuccess) {
-            HTMLInputElement.prototype.click = originalClick;
-            observer.disconnect();
-            console.log('[Whisk Auto] 전략B(슬롯클릭) 성공!');
-            return true;
-          }
+        if (uploadSuccess) {
+          HTMLInputElement.prototype.click = originalClick;
+          observer.disconnect();
+          console.log('[Whisk Auto] 전략B(슬롯클릭) 성공!');
+          return true;
         }
       }
 
