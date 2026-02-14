@@ -564,7 +564,8 @@ async function saveState() {
       projects: PROJECTS,
       currentProject: currentProject,
       saveLocation: saveLocation.value.trim() || 'whisk-images',
-      useCustomDir: !!customDirHandle
+      useCustomDir: !!customDirHandle,
+      customDirName: customDirHandle ? customDirHandle.name : null
     });
   } catch (error) {
     console.error('Failed to save state:', error);
