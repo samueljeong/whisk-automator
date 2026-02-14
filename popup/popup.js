@@ -533,13 +533,12 @@ async function loadState() {
             saveLocation.value = '\uD83D\uDCC1 ' + savedHandle.name;
             saveLocation.readOnly = true;
           } else {
-            // Permission lost — 커스텀 폴더만 해제, 텍스트 경로는 유지
+            // Permission lost — 폴더 이름을 다운로드 하위 경로로 폴백
             await clearDirHandle();
-            // result.saveLocation이 📁로 시작하면 기본값 복원, 아니면 유지
-            if (!result.saveLocation || result.saveLocation.startsWith('\uD83D\uDCC1')) {
-              saveLocation.value = 'whisk-images';
-            }
+            var fallbackName = result.customDirName || 'whisk-images';
+            saveLocation.value = fallbackName;
             saveLocation.readOnly = false;
+            console.log('[Whisk] 커스텀 폴더 권한 만료 → 다운로드/' + fallbackName + ' 으로 폴백');
           }
         }
       } catch (e) {
