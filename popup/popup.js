@@ -2214,72 +2214,44 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
   // 모두 해제 실패 시 에러 throw
   async function clearSlotImages(slotName) {
     var labelText = SLOT_TO_LABEL[slotName];
+    var totalDeleted = 0;
+    var maxAttempts = 10;
 
-    var totalCleared = 0;
-    var maxRetries = 5;
-
-    for (var attempt = 0; attempt < maxRetries; attempt++) {
+    for (var attempt = 0; attempt < maxAttempts; attempt++) {
       var range = getSectionYRange(labelText);
       if (!range) {
         console.log('[Whisk Auto] clearSlot: 섹션 ' + labelText + ' 미발견');
-        return totalCleared;
+        return totalDeleted;
       }
 
-      // 매 시도마다 이미지 목록 새로 수집 (DOM 변경 반영)
-      var imgs = sidebarRoot.querySelectorAll('img');
-      var checkedImgs = [];
-      for (var i = 0; i < imgs.length; i++) {
-        var ir = imgs[i].getBoundingClientRect();
-        if (ir.top >= range.top && ir.top < range.end && ir.width > 50 && ir.height > 50) {
-          var checkInfo = findCheckmarkFor(imgs[i]);
-          if (checkInfo.checked) {
-            checkedImgs.push({ img: imgs[i], checkEl: checkInfo.el });
-          }
+      // 섹션 Y범위 내의 "이미지 삭제" 버튼 찾기
+      var delBtns = sidebarRoot.querySelectorAll('[aria-label="이미지 삭제"]');
+      var targetBtn = null;
+      for (var i = 0; i < delBtns.length; i++) {
+        var r = delBtns[i].getBoundingClientRect();
+        if (r.top >= range.top && r.top < range.end && r.left < 260) {
+          targetBtn = delBtns[i];
+          break;
         }
       }
 
-      if (checkedImgs.length === 0) {
-        if (attempt === 0) {
-          console.log('[Whisk Auto] clearSlot(' + labelText + '): 체크된 이미지 없음');
+      if (!targetBtn) {
+        if (totalDeleted > 0) {
+          console.log('[Whisk Auto] clearSlot(' + labelText + '): ' + totalDeleted + '개 삭제 완료');
         } else {
-          console.log('[Whisk Auto] clearSlot(' + labelText + '): 모두 해제 완료 (시도 ' + (attempt + 1) + '회)');
+          console.log('[Whisk Auto] clearSlot(' + labelText + '): 삭제할 이미지 없음');
         }
-        return totalCleared;
+        return totalDeleted;
       }
 
-      console.log('[Whisk Auto] clearSlot(' + labelText + '): 체크된 이미지 ' + checkedImgs.length + '개 해제' +
-        (attempt > 0 ? ' (재시도 ' + (attempt + 1) + ')' : ''));
-
-      for (var c = 0; c < checkedImgs.length; c++) {
-        var imgEl = checkedImgs[c].img;
-        console.log('[Whisk Auto]   체크마크 해제 시도 (' + (c + 1) + '/' + checkedImgs.length + ')');
-        var toggled = await toggleCheckmark(imgEl);
-        if (toggled) totalCleared++;
-      }
-
-      await sleep(1000);
+      console.log('[Whisk Auto] clearSlot(' + labelText + '): 이미지 삭제 (' + (totalDeleted + 1) + '번째)');
+      targetBtn.click();
+      totalDeleted++;
+      await sleep(800);
     }
 
-    // 최종 검증: 여전히 체크된 이미지가 있으면 에러
-    var finalRange = getSectionYRange(labelText);
-    if (finalRange) {
-      var finalImgs = sidebarRoot.querySelectorAll('img');
-      var stillChecked = 0;
-      for (var fi = 0; fi < finalImgs.length; fi++) {
-        var fir = finalImgs[fi].getBoundingClientRect();
-        if (fir.top >= finalRange.top && fir.top < finalRange.end && fir.width > 50 && fir.height > 50) {
-          var fc = findCheckmarkFor(finalImgs[fi]);
-          if (fc.checked) stillChecked++;
-        }
-      }
-      if (stillChecked > 0) {
-        console.error('[Whisk Auto] clearSlot(' + labelText + '): ' + stillChecked + '개 해제 실패! 페이지 새로고침 시도');
-        throw new Error('캐릭터 해제 실패 (' + stillChecked + '개 남음). 재시도합니다.');
-      }
-    }
-
-    console.log('[Whisk Auto] clearSlot(' + labelText + '): 총 ' + totalCleared + '개 해제 완료');
-    return totalCleared;
+    console.log('[Whisk Auto] clearSlot(' + labelText + '): 총 ' + totalDeleted + '개 삭제 완료');
+    return totalDeleted;
   }
 
   // 섹션 헤더의 ⊕(추가) 버튼 찾기 (getSectionRanges 활용)
