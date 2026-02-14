@@ -46,76 +46,22 @@ const characterWarning = document.getElementById('characterWarning');
 const warningText = document.getElementById('warningText');
 
 // 프로젝트별 캐릭터 정보
-// CHARACTER_BASE64는 characters_base64.js에서 로드됨
-function buildDefaultProjects() {
-  const base64 = (typeof CHARACTER_BASE64 !== 'undefined') ? CHARACTER_BASE64 : {};
-
-  // Base64 데이터에서 캐릭터 객체 생성
-  function charFromBase64(name) {
-    const data = base64[name];
-    if (!data) return null;
-    return { image: data.image, aliases: data.aliases || [name] };
+// 폴더 스캔으로 프로젝트를 생성합니다
+const DEFAULT_PROJECTS = {
+  "common": {
+    name: "공통",
+    characters: {},
+    scenes: {},
+    inheritCommon: false,
+    styleImage: "",
+    stylePrefix: "",
+    styleSuffix: "",
+    characterStyleMap: {}
   }
-
-  // 용아 프로젝트 캐릭터 빌드
-  const yongaChars = {};
-  const yongaScenes = {};
-  for (const [name, data] of Object.entries(base64)) {
-    if (data.type === 'scene') {
-      yongaScenes[name] = { image: data.image, aliases: data.aliases || [name] };
-    } else {
-      yongaChars[name] = { image: data.image, aliases: data.aliases || [name] };
-    }
-  }
-
-  return {
-    "common": {
-      name: "공통",
-      characters: {},
-      scenes: {},
-      inheritCommon: false,
-      styleImage: "",
-      stylePrefix: "",
-      styleSuffix: ""
-    },
-    "yonga": {
-      name: "용아",
-      characters: yongaChars,
-      scenes: yongaScenes,
-      inheritCommon: true,
-      styleImage: (typeof STYLE_REFERENCE_BASE64 !== 'undefined' && STYLE_REFERENCE_BASE64) || "", // v3 분위기 스타일 레퍼런스
-      stylePrefix: "Polished premium Korean murim manhwa, Joseon-era Korean martial arts world, hanok architecture with curved giwa tile roofs, Korean pine trees and rocky granite mountains, characters wearing dopo and durumagi robes with sangtu topknot hairstyles, smooth detailed linework with bold outlines, rich vibrant cel-shading with warm cinematic lighting, expressive comic-book shading with soft gradients, semi-realistic mature proportions, detailed expressive faces. ",
-      styleSuffix: ". Clean high-quality digital illustration, vivid saturated colors, dramatic but warm atmosphere, dynamic energy. CRITICAL: No text, no speech bubbles, no watermark, no logos."
-    },
-    "church": {
-      name: "교회묵상",
-      characters: {},
-      scenes: {},
-      inheritCommon: false,
-      styleImage: "",
-      stylePrefix: "Warm gentle watercolor illustration style, soft diffused lighting, muted purple and warm beige tones, ",
-      styleSuffix: ", peaceful contemplative atmosphere. CRITICAL: Generate ONLY the visual scene with NO text whatsoever. Absolutely NO letters, NO Korean characters, NO English words, NO speech bubbles, NO sound effects text, NO captions, NO watermarks. 16:9 aspect ratio."
-    }
-  };
-}
-
-const DEFAULT_PROJECTS = buildDefaultProjects();
+};
 
 let PROJECTS = { ...DEFAULT_PROJECTS };
-let currentProject = "yonga";
-
-// 캐릭터명 → 스타일 프리셋 매핑 (성별/나이별 스타일 이미지 자동 결정)
-const CHARACTER_STYLE_TYPES = {
-  '용아': 'style_ref_male', '염창': 'style_ref_male', '철무영': 'style_ref_male',
-  '독련': 'style_ref_male', '뇌황': 'style_ref_male', '흑염교주': 'style_ref_male',
-  '암영': 'style_ref_male', '당무결': 'style_ref_male', '독랑': 'style_ref_male',
-  '혈영': 'style_ref_male', '제갈명': 'style_ref_male',
-  '소연': 'style_ref_female', '당소화': 'style_ref_female',
-  '취광도인': 'style_ref_elder', '당천로': 'style_ref_elder', '제갈휘': 'style_ref_elder',
-  '석이': 'style_ref_boy',
-  '소소': 'style_ref_girl',
-};
-const MIXED_STYLE_PRESET = '용아 스타일';
+let currentProject = "common";
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
