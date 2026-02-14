@@ -2903,7 +2903,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
           }
         } catch (error) {
           // 정지 요청에 의한 중단
-          if (error.message === '__STOPPED__' || window.__whiskAutoStop) {
+          if (error.message === '__STOPPED__' || isStopRequested()) {
             console.log('[Whisk Auto] 사용자 정지 요청 — 자동화 중단');
             try { chrome.runtime.sendMessage({ action: 'AUTOMATION_STOPPED' }); } catch(e) {}
             return;
