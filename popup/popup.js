@@ -1374,7 +1374,7 @@ async function startAutomation() {
     await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: runWhiskAutomation,
-      args: [promptsWithCharacters, delayMs, shouldDownload, projectStyleImage, characterMap, savePath, sceneMap, styleMap, !!customDirHandle]
+      args: [promptsWithCharacters, delayMs, shouldDownload, projectStyleImage, characterMap, savePath, sceneMap, null, !!customDirHandle]
     });
   } catch (error) {
     console.error('[Popup] Script injection failed:', error);
