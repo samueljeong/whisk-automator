@@ -79,29 +79,22 @@
     <section class="style-section">
       <div class="style-header">
         <h2>프로젝트 스타일 설정</h2>
-        <button id="captureStyleBtn" class="btn btn-small btn-capture">📷 캡처</button>
       </div>
       <div class="style-inputs">
         <div class="style-input-group">
           <label for="styleUrl">스타일 이미지:</label>
-          <input type="text" id="styleUrl" placeholder="URL 또는 캡처로 설정">
+          <input type="text" id="styleUrl" placeholder="URL 또는 폴더에서 자동 로드">
         </div>
         <div class="style-input-group">
           <label for="stylePrefix">스타일 접두어:</label>
-          <input type="text" id="stylePrefix" placeholder="예: Korean Wuxia Manhwa style, ">
+          <input type="text" id="stylePrefix" placeholder="스타일/프로젝트명/style.txt에서 자동 로드">
         </div>
         <div class="style-input-group">
           <label for="styleSuffix">스타일 접미어:</label>
-          <input type="text" id="styleSuffix" placeholder="예: , high quality, detailed">
+          <input type="text" id="styleSuffix" placeholder="스타일/프로젝트명/style.txt에서 자동 로드">
         </div>
       </div>
-      <p class="hint">프로젝트별로 저장됨. 모든 프롬프트에 자동 적용</p>
-      <div class="style-presets" id="stylePresetList" hidden>
-        <label class="style-presets-label">스타일 프리셋:</label>
-        <div class="style-presets-tags" id="stylePresetTags">
-          <!-- 동적으로 렌더링됨 -->
-        </div>
-      </div>
+      <p class="hint">프로젝트별로 저장됨. 스타일 폴더에 style.txt를 넣으면 자동 적용</p>
     </section>
 
     <!-- 미등록 캐릭터 경고 -->
