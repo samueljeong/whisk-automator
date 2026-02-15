@@ -770,6 +770,7 @@ function buildCharacterMap() {
 }
 
 // Build flat scene map for automation (name/alias -> image)
+// 원본 키 + NFC 정규화 키 모두 등록 (macOS NFD/NFC 호환)
 function buildSceneMap() {
   const map = {};
 
@@ -777,8 +778,12 @@ function buildSceneMap() {
   if (PROJECTS.common && PROJECTS.common.scenes) {
     for (const [name, data] of Object.entries(PROJECTS.common.scenes)) {
       map[name] = data.image;
+      map[name.normalize('NFC')] = data.image;
       if (data.aliases) {
-        data.aliases.forEach(alias => { map[alias] = data.image; });
+        data.aliases.forEach(alias => {
+          map[alias] = data.image;
+          map[alias.normalize('NFC')] = data.image;
+        });
       }
     }
   }
@@ -788,8 +793,12 @@ function buildSceneMap() {
   if (project && project.scenes) {
     for (const [name, data] of Object.entries(project.scenes)) {
       map[name] = data.image;
+      map[name.normalize('NFC')] = data.image;
       if (data.aliases) {
-        data.aliases.forEach(alias => { map[alias] = data.image; });
+        data.aliases.forEach(alias => {
+          map[alias] = data.image;
+          map[alias.normalize('NFC')] = data.image;
+        });
       }
     }
   }
