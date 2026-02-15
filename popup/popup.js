@@ -2854,7 +2854,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
           if (cn && allCharNames.indexOf(cn) === -1) allCharNames.push(cn);
         }
       }
-      var missingChars = allCharNames.filter(function(name) { return characters && !characters[name]; });
+      var missingChars = allCharNames.filter(function(name) { return characters && !characters[name] && !characters[name.normalize('NFC')]; });
       if (missingChars.length > 0) {
         console.warn('[Whisk Auto] ⚠️ 미등록 캐릭터 ' + missingChars.length + '건: ' + missingChars.join(', '));
         console.warn('[Whisk Auto] → 해당 캐릭터는 레퍼런스 없이 생성됩니다');
