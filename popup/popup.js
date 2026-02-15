@@ -702,19 +702,16 @@ function checkUnregisteredCharacters() {
 
 // Get character image by name or alias
 function getCharacterImageByName(name) {
-  const normalized = name.normalize('NFC');
   // 현재 프로젝트에서 검색
   const project = PROJECTS[currentProject];
   if (project) {
-    // 직접 매칭 (NFC 정규화 비교)
-    for (const [charName, charData] of Object.entries(project.characters)) {
-      if (charName.normalize('NFC') === normalized) {
-        return charData.image;
-      }
+    // 직접 매칭
+    if (project.characters[name]) {
+      return project.characters[name].image;
     }
     // 별명 검색
     for (const [charName, charData] of Object.entries(project.characters)) {
-      if (charData.aliases && charData.aliases.some(a => a.normalize('NFC') === normalized)) {
+      if (charData.aliases && charData.aliases.includes(name)) {
         return charData.image;
       }
     }
@@ -722,13 +719,11 @@ function getCharacterImageByName(name) {
 
   // 공통 프로젝트에서 검색
   if (PROJECTS.common) {
-    for (const [charName, charData] of Object.entries(PROJECTS.common.characters)) {
-      if (charName.normalize('NFC') === normalized) {
-        return charData.image;
-      }
+    if (PROJECTS.common.characters[name]) {
+      return PROJECTS.common.characters[name].image;
     }
     for (const [charName, charData] of Object.entries(PROJECTS.common.characters)) {
-      if (charData.aliases && charData.aliases.some(a => a.normalize('NFC') === normalized)) {
+      if (charData.aliases && charData.aliases.includes(name)) {
         return charData.image;
       }
     }
