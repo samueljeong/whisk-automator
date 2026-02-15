@@ -3326,6 +3326,89 @@ styleSuffix.addEventListener('change', saveStyleSettings);
 // 스타일 이미지 캡처
 if (captureStyleBtn) captureStyleBtn.addEventListener('click', captureStyleFromWhisk);
 
+// 템플릿 다운로드 헬퍼
+function downloadTextFile(filename, content) {
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// 스타일 템플릿 다운로드
+const downloadStyleTemplateBtn = document.getElementById('downloadStyleTemplateBtn');
+if (downloadStyleTemplateBtn) {
+  downloadStyleTemplateBtn.addEventListener('click', () => {
+    const template = `# ============================================
+# 프로젝트 스타일 설정 파일
+# ============================================
+# 이 파일을 스타일/프로젝트명/ 폴더에 style.txt로 저장하면
+# 폴더 불러오기 시 자동으로 접두어/접미어가 적용됩니다.
+#
+# 사용법:
+#   [접두어] 아래에 모든 프롬프트 앞에 붙을 스타일 텍스트 작성
+#   [접미어] 아래에 모든 프롬프트 뒤에 붙을 스타일 텍스트 작성
+#   # 으로 시작하는 줄은 무시됩니다
+#
+# 예시 (프롬프트: "a warrior on a cliff"):
+#   최종 결과 = 접두어 + 프롬프트 + 접미어
+#   → "Korean manhwa style, a warrior on a cliff, no text, high quality"
+# ============================================
+
+[접두어]
+
+
+[접미어]
+
+`;
+    downloadTextFile('style.txt', template);
+  });
+}
+
+// 캐릭터시트 프롬프트 다운로드
+const downloadCharSheetBtn = document.getElementById('downloadCharSheetBtn');
+if (downloadCharSheetBtn) {
+  downloadCharSheetBtn.addEventListener('click', () => {
+    const content = `========================================
+[범용] 캐릭터 시트 - 기본 (7패널)
+========================================
+
+Professional character turnaround reference sheet, clean light gray background. High-quality Korean manhwa webtoon style digital illustration with clean outlines and vibrant coloring. Top row: 4 full-body standing views (front, left profile, right profile, back) in relaxed A-pose. Bottom row: 3 detailed portrait close-ups (front, left profile, right profile). Consistent character design, uniform lighting, clean spacing between panels. Sharp print-ready quality.
+
+
+========================================
+[범용] 캐릭터 시트 - 전신만 (4패널)
+========================================
+
+Professional character turnaround reference sheet, clean light gray background. High-quality Korean manhwa webtoon style digital illustration with clean outlines and vibrant coloring. 4 full-body standing views arranged side by side: front view, left side profile, right side profile, back view. Relaxed A-pose, consistent character design across all views, uniform lighting, clean spacing. Sharp print-ready quality.
+
+
+========================================
+[범용] 캐릭터 시트 - 얼굴만 (3패널)
+========================================
+
+Professional character portrait reference sheet, clean light gray background. High-quality Korean manhwa webtoon style digital illustration with clean outlines and vibrant coloring. 3 detailed head and shoulder portrait close-ups arranged side by side: front face, left side profile, right side profile. Consistent face design, uniform lighting, clean spacing. Sharp print-ready quality.
+
+
+========================================
+[범용] 캐릭터 시트 - 표정 시트
+========================================
+
+Character expression reference sheet, clean light gray background. High-quality Korean manhwa webtoon style digital illustration. 6 portrait headshots arranged in 2 rows of 3, showing different emotions: calm neutral, angry fierce, happy smiling, sad sorrowful, surprised shocked, cold determined. Same character in each panel, consistent design, uniform lighting, clean spacing.
+
+
+========================================
+[범용] 캐릭터 시트 - 액션 포즈
+========================================
+
+Character action pose reference sheet, clean light gray background. High-quality Korean manhwa webtoon style digital illustration with clean outlines and vibrant coloring. 4 dynamic full-body poses arranged side by side: standing ready stance, sword drawing motion, combat attack pose, defensive guard pose. Same character in each panel, consistent design, uniform lighting, clean spacing.
+`;
+    downloadTextFile('character_sheet_prompts.txt', content);
+  });
+}
+
 // Delete button delegation
 promptQueue.addEventListener('click', (e) => {
   if (e.target.classList.contains('delete-btn')) {
