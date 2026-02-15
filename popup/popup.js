@@ -637,7 +637,7 @@ function renderCharacterList() {
     characterList.innerHTML = charKeys.map(name => {
       const char = characters[name];
       const localClass = char.isLocal ? ' local' : '';
-      const activeClass = allTags.has(name) ? ' active' : '';
+      const activeClass = (allTags.has(name) || allTags.has(name.normalize('NFC'))) ? ' active' : '';
       return `<span class="character-tag${localClass}${activeClass}" data-char="${name}">${name}</span>`;
     }).join('');
   }
