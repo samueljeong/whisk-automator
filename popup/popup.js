@@ -739,9 +739,9 @@ function buildCharacterMap() {
   // 공통 캐릭터 먼저
   if (PROJECTS.common) {
     for (const [name, data] of Object.entries(PROJECTS.common.characters)) {
-      map[name.normalize('NFC')] = data.image;
+      map[name] = data.image;
       if (data.aliases) {
-        data.aliases.forEach(alias => { map[alias.normalize('NFC')] = data.image; });
+        data.aliases.forEach(alias => { map[alias] = data.image; });
       }
     }
   }
@@ -750,9 +750,9 @@ function buildCharacterMap() {
   const project = PROJECTS[currentProject];
   if (project) {
     for (const [name, data] of Object.entries(project.characters)) {
-      map[name.normalize('NFC')] = data.image;
+      map[name] = data.image;
       if (data.aliases) {
-        data.aliases.forEach(alias => { map[alias.normalize('NFC')] = data.image; });
+        data.aliases.forEach(alias => { map[alias] = data.image; });
       }
     }
   }
