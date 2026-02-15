@@ -678,7 +678,7 @@ function extractCharacterTags() {
       matches.forEach(m => {
         const charName = m.slice(1, -1);
         allTags.add(charName);
-        if (!characterMap[charName]) {
+        if (!characterMap[charName] && !characterMap[charName.normalize('NFC')]) {
           unregistered.add(charName);
         }
       });
