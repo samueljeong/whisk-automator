@@ -2999,6 +2999,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
               await sleep(waitTime);
               styleUploaded = false;
               console.log('[Whisk Auto] 분석 완료, 생성 시작');
+              await ensureStyleChecked();
             }
 
             currentCharacterGroup = charGroup;
