@@ -2937,7 +2937,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
               // 모든 캐릭터 빠르게 업로드 (개별 분석 대기 없음)
               for (var ci = 0; ci < charNames.length; ci++) {
                 var charName = charNames[ci].trim();
-                var charImageUrl = characters[charName];
+                var charImageUrl = characters[charName] || characters[charName.normalize('NFC')];
                 if (!charImageUrl) {
                   console.warn(`[Whisk Auto] ⚠️ 캐릭터 "${charName}" 미등록 — 레퍼런스 없이 생성`);
                   continue;
