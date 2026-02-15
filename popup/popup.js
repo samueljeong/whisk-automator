@@ -1251,8 +1251,8 @@ async function startAutomation() {
       // [filename:...] 이나 프롬프트 본문이면 중단
       if (charM[1].startsWith('filename:')) break;
       // [장면:무림맹] → 장면 태그 추출
-      if (charM[1].startsWith('장면:')) {
-        scene = charM[1].replace('장면:', '').trim();
+      if (charM[1].normalize('NFC').startsWith('장면:')) {
+        scene = charM[1].normalize('NFC').replace('장면:', '').trim();
         cleanPrompt = cleanPrompt.replace(charRegex, '');
         continue;
       }
