@@ -733,6 +733,7 @@ function getCharacterImageByName(name) {
 }
 
 // Build flat character map for automation (name/alias -> image)
+// 원본 키 + NFC 정규화 키 모두 등록 (macOS NFD/NFC 호환)
 function buildCharacterMap() {
   const map = {};
 
@@ -740,8 +741,12 @@ function buildCharacterMap() {
   if (PROJECTS.common) {
     for (const [name, data] of Object.entries(PROJECTS.common.characters)) {
       map[name] = data.image;
+      map[name.normalize('NFC')] = data.image;
       if (data.aliases) {
-        data.aliases.forEach(alias => { map[alias] = data.image; });
+        data.aliases.forEach(alias => {
+          map[alias] = data.image;
+          map[alias.normalize('NFC')] = data.image;
+        });
       }
     }
   }
@@ -751,8 +756,12 @@ function buildCharacterMap() {
   if (project) {
     for (const [name, data] of Object.entries(project.characters)) {
       map[name] = data.image;
+      map[name.normalize('NFC')] = data.image;
       if (data.aliases) {
-        data.aliases.forEach(alias => { map[alias] = data.image; });
+        data.aliases.forEach(alias => {
+          map[alias] = data.image;
+          map[alias.normalize('NFC')] = data.image;
+        });
       }
     }
   }
