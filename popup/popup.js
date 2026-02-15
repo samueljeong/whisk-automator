@@ -2977,7 +2977,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
           // --- 장면(Scene) 슬롯 전환 ---
           const sceneTag = item.scene || '';
           if (sceneTag !== currentScene) {
-            const sceneImageUrl = scenes ? scenes[sceneTag] : null;
+            const sceneImageUrl = scenes ? (scenes[sceneTag] || scenes[sceneTag.normalize('NFC')]) : null;
 
             if (sceneTag && sceneImageUrl) {
               console.log(`[Whisk Auto] 장면 전환: ${currentScene || '없음'} → ${sceneTag}`);
