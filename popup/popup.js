@@ -2042,6 +2042,34 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     return result;
   }
 
+  // 스타일 섹션 이미지를 Y위치 순으로 가져오기
+  function getStyleImages() {
+    var range = getSectionYRange('스타일');
+    if (!range) return [];
+    var imgs = sidebarRoot.querySelectorAll('img');
+    var result = [];
+    for (var i = 0; i < imgs.length; i++) {
+      var ir = imgs[i].getBoundingClientRect();
+      if (ir.top >= range.top && ir.top < range.end && ir.width > 50 && ir.height > 50) {
+        result.push(imgs[i]);
+      }
+    }
+    return result;
+  }
+
+  // 스타일 이미지 체크 상태 확인 + 해제 시 재활성화
+  async function ensureStyleChecked() {
+    var styleImgs = getStyleImages();
+    if (styleImgs.length === 0) return;
+    for (var i = 0; i < styleImgs.length; i++) {
+      var checkInfo = findCheckmarkFor(styleImgs[i]);
+      if (checkInfo.el && !checkInfo.checked) {
+        console.log('[Whisk Auto] ⚠️ 스타일 체크 해제 감지, 재활성화...');
+        await toggleCheckmark(styleImgs[i]);
+      }
+    }
+  }
+
   // 이미지의 체크/선택 여부 판단 + 클릭 대상 요소 찾기
   function findCheckmarkFor(img) {
     var imgRect = img.getBoundingClientRect();
