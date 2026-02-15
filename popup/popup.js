@@ -2843,6 +2843,8 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       }
       styleUploaded = true;
       console.log('[Whisk Auto] 스타일 이미지 업로드 완료 (분석은 캐릭터와 함께 대기)');
+      await sleep(2000);
+      await ensureStyleChecked();
     }
 
     // 시작 시 정지 플래그 초기화
