@@ -3035,6 +3035,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
             }
 
             currentScene = sceneTag;
+            await ensureStyleChecked();
           }
 
           await findAndFillPrompt(prompt);
