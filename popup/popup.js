@@ -767,9 +767,9 @@ function buildSceneMap() {
   // 공통 장면 먼저
   if (PROJECTS.common && PROJECTS.common.scenes) {
     for (const [name, data] of Object.entries(PROJECTS.common.scenes)) {
-      map[name.normalize('NFC')] = data.image;
+      map[name] = data.image;
       if (data.aliases) {
-        data.aliases.forEach(alias => { map[alias.normalize('NFC')] = data.image; });
+        data.aliases.forEach(alias => { map[alias] = data.image; });
       }
     }
   }
@@ -778,9 +778,9 @@ function buildSceneMap() {
   const project = PROJECTS[currentProject];
   if (project && project.scenes) {
     for (const [name, data] of Object.entries(project.scenes)) {
-      map[name.normalize('NFC')] = data.image;
+      map[name] = data.image;
       if (data.aliases) {
-        data.aliases.forEach(alias => { map[alias.normalize('NFC')] = data.image; });
+        data.aliases.forEach(alias => { map[alias] = data.image; });
       }
     }
   }
