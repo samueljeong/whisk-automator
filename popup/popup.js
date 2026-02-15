@@ -383,7 +383,7 @@ async function scanCharacterFolder(rootHandle) {
 
         if (!imageExts.includes(ext)) continue;
 
-        const name = fileEntry.name.substring(0, fileEntry.name.lastIndexOf('.'));
+        const name = fileEntry.name.substring(0, fileEntry.name.lastIndexOf('.')).normalize('NFC');
 
         try {
           const file = await fileEntry.getFile();
