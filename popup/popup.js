@@ -1262,7 +1262,7 @@ async function startAutomation() {
         cleanPrompt = cleanPrompt.replace(charRegex, '');
         continue;
       }
-      charNames.push(charM[1].normalize('NFC'));
+      charNames.push(charM[1]);
       cleanPrompt = cleanPrompt.replace(charRegex, '');
     }
     if (charNames.length > 0) {
