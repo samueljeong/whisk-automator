@@ -676,7 +676,7 @@ function extractCharacterTags() {
     const matches = text.match(/\[(.+?)\]/g);
     if (matches) {
       matches.forEach(m => {
-        const charName = m.slice(1, -1).normalize('NFC');
+        const charName = m.slice(1, -1);
         allTags.add(charName);
         if (!characterMap[charName]) {
           unregistered.add(charName);
