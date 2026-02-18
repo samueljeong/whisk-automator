@@ -45,10 +45,13 @@
     <section class="input-section">
       <div class="input-header">
         <h2>프롬프트 입력</h2>
-        <label class="file-input-label">
-          <input type="file" id="fileInput" accept=".txt" hidden>
-          📁 파일 불러오기
-        </label>
+        <div class="input-header-actions">
+          <button id="aiPromptHelperBtn" class="btn btn-small btn-ai">AI 프롬프트 생성</button>
+          <label class="file-input-label">
+            <input type="file" id="fileInput" accept=".txt" hidden>
+            📁 파일 불러오기
+          </label>
+        </div>
       </div>
       <textarea
         id="promptInput"
