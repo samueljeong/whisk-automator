@@ -152,8 +152,85 @@
     </section>
 
     <footer>
-      <p class="hint">💡 Whisk 페이지에서 사용하세요</p>
+      <p class="hint">Whisk 페이지에서 사용하세요</p>
     </footer>
+    </div><!-- /whiskContainer -->
+
+    <!-- Grok 컨테이너 -->
+    <div id="grokContainer" hidden>
+      <header>
+        <h1>Grok 영상</h1>
+        <span class="status" id="grokConnectionStatus">연결 확인 중...</span>
+      </header>
+
+      <!-- 연결 상태 -->
+      <section class="grok-connection-section">
+        <button id="grokOpenTabBtn" class="btn btn-small btn-secondary">grok.com 열기</button>
+      </section>
+
+      <!-- 이미지 추가 -->
+      <section class="grok-input-section">
+        <div class="input-header">
+          <h2>이미지 추가</h2>
+        </div>
+        <div class="grok-input-actions">
+          <label class="file-input-label">
+            <input type="file" id="grokFileInput" accept="image/*" multiple hidden>
+            파일 선택
+          </label>
+          <button id="grokImportWhiskBtn" class="btn btn-small btn-secondary">Whisk에서 가져오기</button>
+        </div>
+      </section>
+
+      <!-- 영상 대기열 -->
+      <section class="grok-queue-section">
+        <div class="queue-header">
+          <h2>영상 대기열 <span id="grokQueueCount">(0개)</span></h2>
+          <button id="grokClearQueueBtn" class="btn btn-small btn-danger">전체 삭제</button>
+        </div>
+        <ul id="grokQueue" class="grok-queue-list">
+          <li class="empty-message">이미지를 추가해주세요</li>
+        </ul>
+      </section>
+
+      <!-- 설정 -->
+      <section class="grok-settings-section">
+        <h2>설정</h2>
+        <div class="grok-setting-group">
+          <label for="grokMotionPrompt">기본 모션 프롬프트:</label>
+          <input type="text" id="grokMotionPrompt" placeholder="slow zoom in, cinematic" value="slow zoom in, cinematic">
+        </div>
+        <div class="grok-setting-group">
+          <label for="grokDelay">생성 간격 (초):</label>
+          <input type="number" id="grokDelay" value="10" min="5" max="60">
+        </div>
+        <div class="grok-setting-group">
+          <label for="grokSaveLocation">저장 위치:</label>
+          <input type="text" id="grokSaveLocation" placeholder="grok-videos" value="grok-videos">
+        </div>
+      </section>
+
+      <!-- 진행률 -->
+      <section class="grok-progress-section" id="grokProgressSection" hidden>
+        <div class="progress-bar">
+          <div class="progress-fill" id="grokProgressFill"></div>
+        </div>
+        <p class="progress-text">
+          <span id="grokCurrentIndex">0</span> / <span id="grokTotalCount">0</span> 완료
+        </p>
+        <p class="current-prompt" id="grokCurrentStatus"></p>
+      </section>
+
+      <!-- 제어 -->
+      <section class="control-section">
+        <button id="grokStartBtn" class="btn btn-primary" disabled>영상 생성 시작</button>
+        <button id="grokStopBtn" class="btn btn-danger" hidden>중지</button>
+      </section>
+
+      <footer>
+        <p class="hint">grok.com에서 이미지를 영상으로 변환합니다</p>
+      </footer>
+    </div><!-- /grokContainer -->
   </div>
 
   <!-- 캐릭터 저장 모달 -->
