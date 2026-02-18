@@ -38,6 +38,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         // Popup might be closed, ignore error
       });
       break;
+
+    // === Grok 메시지 핸들러 ===
+    case 'GROK_DOWNLOAD_VIDEO':
+      grokDownloadVideo(message.url, message.dataUrl, message.filename);
+      sendResponse({ success: true });
+      break;
+
+    case 'GROK_INJECT_INTERCEPTOR':
+      grokInjectInterceptor(message.tabId)
+        .then(() => sendResponse({ success: true }))
+        .catch(e => sendResponse({ success: false, error: e.message }));
+      return true;
+
+    case 'GROK_PROGRESS_UPDATE':
+    case 'GROK_AUTOMATION_COMPLETE':
+    case 'GROK_AUTOMATION_ERROR':
+      chrome.runtime.sendMessage(message).catch(() => {});
+      break;
   }
 
   return true;
