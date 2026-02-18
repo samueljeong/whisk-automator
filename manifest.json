@@ -14,7 +14,8 @@
   ],
   "host_permissions": [
     "https://labs.google/*",
-    "https://drama-s2ns.onrender.com/*"
+    "https://drama-s2ns.onrender.com/*",
+    "https://grok.com/*"
   ],
   "action": {
     "default_icon": {
