@@ -240,6 +240,122 @@ chrome.tabs.onCreated.addListener((tab) => {
   }
 });
 
+// === Grok 헬퍼 함수 ===
+
+// Grok 영상 다운로드
+async function grokDownloadVideo(url, dataUrl, filename) {
+  try {
+    if (dataUrl) {
+      // dataUrl → blob URL 변환 후 다운로드
+      const response = await fetch(dataUrl);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      chrome.downloads.download({
+        url: blobUrl,
+        filename: filename,
+        saveAs: false
+      }, (downloadId) => {
+        // blob URL 정리는 다운로드 완료 후
+        if (downloadId) {
+          const cleanup = (delta) => {
+            if (delta.id === downloadId && delta.state?.current === 'complete') {
+              URL.revokeObjectURL(blobUrl);
+              chrome.downloads.onChanged.removeListener(cleanup);
+            }
+          };
+          chrome.downloads.onChanged.addListener(cleanup);
+        }
+      });
+    } else if (url) {
+      chrome.downloads.download({
+        url: url,
+        filename: filename,
+        saveAs: false
+      });
+    }
+    console.log('[Grok Background] 다운로드 시작:', filename);
+  } catch (error) {
+    console.error('[Grok Background] 다운로드 오류:', error);
+  }
+}
+
+// Grok 인터셉터 주입
+async function grokInjectInterceptor(tabId) {
+  if (!tabId) throw new Error('tabId 없음');
+  console.log('[Grok Background] 인터셉터 주입 시도, tabId:', tabId);
+
+  await chrome.scripting.executeScript({
+    target: { tabId: tabId },
+    world: 'MAIN',
+    func: () => {
+      if (window.__grokInterceptorInstalled) {
+        console.log('[Grok Interceptor] 이미 설치됨');
+        return;
+      }
+
+      function dataUrlToFile(dataUrl) {
+        var parts = dataUrl.split(',');
+        var mime = parts[0].match(/:(.*?);/)[1];
+        var bstr = atob(parts[1]);
+        var u8 = new Uint8Array(bstr.length);
+        for (var i = 0; i < bstr.length; i++) u8[i] = bstr.charCodeAt(i);
+        var blob = new Blob([u8], { type: mime });
+        return new File([blob], 'upload.png', { type: 'image/png' });
+      }
+
+      var prevClick = HTMLInputElement.prototype.click;
+      HTMLInputElement.prototype.click = function() {
+        if (this.type === 'file') {
+          var dataUrl = document.documentElement.getAttribute('data-grok-upload');
+          if (dataUrl) {
+            document.documentElement.removeAttribute('data-grok-upload');
+            try {
+              var file = dataUrlToFile(dataUrl);
+              var dt = new DataTransfer();
+              dt.items.add(file);
+              this.files = dt.files;
+              this.dispatchEvent(new Event('change', { bubbles: true }));
+              this.dispatchEvent(new Event('input', { bubbles: true }));
+              document.documentElement.setAttribute('data-grok-upload-done', 'true');
+              return;
+            } catch (e) {
+              document.documentElement.setAttribute('data-grok-upload-done', 'error');
+            }
+          }
+        }
+        return prevClick.call(this);
+      };
+
+      document.addEventListener('click', function(e) {
+        var el = e.target;
+        if (el && el.tagName === 'INPUT' && el.type === 'file') {
+          var dataUrl = document.documentElement.getAttribute('data-grok-upload');
+          if (dataUrl) {
+            e.preventDefault();
+            e.stopPropagation();
+            document.documentElement.removeAttribute('data-grok-upload');
+            try {
+              var file = dataUrlToFile(dataUrl);
+              var dt = new DataTransfer();
+              dt.items.add(file);
+              el.files = dt.files;
+              el.dispatchEvent(new Event('change', { bubbles: true }));
+              document.documentElement.setAttribute('data-grok-upload-done', 'true');
+            } catch (e2) {
+              document.documentElement.setAttribute('data-grok-upload-done', 'error');
+            }
+          }
+        }
+      }, true);
+
+      window.__grokInterceptorInstalled = true;
+      document.documentElement.setAttribute('data-grok-interceptor-ready', 'true');
+      console.log('[Grok Interceptor] background 주입 완료');
+    }
+  });
+  console.log('[Grok Background] 인터셉터 주입 완료');
+}
+
 // Handle extension install/update
 chrome.runtime.onInstalled.addListener((details) => {
   console.log('[Whisk Automator Background] Extension installed/updated:', details.reason);
