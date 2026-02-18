@@ -45,6 +45,16 @@
         "https://*.google.com/*whisk*"
       ],
       "js": ["content/content.js"]
+    },
+    {
+      "matches": ["https://grok.com/*"],
+      "js": ["content/grok_interceptor.js"],
+      "world": "MAIN",
+      "run_at": "document_start"
+    },
+    {
+      "matches": ["https://grok.com/*"],
+      "js": ["content/grok_content.js"]
     }
   ],
   "background": {
