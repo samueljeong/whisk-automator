@@ -23,6 +23,14 @@
   </div>
 
   <div class="container" id="mainContainer" hidden>
+    <!-- 모드 탭 -->
+    <div class="mode-tabs">
+      <button class="mode-tab active" id="modeTabWhisk" data-mode="whisk">Whisk 이미지</button>
+      <button class="mode-tab" id="modeTabGrok" data-mode="grok">Grok 영상</button>
+    </div>
+
+    <!-- Whisk 컨테이너 -->
+    <div id="whiskContainer">
     <header>
       <h1>Whisk 자동화</h1>
       <span class="status" id="connectionStatus">연결 확인 중...</span>
