@@ -260,6 +260,26 @@
     </div>
   </div>
 
+  <!-- AI 프롬프트 도우미 모달 -->
+  <div id="aiPromptModal" class="modal" hidden>
+    <div class="modal-content modal-wide">
+      <h3>AI 프롬프트 생성 도우미</h3>
+      <p class="modal-desc">아래 프롬프트를 복사하여 AI에 붙여넣고, 대본을 함께 입력하세요.</p>
+      <div class="ai-tabs">
+        <button class="ai-tab active" data-ai="claude">Claude</button>
+        <button class="ai-tab" data-ai="gpt">ChatGPT</button>
+        <button class="ai-tab" data-ai="gemini">Gemini</button>
+      </div>
+      <div class="ai-prompt-area">
+        <pre id="aiPromptText"></pre>
+      </div>
+      <div class="modal-actions">
+        <button id="copyAiPromptBtn" class="btn btn-small btn-primary">복사</button>
+        <button id="closeAiPromptBtn" class="btn btn-small btn-secondary">닫기</button>
+      </div>
+    </div>
+  </div>
+
   <script src="prompt_safety.js"></script>
   <script src="license.js"></script>
   <script src="popup.js"></script>
