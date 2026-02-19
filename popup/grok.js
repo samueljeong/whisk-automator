@@ -921,55 +921,99 @@
     });
   }
 
-  // 영상 완성 대기 (최대 5분)
+  // 영상 완성 대기 (최대 3분)
   async function waitForVideo() {
-    const maxWait = 5 * 60 * 1000; // 5분
-    const pollInterval = 5000; // 5초
+    const maxWait = 3 * 60 * 1000; // 3분
+    const pollInterval = 3000; // 3초
     const startTime = Date.now();
+    let pollCount = 0;
 
     while (Date.now() - startTime < maxWait) {
       if (!grokIsRunning) return null;
+      pollCount++;
 
       const [result] = await chrome.scripting.executeScript({
         target: { tabId: grokTabId },
         world: 'MAIN',
-        func: () => {
-          // 가장 최근 메시지의 video 태그 찾기
+        func: (shouldLog) => {
+          // 1. video 태그
           const videos = document.querySelectorAll('video');
-          if (videos.length === 0) return null;
-
-          // 마지막 video 요소의 src
-          const lastVideo = videos[videos.length - 1];
-          const src = lastVideo.src || lastVideo.querySelector('source')?.src;
-          if (src && (src.startsWith('blob:') || src.includes('video.twimg.com') || src.includes('.mp4'))) {
-            return src;
+          for (const v of videos) {
+            const src = v.src || v.currentSrc || v.querySelector('source')?.src;
+            if (src) {
+              console.log('[Grok] 영상 URL 발견:', src.substring(0, 120));
+              return { type: 'url', value: src };
+            }
           }
 
-          // 다운로드 링크 찾기
-          const links = document.querySelectorAll('a[download], a[href*=".mp4"]');
-          if (links.length > 0) {
-            return links[links.length - 1].href;
+          // 2. download 링크
+          const dlinks = document.querySelectorAll('a[download], a[href*=".mp4"], a[href*="video"]');
+          for (const a of dlinks) {
+            if (a.href && !a.href.startsWith('javascript:')) {
+              return { type: 'url', value: a.href };
+            }
           }
 
-          // 로딩 인디케이터 확인
-          const loading = document.querySelector('[class*="loading"], [class*="spinner"], [class*="progress"], [role="progressbar"]');
-          if (loading) return 'loading';
+          // 3. 로딩 상태
+          const loadingEls = document.querySelectorAll(
+            '[class*="loading"], [class*="spinner"], [class*="progress"], [role="progressbar"], [class*="generating"]'
+          );
 
-          return null;
-        }
+          // 4. 주기적 진단 로그 (매 3번째 = 9초마다)
+          if (shouldLog) {
+            console.log('[Grok] 대기 중...',
+              'video:', videos.length,
+              'loading:', loadingEls.length,
+              'elapsed:', Math.round((Date.now() - performance.timeOrigin) / 1000) + 's');
+          }
+
+          if (videos.length > 0) return { type: 'video-no-src' };
+          if (loadingEls.length > 0) return { type: 'loading' };
+          return { type: 'none' };
+        },
+        args: [pollCount % 3 === 0]
       });
 
-      const videoUrl = result?.result;
-
-      if (videoUrl && videoUrl !== 'loading') {
-        return videoUrl;
-      }
+      const res = result?.result;
+      if (res?.type === 'url') return res.value;
 
       await sleep(pollInterval);
     }
 
-    console.error('[Grok] 영상 생성 타임아웃 (5분)');
+    console.log('[Grok] 영상 대기 타임아웃 (3분)');
     return null;
+  }
+
+  // 페이지의 다운로드 버튼 클릭 (video URL 추출 실패 시 폴백)
+  async function clickPageDownloadButton() {
+    const [result] = await chrome.scripting.executeScript({
+      target: { tabId: grokTabId },
+      world: 'MAIN',
+      func: () => {
+        const btns = document.querySelectorAll('button');
+        for (const btn of btns) {
+          const aria = (btn.getAttribute('aria-label') || '');
+          if (/다운로드|download/i.test(aria)) {
+            console.log('[Grok] 페이지 다운로드 버튼 클릭:', aria);
+            btn.click();
+            return { clicked: true, aria };
+          }
+        }
+        // a 태그 다운로드 링크
+        const links = document.querySelectorAll('a[download]');
+        if (links.length > 0) {
+          links[links.length - 1].click();
+          return { clicked: true, type: 'link' };
+        }
+        console.log('[Grok] 다운로드 버튼 미발견');
+        return { clicked: false };
+      }
+    });
+    const res = result?.result;
+    if (res?.clicked) {
+      console.log('[Grok] 페이지 다운로드 버튼 클릭 성공:', res.aria || res.type);
+    }
+    return res?.clicked;
   }
 
   // 영상 다운로드
