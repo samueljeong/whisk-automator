@@ -988,6 +988,216 @@
     return null;
   }
 
+  // 더보기(...) 메뉴 → "동영상 업스케일" 클릭
+  async function clickUpscaleInMenu() {
+    const [result] = await chrome.scripting.executeScript({
+      target: { tabId: grokTabId },
+      world: 'MAIN',
+      func: () => {
+        // ── 1단계: ... 더보기 버튼 찾기 ──
+        let moreBtn = null;
+
+        // aria-label로 탐색
+        const ariaSelectors = [
+          'button[aria-label*="옵션"]',
+          'button[aria-label*="more"]',
+          'button[aria-label*="메뉴"]',
+          'button[aria-label*="option"]',
+          'button[aria-label*="More"]'
+        ];
+        for (const sel of ariaSelectors) {
+          const btn = document.querySelector(sel);
+          if (btn) {
+            const r = btn.getBoundingClientRect();
+            if (r.width > 0) {
+              moreBtn = btn;
+              console.log('[Grok Upscale] ... 버튼 발견 (aria):', sel);
+              break;
+            }
+          }
+        }
+
+        // 폴백: "..." 텍스트 또는 3-dot SVG가 있는 버튼
+        if (!moreBtn) {
+          const allBtns = document.querySelectorAll('button');
+          for (const btn of allBtns) {
+            const text = (btn.textContent || '').trim();
+            const r = btn.getBoundingClientRect();
+            if (r.width === 0) continue;
+            // "..." 또는 "⋯" 또는 "⋮" 텍스트
+            if (/^[.…⋯⋮]{3}$/.test(text) || text === '···' || text === '⋯') {
+              moreBtn = btn;
+              console.log('[Grok Upscale] ... 버튼 발견 (텍스트):', text);
+              break;
+            }
+            // 3개의 원(dot) SVG
+            const circles = btn.querySelectorAll('svg circle');
+            if (circles.length >= 3 && text.length === 0) {
+              moreBtn = btn;
+              console.log('[Grok Upscale] ... 버튼 발견 (SVG dots)');
+              break;
+            }
+          }
+        }
+
+        if (!moreBtn) {
+          console.error('[Grok Upscale] ... 버튼 미발견');
+          return { success: false, reason: 'more-button-not-found' };
+        }
+
+        // 클릭하여 메뉴 열기
+        moreBtn.click();
+        return { success: true, step: 'menu-opened' };
+      }
+    });
+
+    if (!result?.result?.success) {
+      console.error('[Grok] 더보기 메뉴 열기 실패:', result?.result?.reason);
+      return false;
+    }
+
+    // 메뉴 렌더링 대기
+    await sleep(1000);
+
+    // ── 2단계: 메뉴에서 "동영상 업스케일" 항목 클릭 ──
+    const [menuResult] = await chrome.scripting.executeScript({
+      target: { tabId: grokTabId },
+      world: 'MAIN',
+      func: () => {
+        // 메뉴 항목 탐색
+        const candidates = document.querySelectorAll(
+          '[role="menuitem"], [role="option"], [class*="menu"] button, [class*="menu"] div, [class*="dropdown"] button, [class*="dropdown"] div, [class*="popover"] button, [class*="popover"] div'
+        );
+
+        for (const el of candidates) {
+          const text = (el.textContent || '').trim();
+          if (/동영상\s*업스케일|upscale\s*video|video\s*upscale/i.test(text)) {
+            console.log('[Grok Upscale] "동영상 업스케일" 메뉴 항목 클릭:', text);
+            el.click();
+            return { success: true, text };
+          }
+        }
+
+        // 넓은 범위 폴백: 모든 클릭 가능한 요소에서 검색
+        const allClickable = document.querySelectorAll('button, a, div[role="button"], span[role="button"], li');
+        for (const el of allClickable) {
+          const text = (el.textContent || '').trim();
+          if (/업스케일|upscale/i.test(text) && text.length < 30) {
+            console.log('[Grok Upscale] 업스케일 항목 폴백 클릭:', text);
+            el.click();
+            return { success: true, text };
+          }
+        }
+
+        // 진단 로그
+        const diag = [];
+        for (const el of candidates) {
+          const text = (el.textContent || '').trim();
+          if (text.length > 0 && text.length < 50) {
+            diag.push(text);
+          }
+        }
+        console.error('[Grok Upscale] "동영상 업스케일" 메뉴 항목 미발견. 메뉴 항목들:', diag);
+        return { success: false, reason: 'upscale-item-not-found', menuItems: diag };
+      }
+    });
+
+    const menuRes = menuResult?.result;
+    if (menuRes?.success) {
+      console.log('[Grok] 업스케일 메뉴 클릭 성공:', menuRes.text);
+      return true;
+    } else {
+      console.error('[Grok] 업스케일 메뉴 클릭 실패:', menuRes?.reason, menuRes?.menuItems);
+      return false;
+    }
+  }
+
+  // 업스케일 완료 대기 (최대 5분)
+  async function waitForUpscale() {
+    const maxWait = 5 * 60 * 1000; // 5분
+    const pollInterval = 3000; // 3초
+    const startTime = Date.now();
+    let pollCount = 0;
+
+    // 업스케일 시작 전 현재 video src 기록
+    const [initialResult] = await chrome.scripting.executeScript({
+      target: { tabId: grokTabId },
+      world: 'MAIN',
+      func: () => {
+        const video = document.querySelector('video');
+        return video ? (video.src || video.currentSrc || '') : '';
+      }
+    });
+    const initialSrc = initialResult?.result || '';
+    console.log('[Grok Upscale] 초기 video src:', initialSrc.substring(0, 80));
+
+    while (Date.now() - startTime < maxWait) {
+      if (!grokIsRunning) return null;
+      pollCount++;
+
+      const [result] = await chrome.scripting.executeScript({
+        target: { tabId: grokTabId },
+        world: 'MAIN',
+        func: (origSrc, shouldLog) => {
+          // 1. 로딩/프로그레스 인디케이터 확인
+          const loadingEls = document.querySelectorAll(
+            '[class*="loading"], [class*="spinner"], [class*="progress"], [role="progressbar"], [class*="generating"], [class*="upscal"]'
+          );
+          const isLoading = loadingEls.length > 0;
+
+          // 2. video src 변경 확인
+          const video = document.querySelector('video');
+          const currentSrc = video ? (video.src || video.currentSrc || '') : '';
+          const srcChanged = currentSrc && currentSrc !== origSrc;
+
+          // 3. 다운로드 버튼 활성화 확인
+          const dlBtns = document.querySelectorAll('button');
+          let dlReady = false;
+          for (const btn of dlBtns) {
+            const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
+            if (/다운로드|download/.test(aria) && !btn.disabled) {
+              dlReady = true;
+              break;
+            }
+          }
+
+          if (shouldLog) {
+            console.log('[Grok Upscale] 대기 중...',
+              'loading:', isLoading,
+              'srcChanged:', srcChanged,
+              'dlReady:', dlReady,
+              'elapsed:', Math.round((Date.now() - startTime) / 1000) + 's');
+          }
+
+          // 완료 조건: src가 변경되었고 로딩이 없음
+          if (srcChanged && !isLoading) {
+            return { done: true, videoUrl: currentSrc };
+          }
+
+          // 대안: 로딩이 사라지고 다운로드 준비됨 (src 변경 감지 불가 시)
+          if (!isLoading && dlReady && !srcChanged) {
+            // src가 안 바뀌었지만 로딩도 없으면 업스케일이 같은 URL에서 완료된 것일 수 있음
+            return { done: true, videoUrl: currentSrc || null };
+          }
+
+          return { done: false, isLoading };
+        },
+        args: [initialSrc, pollCount % 3 === 0]
+      });
+
+      const res = result?.result;
+      if (res?.done) {
+        console.log('[Grok Upscale] 업스케일 완료!', res.videoUrl?.substring(0, 80));
+        return res.videoUrl;
+      }
+
+      await sleep(pollInterval);
+    }
+
+    console.log('[Grok Upscale] 업스케일 대기 타임아웃 (5분)');
+    return null;
+  }
+
   // 페이지의 다운로드 버튼 클릭 (video URL 추출 실패 시 폴백)
   async function clickPageDownloadButton() {
     const [result] = await chrome.scripting.executeScript({
