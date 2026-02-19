@@ -903,35 +903,30 @@
     return res;
   }
 
-  // 팝업/다이얼로그 자동 닫기 (프로젝트 생성, A/B 테스트 등)
+  // 팝업/다이얼로그 처리 (프로젝트 다이얼로그는 유지, 방해 팝업만 처리)
   async function dismissPopups() {
     await chrome.scripting.executeScript({
       target: { tabId: grokTabId },
       world: 'MAIN',
       func: () => {
-        // 1) "취소" 버튼 찾기 (프로젝트 이름 팝업 등)
-        const allButtons = document.querySelectorAll('button');
-        for (const btn of allButtons) {
-          const text = btn.textContent?.trim() || '';
-          if (text === '취소' || text === 'Cancel' || text === 'cancel') {
-            btn.click();
-            return;
-          }
-        }
-
-        // 2) 닫기(X) 버튼 찾기
+        // 프로젝트 다이얼로그는 닫지 않음 (취소/Cancel 클릭 제거)
+        // A/B 테스트, 쿠키, 알림 등 방해 팝업만 닫기
         const closeButtons = document.querySelectorAll(
-          '[role="dialog"] button, .modal button, [data-testid*="close"], [aria-label*="close" i], [aria-label*="dismiss" i]'
+          '[data-testid*="close"], [aria-label*="dismiss" i]'
         );
         for (const btn of closeButtons) {
           const text = btn.textContent?.trim().toLowerCase() || '';
-          if (text === 'x' || text === '×' || text === 'close' || text === 'dismiss' ||
-              text === 'no thanks' || text === 'skip' || text === 'maybe later' ||
-              btn.getAttribute('aria-label')?.toLowerCase().includes('close')) {
+          const label = btn.getAttribute('aria-label')?.toLowerCase() || '';
+          // 프로젝트 관련은 건드리지 않음
+          if (label.includes('project') || label.includes('프로젝트')) continue;
+          if (text === 'no thanks' || text === 'skip' || text === 'maybe later' ||
+              label.includes('dismiss')) {
+            console.log('[Grok] 방해 팝업 닫기:', text || label);
             btn.click();
             return;
           }
         }
+        console.log('[Grok] 닫을 방해 팝업 없음');
       }
     });
   }
