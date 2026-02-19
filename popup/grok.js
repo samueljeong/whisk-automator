@@ -505,13 +505,22 @@
         const videoUrl = await waitForVideo();
 
         if (videoUrl) {
-          // Step 6: 다운로드
+          // Step 6a: URL 추출 성공 → 프로그래밍 방식 다운로드
           updateProgress(completed, total, `${item.name}: 다운로드 중...`);
           item.videoUrl = videoUrl;
           await downloadVideo(videoUrl, item.name);
           item.status = 'done';
         } else {
-          item.status = 'error';
+          // Step 6b: URL 추출 실패 → 페이지 다운로드 버튼 클릭
+          console.log('[Grok] video URL 미발견, 페이지 다운로드 버튼 시도');
+          updateProgress(completed, total, `${item.name}: 다운로드 버튼 클릭...`);
+          const downloaded = await clickPageDownloadButton();
+          if (downloaded) {
+            await sleep(5000); // 다운로드 시작 대기
+            item.status = 'done';
+          } else {
+            item.status = 'error';
+          }
         }
       } catch (e) {
         console.error('[Grok] 자동화 오류:', item.name, e);
