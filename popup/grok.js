@@ -280,6 +280,7 @@
   grokMotionPrompt.addEventListener('change', saveSettings);
   grokDelay.addEventListener('change', saveSettings);
   grokSaveLocation.addEventListener('change', saveSettings);
+  grokUpscaleEnabled.addEventListener('change', saveSettings);
 
   // ============================================================
   // 파일 입력
