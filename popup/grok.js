@@ -774,7 +774,7 @@
 
   // Anti-Bot 클릭 시뮬레이션으로 생성 버튼 클릭
   async function clickGenerateButton() {
-    await chrome.scripting.executeScript({
+    const [result] = await chrome.scripting.executeScript({
       target: { tabId: grokTabId },
       world: 'MAIN',
       func: () => {
@@ -794,11 +794,13 @@
           }, 50 + Math.random() * 100);
         }
 
-        // 생성/전송 버튼 찾기
+        // 1단계: CSS 셀렉터로 직접 찾기
         const selectors = [
           'button[data-testid="send-button"]',
+          'button[data-testid="generate-button"]',
           'button[aria-label*="send" i]',
-          'button[aria-label*="Send" i]',
+          'button[aria-label*="generate" i]',
+          'button[aria-label*="create" i]',
           'button[aria-label*="submit" i]',
           'button[type="submit"]'
         ];
@@ -806,27 +808,89 @@
         for (const sel of selectors) {
           const btn = document.querySelector(sel);
           if (btn && !btn.disabled) {
+            console.log('[Grok] 1단계 버튼 발견:', sel);
             simulateClick(btn);
-            return;
+            return { found: true, method: 'selector', detail: sel };
           }
         }
 
-        // 마지막 수단: 텍스트로 찾기
+        // 2단계: 텍스트 기반 버튼 찾기 (Generate, Create, 생성, 만들기 등)
+        const textPatterns = /^(generate|create|submit|send|go|생성|만들기|전송|시작)$/i;
         const buttons = document.querySelectorAll('button');
         for (const btn of buttons) {
           if (btn.disabled) continue;
-          const svg = btn.querySelector('svg');
-          if (svg && !btn.textContent.trim()) {
-            // 아이콘 전송 버튼일 가능성
-            const rect = btn.getBoundingClientRect();
-            if (rect.width > 0 && rect.height > 0) {
-              simulateClick(btn);
-              return;
-            }
+          const text = btn.textContent?.trim() || '';
+          if (textPatterns.test(text)) {
+            console.log('[Grok] 2단계 텍스트 버튼 발견:', text);
+            simulateClick(btn);
+            return { found: true, method: 'text', detail: text };
           }
         }
+
+        // 3단계: 텍스트 부분 매칭 (버튼 텍스트에 키워드 포함)
+        const partialPatterns = /generate|create|submit|생성|만들기/i;
+        for (const btn of buttons) {
+          if (btn.disabled) continue;
+          const text = btn.textContent?.trim() || '';
+          const label = btn.getAttribute('aria-label') || '';
+          if (text.length < 30 && (partialPatterns.test(text) || partialPatterns.test(label))) {
+            console.log('[Grok] 3단계 부분매칭 버튼 발견:', text || label);
+            simulateClick(btn);
+            return { found: true, method: 'partial', detail: text || label };
+          }
+        }
+
+        // 4단계: 프롬프트 입력란 근처의 아이콘 버튼 (전송 화살표 등)
+        const inputArea = document.querySelector('[contenteditable="true"], textarea');
+        if (inputArea) {
+          // 입력란의 부모/형제에서 아이콘 버튼 찾기
+          let container = inputArea.parentElement;
+          for (let depth = 0; depth < 5 && container; depth++) {
+            const nearButtons = container.querySelectorAll('button:not([disabled])');
+            for (const btn of nearButtons) {
+              const svg = btn.querySelector('svg');
+              const text = btn.textContent?.trim() || '';
+              // SVG 아이콘만 있는 버튼 (전송 아이콘)
+              if (svg && text.length < 3) {
+                const rect = btn.getBoundingClientRect();
+                if (rect.width > 0 && rect.height > 0) {
+                  console.log('[Grok] 4단계 입력란 근처 아이콘 버튼 발견');
+                  simulateClick(btn);
+                  return { found: true, method: 'nearby-icon', detail: `depth=${depth}` };
+                }
+              }
+            }
+            container = container.parentElement;
+          }
+        }
+
+        // 5단계: 못 찾음 - 페이지의 모든 버튼 진단 로그
+        const allBtns = [];
+        for (const btn of buttons) {
+          const rect = btn.getBoundingClientRect();
+          if (rect.width === 0 || rect.height === 0) continue;
+          allBtns.push({
+            text: btn.textContent?.trim().substring(0, 50),
+            aria: btn.getAttribute('aria-label'),
+            testid: btn.getAttribute('data-testid'),
+            type: btn.type,
+            disabled: btn.disabled,
+            hasSvg: !!btn.querySelector('svg'),
+            classes: btn.className?.substring(0, 80)
+          });
+        }
+        console.log('[Grok] 생성 버튼 미발견. 페이지 버튼 목록:', JSON.stringify(allBtns, null, 2));
+        return { found: false, buttons: allBtns };
       }
     });
+
+    const res = result?.result;
+    if (res?.found) {
+      console.log(`[Grok] 생성 버튼 클릭 성공: ${res.method} (${res.detail})`);
+    } else {
+      console.error('[Grok] 생성 버튼 미발견! 페이지 버튼:', res?.buttons);
+    }
+    return res;
   }
 
   // 팝업/다이얼로그 자동 닫기 (프로젝트 생성, A/B 테스트 등)
