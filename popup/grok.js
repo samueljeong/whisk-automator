@@ -861,14 +861,12 @@
         for (const btn of allBtns) {
           const r = btn.getBoundingClientRect();
           if (r.width === 0) continue;
-          const btnMidY = r.top + r.height / 2;
           diag.push({
             text: (btn.textContent || '').trim().substring(0, 30),
             aria: btn.getAttribute('aria-label'),
             x: Math.round(r.left), y: Math.round(r.top),
             size: `${Math.round(r.width)}x${Math.round(r.height)}`,
-            svg: !!btn.querySelector('svg'),
-            yDiff: Math.round(btnMidY - inputMidY) // 입력란과의 Y거리
+            svg: !!btn.querySelector('svg')
           });
         }
         console.log('[Grok] 전송 버튼 미발견. 전체 버튼:',
