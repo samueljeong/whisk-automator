@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Whisk 자동화 도구",
-  "version": "2.2.0",
+  "version": "3.0.0",
   "description": "Google Whisk AI 이미지 대량 생성 자동화",
   "permissions": [
     "activeTab",
