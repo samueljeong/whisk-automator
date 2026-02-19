@@ -168,14 +168,6 @@
         nameEl.title = `원본: ${item.whiskPrompt}`;
       }
 
-      // 원본 Whisk 프롬프트 표시 (있으면)
-      if (item.whiskPrompt) {
-        const origEl = document.createElement('div');
-        origEl.className = 'grok-queue-item-origin';
-        origEl.textContent = item.whiskPrompt;
-        info.appendChild(origEl);
-      }
-
       const promptDiv = document.createElement('div');
       promptDiv.className = 'grok-queue-item-prompt';
       const promptInput = document.createElement('input');
@@ -199,6 +191,13 @@
       statusEl.textContent = statusLabels[item.status] || item.status;
 
       info.appendChild(nameEl);
+      // 원본 Whisk 프롬프트 표시 (있으면)
+      if (item.whiskPrompt) {
+        const origEl = document.createElement('div');
+        origEl.className = 'grok-queue-item-origin';
+        origEl.textContent = item.whiskPrompt;
+        info.appendChild(origEl);
+      }
       info.appendChild(promptDiv);
       info.appendChild(statusEl);
 
