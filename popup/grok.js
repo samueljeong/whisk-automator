@@ -1045,36 +1045,45 @@
           }
         }
 
-        console.log('[Grok Upscale] 영상 오버레이 버튼들:',
-          overlayBtns.map(b => `"${b.text || b.aria}" (${b.x},${b.y}) ${b.w}x${b.h}`));
+        console.log('[Grok Upscale] 영상 오버레이 버튼 상세:',
+          JSON.stringify(overlayBtns.map(b => ({
+            text: b.text, aria: b.aria,
+            pos: `(${b.x},${b.y})`, size: `${b.w}x${b.h}`,
+            hasSvg: !!b.btn.querySelector('svg')
+          })), null, 2));
+
+        // "추가 옵션" 사이드바 버튼은 제외 (영상 영역과 겹치는 false positive)
+        const filtered = overlayBtns.filter(b => b.aria !== '추가 옵션');
 
         let moreBtn = null;
 
-        // 1순위: 오버레이 버튼 중 가장 오른쪽의 작은 아이콘 버튼 = ... 버튼
+        // 1순위: 필터된 버튼 중 가장 오른쪽의 작은 아이콘 버튼 = ... 버튼
         // 스크린샷 기준: [이미지편집] [카메라HD] [핀] [...] → 맨 오른쪽
-        const iconBtns = overlayBtns.filter(b => b.w < 60 && b.h < 60); // 아이콘 크기 버튼만
+        const iconBtns = filtered.filter(b => b.w < 60 && b.h < 60); // 아이콘 크기 버튼만
         if (iconBtns.length > 0) {
           iconBtns.sort((a, b) => b.right - a.right); // 가장 오른쪽 먼저
           moreBtn = iconBtns[0].btn;
-          console.log('[Grok Upscale] ... 버튼 발견 (영상 오버레이 맨 오른쪽):',
+          console.log('[Grok Upscale] ... 버튼 발견 (영상 오버레이 맨 오른쪽, "추가 옵션" 제외):',
             `"${iconBtns[0].text || iconBtns[0].aria}" (${iconBtns[0].x},${iconBtns[0].y})`);
         }
 
-        // 2순위: 오버레이 버튼 중 aria에 "옵션"/"more" 포함
+        // 2순위: 필터된 버튼 중 SVG가 있고 텍스트 없는 작은 버튼 (아이콘 전용)
         if (!moreBtn) {
-          for (const b of overlayBtns) {
-            if (/옵션|more|메뉴|option/i.test(b.aria)) {
-              moreBtn = b.btn;
-              console.log('[Grok Upscale] ... 버튼 발견 (오버레이 aria):', b.aria);
-              break;
-            }
+          const svgOnlyBtns = filtered.filter(b =>
+            b.btn.querySelector('svg') && (!b.text || b.text.length <= 2) && b.w < 60
+          );
+          if (svgOnlyBtns.length > 0) {
+            svgOnlyBtns.sort((a, b) => b.right - a.right);
+            moreBtn = svgOnlyBtns[0].btn;
+            console.log('[Grok Upscale] ... 버튼 발견 (SVG 아이콘, 맨 오른쪽)');
           }
         }
 
         if (!moreBtn) {
           console.error('[Grok Upscale] 영상 오버레이에서 ... 버튼 미발견.',
-            '오버레이 버튼 수:', overlayBtns.length);
-          return { success: false, reason: 'more-button-not-found-in-overlay', overlayCount: overlayBtns.length };
+            '총 오버레이:', overlayBtns.length, '필터 후:', filtered.length);
+          return { success: false, reason: 'more-button-not-found-in-overlay',
+            overlayCount: overlayBtns.length, filteredCount: filtered.length };
         }
 
         moreBtn.click();
