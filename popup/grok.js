@@ -251,12 +251,13 @@
   async function loadState() {
     const result = await chrome.storage.local.get([
       'grok_queueMeta', 'grok_motionPrompt', 'grok_delay',
-      'grok_saveLocation', 'grok_activeMode'
+      'grok_saveLocation', 'grok_activeMode', 'grok_upscaleEnabled'
     ]);
 
     if (result.grok_motionPrompt) grokMotionPrompt.value = result.grok_motionPrompt;
     if (result.grok_delay) grokDelay.value = result.grok_delay;
     if (result.grok_saveLocation) grokSaveLocation.value = result.grok_saveLocation;
+    if (result.grok_upscaleEnabled !== undefined) grokUpscaleEnabled.checked = result.grok_upscaleEnabled;
 
     // 큐 복원
     if (result.grok_queueMeta && result.grok_queueMeta.length > 0) {
