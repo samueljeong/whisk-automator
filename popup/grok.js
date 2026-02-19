@@ -715,13 +715,23 @@
     });
   }
 
-  // A/B 테스트 팝업 자동 닫기
+  // 팝업/다이얼로그 자동 닫기 (프로젝트 생성, A/B 테스트 등)
   async function dismissPopups() {
     await chrome.scripting.executeScript({
       target: { tabId: grokTabId },
       world: 'MAIN',
       func: () => {
-        // 모달/다이얼로그의 닫기 버튼 찾기
+        // 1) "취소" 버튼 찾기 (프로젝트 이름 팝업 등)
+        const allButtons = document.querySelectorAll('button');
+        for (const btn of allButtons) {
+          const text = btn.textContent?.trim() || '';
+          if (text === '취소' || text === 'Cancel' || text === 'cancel') {
+            btn.click();
+            return;
+          }
+        }
+
+        // 2) 닫기(X) 버튼 찾기
         const closeButtons = document.querySelectorAll(
           '[role="dialog"] button, .modal button, [data-testid*="close"], [aria-label*="close" i], [aria-label*="dismiss" i]'
         );
@@ -731,6 +741,7 @@
               text === 'no thanks' || text === 'skip' || text === 'maybe later' ||
               btn.getAttribute('aria-label')?.toLowerCase().includes('close')) {
             btn.click();
+            return;
           }
         }
       }
