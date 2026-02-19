@@ -793,93 +793,31 @@
           }, 50 + Math.random() * 100);
         }
 
-        // ── 1단계: 프롬프트 입력란 찾기 ──
-        // 여러 후보 중 가장 크고 보이는 것 선택
-        const editables = [
-          ...document.querySelectorAll('[contenteditable="true"]'),
-          ...document.querySelectorAll('textarea'),
+        // ── 1단계: aria-label로 동영상 생성 버튼 직접 탐색 ──
+        // grok.com/imagine은 채팅 UI가 아닌 이미지 편집 UI이므로
+        // 입력란 근처가 아닌 aria-label로 직접 찾는 것이 가장 정확
+        const ariaSelectors = [
+          'button[aria-label="동영상 만들기"]',
+          'button[aria-label*="make video" i]',
+          'button[aria-label*="create video" i]',
+          'button[aria-label*="generate video" i]',
+          'button[aria-label*="generate image" i]',
         ];
-        const visibleInputs = editables.filter(el => {
-          const r = el.getBoundingClientRect();
-          return r.width > 100 && r.height > 15;
-        });
-
-        if (visibleInputs.length === 0) {
-          console.log('[Grok] 프롬프트 입력란을 찾을 수 없음');
-          return { found: false, reason: 'no-input-area' };
-        }
-
-        // 가장 넓은(주요) 입력란 선택
-        const inputArea = visibleInputs.reduce((a, b) => {
-          return a.getBoundingClientRect().width > b.getBoundingClientRect().width ? a : b;
-        });
-        const inputRect = inputArea.getBoundingClientRect();
-        const inputMidY = inputRect.top + inputRect.height / 2;
-
-        console.log('[Grok] 입력란 위치:',
-          `x=${Math.round(inputRect.left)}~${Math.round(inputRect.right)}`,
-          `y=${Math.round(inputRect.top)}~${Math.round(inputRect.bottom)}`,
-          `${Math.round(inputRect.width)}x${Math.round(inputRect.height)}`);
-
-        // ── 2단계: 같은 수평 행에서 버튼 찾기 (Y좌표 필터) ──
-        const allBtns = document.querySelectorAll('button:not([disabled])');
-        const sameLine = [];
-
-        for (const btn of allBtns) {
-          const r = btn.getBoundingClientRect();
-          if (r.width < 10 || r.height < 10) continue;
-
-          // Y좌표 검사: 입력란과 같은 수평 밴드(±60px) 안에 있어야 함
-          const btnMidY = r.top + r.height / 2;
-          if (Math.abs(btnMidY - inputMidY) > 60) continue;
-
-          const text = (btn.textContent || '').trim();
-          const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
-          const hasSvg = !!btn.querySelector('svg');
-
-          // 다운로드/공유/닫기/삭제 등 유틸리티 버튼 제외
-          if (/download|share|close|delete|remove|copy|다운|공유|닫기|삭제|복사/i.test(aria)) continue;
-
-          sameLine.push({
-            btn, rect: r, text: text.substring(0, 30), aria, hasSvg,
-            relX: r.left - inputRect.right // 입력란 오른쪽 끝 기준 거리
-          });
-        }
-
-        console.log('[Grok] 같은 행 버튼 후보:', sameLine.length, '개',
-          sameLine.map(c =>
-            `[${c.text || '(icon)'}] aria="${c.aria}" svg=${c.hasSvg} relX=${Math.round(c.relX)} ${Math.round(c.rect.width)}x${Math.round(c.rect.height)} pos=(${Math.round(c.rect.left)},${Math.round(c.rect.top)})`
-          ));
-
-        if (sameLine.length > 0) {
-          // 입력란 오른쪽에 있는 SVG 아이콘 버튼 (텍스트 거의 없는 것)
-          const rightSvgIcons = sameLine.filter(c =>
-            c.hasSvg && c.text.length < 3 && c.relX > -20
-          );
-
-          if (rightSvgIcons.length > 0) {
-            // 입력란에 가장 가까운 SVG 아이콘 버튼 선택
-            const target = rightSvgIcons.reduce((a, b) => a.relX < b.relX ? a : b);
-            console.log('[Grok] ✓ 전송 버튼 선택 (SVG 아이콘):',
-              `pos=(${Math.round(target.rect.left)},${Math.round(target.rect.top)})`,
-              `${Math.round(target.rect.width)}x${Math.round(target.rect.height)}`,
-              `aria="${target.aria}" relX=${Math.round(target.relX)}`);
-            simulateClick(target.btn);
-            return { found: true, method: 'same-line-svg', x: Math.round(target.rect.left), y: Math.round(target.rect.top) };
-          }
-
-          // SVG 아이콘이 없으면 입력란 오른쪽의 아무 버튼
-          const rightAny = sameLine.filter(c => c.relX > -20);
-          if (rightAny.length > 0) {
-            const target = rightAny.reduce((a, b) => a.relX < b.relX ? a : b);
-            console.log('[Grok] ✓ 전송 버튼 선택 (폴백):',
-              `"${target.text}" aria="${target.aria}" pos=(${Math.round(target.rect.left)},${Math.round(target.rect.top)})`);
-            simulateClick(target.btn);
-            return { found: true, method: 'same-line-fallback', x: Math.round(target.rect.left) };
+        for (const sel of ariaSelectors) {
+          const btn = document.querySelector(sel);
+          if (btn && !btn.disabled) {
+            const r = btn.getBoundingClientRect();
+            if (r.width > 0) {
+              console.log('[Grok] ✓ aria 직접 매치:', sel,
+                `pos=(${Math.round(r.left)},${Math.round(r.top)})`,
+                `${Math.round(r.width)}x${Math.round(r.height)}`);
+              simulateClick(btn);
+              return { found: true, method: 'aria-direct', selector: sel };
+            }
           }
         }
 
-        // ── 3단계: 셀렉터 기반 폴백 ──
+        // ── 2단계: 셀렉터 기반 탐색 ──
         const selectors = [
           'button[data-testid="send-button"]',
           'button[data-testid="generate-button"]',
@@ -890,15 +828,27 @@
         for (const sel of selectors) {
           const btn = document.querySelector(sel);
           if (btn && !btn.disabled) {
-            console.log('[Grok] ✓ 셀렉터 폴백:', sel);
+            const r = btn.getBoundingClientRect();
+            console.log('[Grok] ✓ 셀렉터 매치:', sel,
+              `pos=(${Math.round(r.left)},${Math.round(r.top)})`);
             simulateClick(btn);
-            return { found: true, method: 'selector-fallback', selector: sel };
+            return { found: true, method: 'selector', selector: sel };
           }
         }
 
-        // 텍스트 기반 폴백
+        // ── 3단계: 텍스트/aria 패턴 기반 폴백 ──
+        const allBtns = document.querySelectorAll('button:not([disabled])');
         for (const btn of allBtns) {
           const text = (btn.textContent || '').trim();
+          const aria = (btn.getAttribute('aria-label') || '');
+          // "동영상"이 포함된 aria (단, "옵션"은 제외)
+          if (/동영상/i.test(aria) && !/옵션/i.test(aria)) {
+            const r = btn.getBoundingClientRect();
+            console.log('[Grok] ✓ 동영상 aria 매치:', aria,
+              `pos=(${Math.round(r.left)},${Math.round(r.top)})`);
+            simulateClick(btn);
+            return { found: true, method: 'aria-video', aria };
+          }
           if (/^(generate|create|send|생성|만들기|전송)$/i.test(text)) {
             console.log('[Grok] ✓ 텍스트 폴백:', text);
             simulateClick(btn);
