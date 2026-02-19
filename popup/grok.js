@@ -243,7 +243,8 @@
     chrome.storage.local.set({
       grok_motionPrompt: grokMotionPrompt.value,
       grok_delay: parseInt(grokDelay.value) || 10,
-      grok_saveLocation: grokSaveLocation.value || 'grok-videos'
+      grok_saveLocation: grokSaveLocation.value || 'grok-videos',
+      grok_upscaleEnabled: grokUpscaleEnabled.checked
     });
   }
 
