@@ -506,7 +506,24 @@
 
         // Step 5: 영상 완성 대기
         updateProgress(completed, total, `${item.name}: 영상 생성 대기 중...`);
-        const videoUrl = await waitForVideo();
+        let videoUrl = await waitForVideo();
+
+        // Step 5.5: 업스케일 (옵션)
+        if (videoUrl && grokUpscaleEnabled.checked) {
+          updateProgress(completed, total, `${item.name}: 업스케일 중...`);
+          const upscaleClicked = await clickUpscaleInMenu();
+          if (upscaleClicked) {
+            const upscaledUrl = await waitForUpscale();
+            if (upscaledUrl) {
+              videoUrl = upscaledUrl;
+              console.log('[Grok] 업스케일 완료, 새 URL:', videoUrl.substring(0, 80));
+            } else {
+              console.log('[Grok] 업스케일 대기 실패, 원본 영상으로 진행');
+            }
+          } else {
+            console.log('[Grok] 업스케일 메뉴 클릭 실패, 원본 영상으로 진행');
+          }
+        }
 
         if (videoUrl) {
           // Step 6a: URL 추출 성공 → 프로그래밍 방식 다운로드
