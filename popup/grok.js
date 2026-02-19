@@ -805,7 +805,7 @@
     });
   }
 
-  // Anti-Bot 클릭 시뮬레이션으로 생성 버튼 클릭
+  // 생성 버튼(↑ 화살표) 클릭 - 프롬프트 입력바 내부의 원형 전송 버튼
   async function clickGenerateButton() {
     const [result] = await chrome.scripting.executeScript({
       target: { tabId: grokTabId },
@@ -816,78 +816,86 @@
           const x = rect.left + rect.width / 2;
           const y = rect.top + rect.height / 2;
           const opts = { bubbles: true, cancelable: true, clientX: x, clientY: y };
-
           element.dispatchEvent(new MouseEvent('mouseover', opts));
           element.dispatchEvent(new MouseEvent('mouseenter', opts));
           element.dispatchEvent(new MouseEvent('mousedown', { ...opts, button: 0 }));
-
           setTimeout(() => {
             element.dispatchEvent(new MouseEvent('mouseup', { ...opts, button: 0 }));
             element.dispatchEvent(new MouseEvent('click', { ...opts, button: 0 }));
           }, 50 + Math.random() * 100);
         }
 
-        // 1단계: CSS 셀렉터로 직접 찾기
+        // 1단계: ↑ 화살표 SVG 패턴으로 찾기 (위쪽 화살표 아이콘 버튼)
+        const buttons = document.querySelectorAll('button:not([disabled])');
+        for (const btn of buttons) {
+          const svg = btn.querySelector('svg');
+          if (!svg) continue;
+          const paths = svg.querySelectorAll('path');
+          for (const path of paths) {
+            const d = path.getAttribute('d') || '';
+            // 위쪽 화살표 패턴: 위로 향하는 벡터 (M...L... 또는 arrow-up 패턴)
+            // polyline/line으로 화살표를 그리는 경우도 체크
+            if (d.includes('M12') || d.includes('arrow') || d.includes('m12')) {
+              const rect = btn.getBoundingClientRect();
+              // 원형 버튼 (가로세로 비슷, 적당한 크기)
+              if (rect.width > 20 && rect.width < 60 &&
+                  Math.abs(rect.width - rect.height) < 10) {
+                console.log('[Grok] 1단계 ↑ 화살표 원형 버튼 발견:', rect.width, 'x', rect.height);
+                simulateClick(btn);
+                return { found: true, method: 'arrow-svg', detail: `${rect.width}x${rect.height}` };
+              }
+            }
+          }
+          // polyline/line 체크 (위쪽 화살표)
+          const polylines = svg.querySelectorAll('polyline, line');
+          if (polylines.length > 0) {
+            const rect = btn.getBoundingClientRect();
+            if (rect.width > 20 && rect.width < 60 &&
+                Math.abs(rect.width - rect.height) < 10) {
+              // 텍스트 없는 원형 아이콘 버튼
+              const text = btn.textContent?.trim() || '';
+              if (text.length < 3) {
+                console.log('[Grok] 1단계 polyline 원형 버튼 발견:', rect.width, 'x', rect.height);
+                simulateClick(btn);
+                return { found: true, method: 'polyline-svg', detail: `${rect.width}x${rect.height}` };
+              }
+            }
+          }
+        }
+
+        // 2단계: CSS 셀렉터로 찾기
         const selectors = [
           'button[data-testid="send-button"]',
           'button[data-testid="generate-button"]',
           'button[aria-label*="send" i]',
           'button[aria-label*="generate" i]',
-          'button[aria-label*="create" i]',
           'button[aria-label*="submit" i]',
           'button[type="submit"]'
         ];
-
         for (const sel of selectors) {
           const btn = document.querySelector(sel);
           if (btn && !btn.disabled) {
-            console.log('[Grok] 1단계 버튼 발견:', sel);
+            console.log('[Grok] 2단계 셀렉터 발견:', sel);
             simulateClick(btn);
             return { found: true, method: 'selector', detail: sel };
           }
         }
 
-        // 2단계: 텍스트 기반 버튼 찾기 (Generate, Create, 생성, 만들기 등)
-        const textPatterns = /^(generate|create|submit|send|go|생성|만들기|전송|시작)$/i;
-        const buttons = document.querySelectorAll('button');
-        for (const btn of buttons) {
-          if (btn.disabled) continue;
-          const text = btn.textContent?.trim() || '';
-          if (textPatterns.test(text)) {
-            console.log('[Grok] 2단계 텍스트 버튼 발견:', text);
-            simulateClick(btn);
-            return { found: true, method: 'text', detail: text };
-          }
-        }
-
-        // 3단계: 텍스트 부분 매칭 (버튼 텍스트에 키워드 포함)
-        const partialPatterns = /generate|create|submit|생성|만들기/i;
-        for (const btn of buttons) {
-          if (btn.disabled) continue;
-          const text = btn.textContent?.trim() || '';
-          const label = btn.getAttribute('aria-label') || '';
-          if (text.length < 30 && (partialPatterns.test(text) || partialPatterns.test(label))) {
-            console.log('[Grok] 3단계 부분매칭 버튼 발견:', text || label);
-            simulateClick(btn);
-            return { found: true, method: 'partial', detail: text || label };
-          }
-        }
-
-        // 4단계: 프롬프트 입력란 근처의 아이콘 버튼 (전송 화살표 등)
-        const inputArea = document.querySelector('[contenteditable="true"], textarea');
+        // 3단계: 프롬프트 입력란 옆 아이콘 버튼 (가장 가까운 SVG 버튼)
+        const inputArea = document.querySelector(
+          '[contenteditable="true"], textarea, input[type="text"]'
+        );
         if (inputArea) {
-          // 입력란의 부모/형제에서 아이콘 버튼 찾기
           let container = inputArea.parentElement;
-          for (let depth = 0; depth < 5 && container; depth++) {
+          for (let depth = 0; depth < 8 && container; depth++) {
             const nearButtons = container.querySelectorAll('button:not([disabled])');
             for (const btn of nearButtons) {
               const svg = btn.querySelector('svg');
               const text = btn.textContent?.trim() || '';
-              // SVG 아이콘만 있는 버튼 (전송 아이콘)
               if (svg && text.length < 3) {
                 const rect = btn.getBoundingClientRect();
-                if (rect.width > 0 && rect.height > 0) {
-                  console.log('[Grok] 4단계 입력란 근처 아이콘 버튼 발견');
+                if (rect.width > 20 && rect.height > 20) {
+                  console.log('[Grok] 3단계 입력란 근처 아이콘 버튼:', depth, rect.width, 'x', rect.height);
                   simulateClick(btn);
                   return { found: true, method: 'nearby-icon', detail: `depth=${depth}` };
                 }
@@ -897,22 +905,30 @@
           }
         }
 
-        // 5단계: 못 찾음 - 페이지의 모든 버튼 진단 로그
+        // 4단계: 텍스트 기반 (Generate, 생성 등)
+        const textPatterns = /^(generate|create|submit|send|go|생성|만들기|전송)$/i;
+        for (const btn of buttons) {
+          const text = btn.textContent?.trim() || '';
+          if (textPatterns.test(text)) {
+            console.log('[Grok] 4단계 텍스트 버튼:', text);
+            simulateClick(btn);
+            return { found: true, method: 'text', detail: text };
+          }
+        }
+
+        // 실패: 진단 로그
         const allBtns = [];
         for (const btn of buttons) {
           const rect = btn.getBoundingClientRect();
-          if (rect.width === 0 || rect.height === 0) continue;
+          if (rect.width === 0) continue;
           allBtns.push({
-            text: btn.textContent?.trim().substring(0, 50),
+            text: btn.textContent?.trim().substring(0, 30),
             aria: btn.getAttribute('aria-label'),
-            testid: btn.getAttribute('data-testid'),
-            type: btn.type,
-            disabled: btn.disabled,
-            hasSvg: !!btn.querySelector('svg'),
-            classes: btn.className?.substring(0, 80)
+            size: `${Math.round(rect.width)}x${Math.round(rect.height)}`,
+            hasSvg: !!btn.querySelector('svg')
           });
         }
-        console.log('[Grok] 생성 버튼 미발견. 페이지 버튼 목록:', JSON.stringify(allBtns, null, 2));
+        console.log('[Grok] 생성 버튼 미발견. 버튼 목록:', JSON.stringify(allBtns, null, 2));
         return { found: false, buttons: allBtns };
       }
     });
@@ -921,7 +937,7 @@
     if (res?.found) {
       console.log(`[Grok] 생성 버튼 클릭 성공: ${res.method} (${res.detail})`);
     } else {
-      console.error('[Grok] 생성 버튼 미발견! 페이지 버튼:', res?.buttons);
+      console.error('[Grok] 생성 버튼 미발견!', res?.buttons);
     }
     return res;
   }
