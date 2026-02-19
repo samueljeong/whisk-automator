@@ -465,6 +465,11 @@
       updateProgress(completed, total, `${item.name} 처리 중...`);
 
       try {
+        // Step 0: Imagine 새 생성 페이지로 이동
+        updateProgress(completed, total, `${item.name}: 새 생성 페이지 이동 중...`);
+        await navigateToImagine();
+        await sleep(2000);
+
         // Step 1: 이미지 업로드
         updateProgress(completed, total, `${item.name}: 이미지 업로드 중...`);
         await uploadImageToGrok(item.dataUrl);
