@@ -536,22 +536,43 @@
   // 자동화 헬퍼 함수들
   // ============================================================
 
-  // Imagine 새 생성 페이지로 이동
+  // Imagine 새 생성 페이지로 이동 → "만들기" 버튼 클릭
   async function navigateToImagine() {
+    // 1) Imagine 메인 페이지로 이동
     await chrome.tabs.update(grokTabId, { url: 'https://grok.com/imagine' });
-    // 페이지 로드 대기
+
+    // 2) 페이지 로드 대기
     for (let i = 0; i < 20; i++) {
       await sleep(500);
       try {
         const [result] = await chrome.scripting.executeScript({
           target: { tabId: grokTabId },
-          func: () => document.readyState === 'complete' && !!document.querySelector('input[type="file"], [contenteditable], textarea, button')
+          func: () => document.readyState === 'complete'
         });
-        if (result?.result) return;
+        if (result?.result) break;
       } catch (e) {
-        // 페이지 로딩 중 — 재시도
+        // 페이지 로딩 중
       }
     }
+    await sleep(1500);
+
+    // 3) "만들기" 버튼 클릭
+    await chrome.scripting.executeScript({
+      target: { tabId: grokTabId },
+      world: 'MAIN',
+      func: () => {
+        const buttons = document.querySelectorAll('button, a');
+        for (const btn of buttons) {
+          const text = btn.textContent?.trim() || '';
+          if (text === '만들기' || text === 'Create' || text === 'New' ||
+              text.includes('만들기') || text.includes('Create')) {
+            btn.click();
+            return;
+          }
+        }
+      }
+    });
+    await sleep(2000);
   }
 
   // 이미지 업로드: data-grok-upload 속성 설정 후 파일 입력 트리거
