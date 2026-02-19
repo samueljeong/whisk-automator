@@ -465,6 +465,11 @@
       updateProgress(completed, total, `${item.name} 처리 중...`);
 
       try {
+        // Step 0: Imagine 모드 진입 (사이드바 클릭)
+        updateProgress(completed, total, `${item.name}: Imagine 모드 진입...`);
+        await clickImagineInSidebar();
+        await sleep(2000);
+
         // Step 1: 이미지 업로드
         updateProgress(completed, total, `${item.name}: 이미지 업로드 중...`);
         await uploadImageToGrok(item.dataUrl);
