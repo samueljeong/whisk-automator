@@ -536,7 +536,28 @@
   // 자동화 헬퍼 함수들
   // ============================================================
 
-  // Imagine 새 생성 페이지로 이동 → "만들기" 버튼 클릭
+  // 사이드바에서 "Imagine" 클릭 → 새 생성 모드 진입
+  async function clickImagineInSidebar() {
+    await chrome.scripting.executeScript({
+      target: { tabId: grokTabId },
+      world: 'MAIN',
+      func: () => {
+        // 사이드바에서 "Imagine" 텍스트를 가진 링크/버튼 찾기
+        const elements = document.querySelectorAll('a, button, [role="button"], nav *');
+        for (const el of elements) {
+          const text = el.textContent?.trim() || '';
+          if (text === 'Imagine') {
+            el.click();
+            console.log('[Grok] Imagine 사이드바 클릭 성공');
+            return;
+          }
+        }
+        console.log('[Grok] Imagine 링크 미발견');
+      }
+    });
+  }
+
+  // (미사용) 이전 네비게이션 함수
   async function navigateToImagine() {
     // 1) 사이드바의 "Imagine" 링크 클릭으로 갤러리 이동
     const [navResult] = await chrome.scripting.executeScript({
