@@ -114,6 +114,16 @@
   text-overflow: ellipsis;
 }
 
+.grok-queue-item-origin {
+  font-size: 10px;
+  color: #6366f1;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.7;
+}
+
 .grok-queue-item-prompt {
   font-size: 11px;
   color: #888;
