@@ -40,6 +40,7 @@
 
   const grokStartBtn = $('#grokStartBtn');
   const grokStopBtn = $('#grokStopBtn');
+  const grokUpscaleEnabled = $('#grokUpscaleEnabled');
 
   // ============================================================
   // 모드 탭 전환
