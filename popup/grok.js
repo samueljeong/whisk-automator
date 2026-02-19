@@ -796,6 +796,21 @@
   // ============================================================
   loadState();
 
+  // 모션 프롬프트 파일 로드 이벤트 수신
+  window.addEventListener('grokMotionPromptsLoaded', (e) => {
+    const prompts = e.detail.prompts;
+    const pendingItems = grokQueue.filter(i => i.status === 'pending');
+
+    pendingItems.forEach((item, idx) => {
+      if (idx < prompts.length) {
+        item.motionPrompt = prompts[idx];
+      }
+    });
+
+    renderQueue();
+    saveQueue();
+  });
+
   // 5초마다 연결 상태 확인 (Grok 모드일 때만)
   setInterval(() => {
     if (!grokContainer.hidden) {
