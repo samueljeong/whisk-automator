@@ -283,9 +283,66 @@
     clearQueue();
   });
 
-  // Whisk에서 가져오기 - Whisk의 다운로드 폴더에서 최근 이미지를 가져옴
+  // ============================================================
+  // Whisk 프롬프트 → 모션 프롬프트 자동 변환
+  // ============================================================
+  function generateMotionPrompt(imagePrompt) {
+    if (!imagePrompt) return grokMotionPrompt.value || 'slow zoom in, cinematic';
+
+    const lp = imagePrompt.toLowerCase();
+    const motions = [];
+
+    // 카메라 움직임 (장면 유형별)
+    if (/close[- ]?up|face|portrait|expression|eyes/.test(lp)) {
+      motions.push('slow zoom in on face');
+    } else if (/wide shot|landscape|panorama|aerial|vast|city[- ]?scape|skyline/.test(lp)) {
+      motions.push('slow pan right');
+    } else if (/battle|fight|action|explosion|clash|sword|combat/.test(lp)) {
+      motions.push('dynamic camera movement');
+    } else if (/crowd|group|army|soldiers|people/.test(lp)) {
+      motions.push('slow dolly back');
+    } else if (/walk|running|riding|horse|moving|chase/.test(lp)) {
+      motions.push('tracking shot');
+    } else {
+      motions.push('slow zoom in');
+    }
+
+    // 피사체 움직임
+    if (/wind|hair|cape|cloth|flag|robe|cloak/.test(lp)) motions.push('wind blowing');
+    if (/rain|storm|thunder/.test(lp)) motions.push('rain falling');
+    if (/fire|flame|torch|candle|burning/.test(lp)) motions.push('flickering firelight');
+    if (/fog|mist|smoke|haze|steam/.test(lp)) motions.push('fog drifting');
+    if (/water|ocean|river|lake|wave|sea/.test(lp)) motions.push('gentle water ripples');
+    if (/snow|ice|frost|winter/.test(lp)) motions.push('snowflakes falling');
+    if (/forest|tree|leaves|branch/.test(lp)) motions.push('leaves swaying');
+    if (/dust|particle|debris|sand/.test(lp)) motions.push('particles floating');
+
+    // 분위기 보정
+    if (motions.length <= 1) {
+      if (/dramatic|epic|intense|dark|shadow/.test(lp)) {
+        motions.push('dramatic lighting shift');
+      } else if (/serene|calm|peaceful|quiet|gentle/.test(lp)) {
+        motions.push('soft ambient light');
+      } else {
+        motions.push('cinematic atmosphere');
+      }
+    }
+
+    return motions.join(', ');
+  }
+
+  // 파일명에서 씬 번호 추출 (예: ep5_scene_003.png → 3)
+  function extractSceneIndex(filename) {
+    const match = filename.match(/(?:scene|씬|s)[_-]?(\d+)/i);
+    if (match) return parseInt(match[1], 10) - 1; // 0-based
+    // 숫자만 있는 경우 (001.png, 03.png)
+    const numMatch = filename.match(/(\d+)\.\w+$/);
+    if (numMatch) return parseInt(numMatch[1], 10) - 1;
+    return -1;
+  }
+
+  // Whisk에서 가져오기 - 이미지 + Whisk 프롬프트 자동 매칭
   grokImportWhiskBtn.addEventListener('click', async () => {
-    // File System Access API로 폴더 선택
     try {
       const handles = await window.showOpenFilePicker({
         multiple: true,
@@ -294,15 +351,40 @@
           accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] }
         }]
       });
+
+      // Whisk 프롬프트 데이터 읽기
+      const storageData = await chrome.storage.local.get(['prompts']);
+      const whiskPrompts = storageData.prompts || [];
+
+      // 파일을 이름순으로 정렬
+      const sortedHandles = [];
       for (const handle of handles) {
         const file = await handle.getFile();
+        sortedHandles.push({ handle, file });
+      }
+      sortedHandles.sort((a, b) => a.file.name.localeCompare(b.file.name));
+
+      let matchCount = 0;
+
+      for (const { file } of sortedHandles) {
         const reader = new FileReader();
         reader.onload = (e) => {
+          // 씬 번호로 Whisk 프롬프트 매칭
+          const sceneIdx = extractSceneIndex(file.name);
+          let whiskText = '';
+          if (sceneIdx >= 0 && sceneIdx < whiskPrompts.length) {
+            whiskText = whiskPrompts[sceneIdx].text || '';
+            matchCount++;
+          }
+
+          const motion = generateMotionPrompt(whiskText);
+
           grokQueue.push({
             id: generateId(),
             name: file.name,
             dataUrl: e.target.result,
-            motionPrompt: grokMotionPrompt.value || '',
+            motionPrompt: motion,
+            whiskPrompt: whiskText, // 원본 Whisk 프롬프트 보존
             status: 'pending',
             videoUrl: null
           });
