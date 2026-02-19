@@ -538,68 +538,76 @@
 
   // Imagine 새 생성 페이지로 이동 → "만들기" 버튼 클릭
   async function navigateToImagine() {
-    // 1) Imagine 메인 페이지로 이동
-    await chrome.tabs.update(grokTabId, { url: 'https://grok.com/imagine' });
+    // 1) 사이드바의 "Imagine" 링크 클릭으로 갤러리 이동
+    const [navResult] = await chrome.scripting.executeScript({
+      target: { tabId: grokTabId },
+      world: 'MAIN',
+      func: () => {
+        // 사이드바에서 "Imagine" 링크 찾기
+        const links = document.querySelectorAll('a[href*="/imagine"], nav a, aside a');
+        for (const link of links) {
+          const text = link.textContent?.trim() || '';
+          if (text === 'Imagine' || text.includes('Imagine')) {
+            link.click();
+            return 'sidebar-imagine';
+          }
+        }
+        // fallback: window.location 직접 변경
+        window.location.href = '/imagine';
+        return 'location-fallback';
+      }
+    });
+    console.log('[Grok] 네비게이션:', navResult?.result);
 
-    // 2) 페이지 로드 대기
-    for (let i = 0; i < 20; i++) {
+    // 2) 갤러리 페이지 로드 대기
+    for (let i = 0; i < 30; i++) {
       await sleep(500);
       try {
-        const [result] = await chrome.scripting.executeScript({
+        const [urlCheck] = await chrome.scripting.executeScript({
           target: { tabId: grokTabId },
-          func: () => document.readyState === 'complete'
+          func: () => ({ ready: document.readyState === 'complete', url: window.location.pathname })
         });
-        if (result?.result) break;
-      } catch (e) {
-        // 페이지 로딩 중
-      }
+        // /imagine 갤러리에 도착했는지 확인 (/imagine/post가 아닌)
+        if (urlCheck?.result?.ready && urlCheck.result.url === '/imagine') break;
+      } catch (e) { /* 로딩 중 */ }
     }
     await sleep(2000);
 
-    // 3) 페이지 분석 + "만들기" 버튼 클릭
+    // 3) 페이지의 모든 버튼 스캔 + "만들기" 클릭
     const [scanResult] = await chrome.scripting.executeScript({
       target: { tabId: grokTabId },
       world: 'MAIN',
       func: () => {
-        const found = [];
-        // 모든 클릭 가능한 요소 스캔
         const elements = document.querySelectorAll('button, a, [role="button"]');
+        const found = [];
         for (const el of elements) {
           const text = el.textContent?.trim() || '';
           const href = el.href || el.getAttribute('href') || '';
           const ariaLabel = el.getAttribute('aria-label') || '';
           if (text.length > 0 && text.length < 30) {
-            found.push({ tag: el.tagName, text, href, ariaLabel, cls: el.className?.slice(0, 60) });
+            found.push(`${el.tagName}:"${text}" href=${href} aria=${ariaLabel}`);
           }
         }
 
-        // 클릭 시도: 여러 패턴으로 "만들기" 버튼 찾기
+        // "만들기" / "Create" / "새로 만들기" 등 클릭
         for (const el of elements) {
           const text = el.textContent?.trim() || '';
           const href = el.href || el.getAttribute('href') || '';
           const ariaLabel = el.getAttribute('aria-label') || '';
-
-          if (text === '만들기' || text === 'Create' || text === '새로 만들기' ||
-              text === '+ 만들기' || text === '+ Create' ||
-              ariaLabel.includes('만들기') || ariaLabel.includes('Create') || ariaLabel.includes('create') ||
-              href.includes('/imagine/create') || href.includes('/imagine/new')) {
+          if (/^(만들기|Create|새로 만들기|\+ 만들기|New|새 이미지)$/i.test(text) ||
+              /만들기|create/i.test(ariaLabel) ||
+              /\/imagine\/(create|new)/.test(href)) {
             el.click();
-            return { clicked: text || ariaLabel || href, found };
+            return { clicked: text || ariaLabel, found };
           }
         }
 
-        // SVG + 아이콘만 있는 버튼 (플러스 아이콘)
+        // "만들기"를 포함하는 버튼 (부분 일치)
         for (const el of elements) {
           const text = el.textContent?.trim() || '';
-          if (text === '+' || text === '＋') {
+          if (/만들기|create/i.test(text) && text.length < 20) {
             el.click();
-            return { clicked: '+', found };
-          }
-          // SVG path로 플러스 아이콘 감지
-          const svg = el.querySelector('svg');
-          if (svg && !text && el.closest('[class*="create"], [class*="new"], [class*="add"]')) {
-            el.click();
-            return { clicked: 'svg-icon', found };
+            return { clicked: text, found };
           }
         }
 
@@ -607,14 +615,13 @@
       }
     });
 
-    console.log('[Grok] Imagine 페이지 스캔 결과:', scanResult?.result);
-
-    // 버튼을 못 찾았으면 input[type=file] 이 이미 있는지 확인 (생성 페이지일 수 있음)
-    if (!scanResult?.result?.clicked) {
-      console.log('[Grok] "만들기" 버튼 미발견. 현재 페이지에서 바로 업로드 시도.');
+    const result = scanResult?.result;
+    if (result?.clicked) {
+      console.log('[Grok] "만들기" 클릭 성공:', result.clicked);
+    } else {
+      console.log('[Grok] "만들기" 버튼 미발견. 페이지 버튼 목록:', result?.found);
     }
-
-    await sleep(1500);
+    await sleep(2000);
   }
 
   // 이미지 업로드: data-grok-upload 속성 설정 후 파일 입력 트리거
