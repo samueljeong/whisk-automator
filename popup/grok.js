@@ -1007,122 +1007,74 @@
 
   // 더보기(...) 메뉴 → "동영상 업스케일" 클릭
   // 스크린샷 기준: 영상 오버레이 상단 우측에 [이미지편집] [카메라HD] [핀] [...] 버튼 배열
+  // 주의: 사이드바에도 "추가 옵션" 버튼이 있으므로 영상 영역 내 버튼만 탐색해야 함
   async function clickUpscaleInMenu() {
-    // ── 1단계: ... 더보기 버튼 찾기 & 클릭 ──
+    // ── 1단계: 영상 영역 내 ... 더보기 버튼 찾기 & 클릭 ──
     const [result] = await chrome.scripting.executeScript({
       target: { tabId: grokTabId },
       world: 'MAIN',
       func: () => {
-        // 영상 요소 근처의 버튼들을 우선 탐색
         const video = document.querySelector('video');
-        const videoContainer = video ? video.closest('div[class]') : null;
+        if (!video) {
+          console.error('[Grok Upscale] video 요소 미발견');
+          return { success: false, reason: 'no-video-element' };
+        }
 
-        // 탐색 범위: 영상 컨테이너 또는 전체 페이지
-        const searchRoot = videoContainer?.parentElement?.parentElement || document;
+        const vRect = video.getBoundingClientRect();
+        console.log('[Grok Upscale] 영상 위치:', JSON.stringify({
+          x: Math.round(vRect.left), y: Math.round(vRect.top),
+          w: Math.round(vRect.width), h: Math.round(vRect.height)
+        }));
+
+        // 영상 오버레이 영역의 버튼들 수집 (영상 위에 떠 있는 버튼들)
+        const overlayBtns = [];
+        for (const btn of document.querySelectorAll('button')) {
+          const r = btn.getBoundingClientRect();
+          if (r.width === 0 || r.height === 0) continue;
+          // 영상 영역 내부에 위치하는 버튼만 (영상 바운딩 박스 기준)
+          if (r.left >= vRect.left - 10 && r.right <= vRect.right + 10 &&
+              r.top >= vRect.top - 10 && r.bottom <= vRect.bottom + 10) {
+            overlayBtns.push({
+              btn,
+              text: (btn.textContent || '').trim(),
+              aria: btn.getAttribute('aria-label') || '',
+              right: r.right,
+              x: Math.round(r.left), y: Math.round(r.top),
+              w: Math.round(r.width), h: Math.round(r.height)
+            });
+          }
+        }
+
+        console.log('[Grok Upscale] 영상 오버레이 버튼들:',
+          overlayBtns.map(b => `"${b.text || b.aria}" (${b.x},${b.y}) ${b.w}x${b.h}`));
 
         let moreBtn = null;
 
-        // 1순위: aria-label (다양한 변형)
-        const ariaPatterns = ['옵션', 'more', '더보기', '메뉴', 'option', 'More', 'menu', 'actions'];
-        const allBtns = searchRoot.querySelectorAll('button');
-        for (const btn of allBtns) {
-          const aria = btn.getAttribute('aria-label') || '';
-          const r = btn.getBoundingClientRect();
-          if (r.width === 0) continue;
-          for (const pattern of ariaPatterns) {
-            if (aria.toLowerCase().includes(pattern.toLowerCase())) {
-              moreBtn = btn;
-              console.log('[Grok Upscale] ... 버튼 발견 (aria):', aria);
-              break;
-            }
-          }
-          if (moreBtn) break;
+        // 1순위: 오버레이 버튼 중 가장 오른쪽의 작은 아이콘 버튼 = ... 버튼
+        // 스크린샷 기준: [이미지편집] [카메라HD] [핀] [...] → 맨 오른쪽
+        const iconBtns = overlayBtns.filter(b => b.w < 60 && b.h < 60); // 아이콘 크기 버튼만
+        if (iconBtns.length > 0) {
+          iconBtns.sort((a, b) => b.right - a.right); // 가장 오른쪽 먼저
+          moreBtn = iconBtns[0].btn;
+          console.log('[Grok Upscale] ... 버튼 발견 (영상 오버레이 맨 오른쪽):',
+            `"${iconBtns[0].text || iconBtns[0].aria}" (${iconBtns[0].x},${iconBtns[0].y})`);
         }
 
-        // 2순위: SVG 내 3개 원(circle) 또는 3-dot path
+        // 2순위: 오버레이 버튼 중 aria에 "옵션"/"more" 포함
         if (!moreBtn) {
-          for (const btn of allBtns) {
-            const r = btn.getBoundingClientRect();
-            if (r.width === 0) continue;
-            const svg = btn.querySelector('svg');
-            if (!svg) continue;
-            // circle 3개
-            const circles = svg.querySelectorAll('circle');
-            if (circles.length >= 3) {
-              moreBtn = btn;
-              console.log('[Grok Upscale] ... 버튼 발견 (SVG circles)');
-              break;
-            }
-            // path로 그린 3-dot (ellipsis)
-            const paths = svg.querySelectorAll('path');
-            for (const p of paths) {
-              const d = p.getAttribute('d') || '';
-              // 일반적인 ... 아이콘: 3개의 원호/원 모양이 d 속성에 반복
-              if ((d.match(/[aA]/g) || []).length >= 6 || (d.match(/[cC]/g) || []).length >= 9) {
-                moreBtn = btn;
-                console.log('[Grok Upscale] ... 버튼 발견 (SVG path dots)');
-                break;
-              }
-            }
-            if (moreBtn) break;
-          }
-        }
-
-        // 3순위: 텍스트 매치 ("..." / "⋯" / "⋮")
-        if (!moreBtn) {
-          for (const btn of allBtns) {
-            const text = (btn.textContent || '').trim();
-            const r = btn.getBoundingClientRect();
-            if (r.width === 0) continue;
-            if (/^[.…⋯⋮·]{2,3}$/.test(text) || text === '···') {
-              moreBtn = btn;
-              console.log('[Grok Upscale] ... 버튼 발견 (텍스트):', text);
+          for (const b of overlayBtns) {
+            if (/옵션|more|메뉴|option/i.test(b.aria)) {
+              moreBtn = b.btn;
+              console.log('[Grok Upscale] ... 버튼 발견 (오버레이 aria):', b.aria);
               break;
             }
           }
         }
 
-        // 4순위: 영상 영역 내 가장 오른쪽 작은 원형 버튼 (스크린샷 기준 마지막 버튼)
-        if (!moreBtn && video) {
-          const vRect = video.getBoundingClientRect();
-          const nearbyBtns = [];
-          for (const btn of document.querySelectorAll('button')) {
-            const r = btn.getBoundingClientRect();
-            if (r.width === 0) continue;
-            // 영상 영역 위에 있는 버튼들 (y 기준 영상 상단~중간)
-            if (r.top >= vRect.top - 20 && r.top <= vRect.top + vRect.height * 0.3 &&
-                r.left >= vRect.left && r.right <= vRect.right + 20) {
-              nearbyBtns.push({ btn, right: r.right, width: r.width });
-            }
-          }
-          // 가장 오른쪽에 있는 작은 버튼 = ... 버튼
-          if (nearbyBtns.length > 0) {
-            nearbyBtns.sort((a, b) => b.right - a.right);
-            const candidate = nearbyBtns[0];
-            if (candidate.width < 60) { // 원형 아이콘 버튼
-              moreBtn = candidate.btn;
-              console.log('[Grok Upscale] ... 버튼 발견 (위치 기반: 영상 우상단 맨 오른쪽)');
-            }
-          }
-        }
-
         if (!moreBtn) {
-          // 진단: 페이지의 모든 버튼 정보 출력
-          const diag = [];
-          for (const btn of document.querySelectorAll('button')) {
-            const r = btn.getBoundingClientRect();
-            if (r.width === 0) continue;
-            diag.push({
-              text: (btn.textContent || '').trim().substring(0, 30),
-              aria: btn.getAttribute('aria-label'),
-              x: Math.round(r.left), y: Math.round(r.top),
-              size: `${Math.round(r.width)}x${Math.round(r.height)}`,
-              hasSvg: !!btn.querySelector('svg'),
-              classes: (btn.className || '').substring(0, 50)
-            });
-          }
-          console.error('[Grok Upscale] ... 버튼 미발견. 페이지 버튼:', JSON.stringify(diag, null, 2));
-          return { success: false, reason: 'more-button-not-found', buttons: diag };
+          console.error('[Grok Upscale] 영상 오버레이에서 ... 버튼 미발견.',
+            '오버레이 버튼 수:', overlayBtns.length);
+          return { success: false, reason: 'more-button-not-found-in-overlay', overlayCount: overlayBtns.length };
         }
 
         moreBtn.click();
