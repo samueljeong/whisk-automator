@@ -554,25 +554,67 @@
         // 페이지 로딩 중
       }
     }
-    await sleep(1500);
+    await sleep(2000);
 
-    // 3) "만들기" 버튼 클릭
-    await chrome.scripting.executeScript({
+    // 3) 페이지 분석 + "만들기" 버튼 클릭
+    const [scanResult] = await chrome.scripting.executeScript({
       target: { tabId: grokTabId },
       world: 'MAIN',
       func: () => {
-        const buttons = document.querySelectorAll('button, a');
-        for (const btn of buttons) {
-          const text = btn.textContent?.trim() || '';
-          if (text === '만들기' || text === 'Create' || text === 'New' ||
-              text.includes('만들기') || text.includes('Create')) {
-            btn.click();
-            return;
+        const found = [];
+        // 모든 클릭 가능한 요소 스캔
+        const elements = document.querySelectorAll('button, a, [role="button"]');
+        for (const el of elements) {
+          const text = el.textContent?.trim() || '';
+          const href = el.href || el.getAttribute('href') || '';
+          const ariaLabel = el.getAttribute('aria-label') || '';
+          if (text.length > 0 && text.length < 30) {
+            found.push({ tag: el.tagName, text, href, ariaLabel, cls: el.className?.slice(0, 60) });
           }
         }
+
+        // 클릭 시도: 여러 패턴으로 "만들기" 버튼 찾기
+        for (const el of elements) {
+          const text = el.textContent?.trim() || '';
+          const href = el.href || el.getAttribute('href') || '';
+          const ariaLabel = el.getAttribute('aria-label') || '';
+
+          if (text === '만들기' || text === 'Create' || text === '새로 만들기' ||
+              text === '+ 만들기' || text === '+ Create' ||
+              ariaLabel.includes('만들기') || ariaLabel.includes('Create') || ariaLabel.includes('create') ||
+              href.includes('/imagine/create') || href.includes('/imagine/new')) {
+            el.click();
+            return { clicked: text || ariaLabel || href, found };
+          }
+        }
+
+        // SVG + 아이콘만 있는 버튼 (플러스 아이콘)
+        for (const el of elements) {
+          const text = el.textContent?.trim() || '';
+          if (text === '+' || text === '＋') {
+            el.click();
+            return { clicked: '+', found };
+          }
+          // SVG path로 플러스 아이콘 감지
+          const svg = el.querySelector('svg');
+          if (svg && !text && el.closest('[class*="create"], [class*="new"], [class*="add"]')) {
+            el.click();
+            return { clicked: 'svg-icon', found };
+          }
+        }
+
+        return { clicked: null, found };
       }
     });
-    await sleep(2000);
+
+    console.log('[Grok] Imagine 페이지 스캔 결과:', scanResult?.result);
+
+    // 버튼을 못 찾았으면 input[type=file] 이 이미 있는지 확인 (생성 페이지일 수 있음)
+    if (!scanResult?.result?.clicked) {
+      console.log('[Grok] "만들기" 버튼 미발견. 현재 페이지에서 바로 업로드 시도.');
+    }
+
+    await sleep(1500);
   }
 
   // 이미지 업로드: data-grok-upload 속성 설정 후 파일 입력 트리거
