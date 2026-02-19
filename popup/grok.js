@@ -546,46 +546,14 @@
   // 자동화 헬퍼 함수들
   // ============================================================
 
-  // 사이드바에서 "Imagine" 클릭 → 새 생성 모드 진입
+  // Imagine 페이지로 이동 (URL 직접 이동 - 사이드바 클릭 대신)
   async function clickImagineInSidebar() {
     await chrome.scripting.executeScript({
       target: { tabId: grokTabId },
       world: 'MAIN',
       func: () => {
-        // 1) <a> 태그로 "Imagine" 링크 찾기 (프로젝트 하위 항목 제외)
-        const links = document.querySelectorAll('a[href*="imagine" i]');
-        for (const link of links) {
-          const text = link.textContent?.trim() || '';
-          // "Imagine"만 포함, "프로젝트" 하위가 아닌 것
-          if (text === 'Imagine' || text === 'Imagine') {
-            console.log('[Grok] Imagine <a> 링크 클릭:', link.href);
-            link.click();
-            return;
-          }
-        }
-
-        // 2) 직접 텍스트 매칭 - "Imagine"만 정확히 가진 최상위 요소
-        const allElements = document.querySelectorAll('a, button, [role="button"], [role="link"]');
-        for (const el of allElements) {
-          // 자식 텍스트가 아닌 직접 텍스트만 확인
-          const directText = Array.from(el.childNodes)
-            .filter(n => n.nodeType === Node.TEXT_NODE)
-            .map(n => n.textContent.trim())
-            .join('');
-          const fullText = el.textContent?.trim() || '';
-
-          // "Imagine"만 있고, "프로젝트" 같은 하위 텍스트가 없는 요소
-          if ((directText === 'Imagine' || fullText === 'Imagine') &&
-              !fullText.includes('프로젝트')) {
-            console.log('[Grok] Imagine 요소 클릭:', el.tagName, fullText);
-            el.click();
-            return;
-          }
-        }
-
-        // 3) 최후수단: URL 직접 이동
-        console.log('[Grok] Imagine 링크 미발견, URL 직접 이동');
-        window.location.href = '/imagine';
+        console.log('[Grok] Imagine 페이지로 URL 직접 이동');
+        window.location.href = 'https://grok.com/imagine';
       }
     });
   }
