@@ -1052,79 +1052,104 @@
 
     if (!result?.result?.success) {
       console.error('[Grok] 더보기 메뉴 열기 실패:', result?.result?.reason);
-      // 진단 정보 콘솔에 표시
-      if (result?.result?.buttons) {
-        console.log('[Grok] 페이지 버튼 목록:', result.result.buttons);
-      }
       return false;
     }
 
-    // 메뉴 렌더링 대기
-    await sleep(1000);
+    // 메뉴 렌더링 대기 (React 상태 업데이트 + DOM 반영)
+    await sleep(1500);
 
-    // ── 2단계: 메뉴에서 "동영상 업스케일" 항목 찾아 클릭 ──
+    // ── 2단계: 새로 나타난 팝업/메뉴에서 "업스케일" 항목 찾아 클릭 ──
     const [menuResult] = await chrome.scripting.executeScript({
       target: { tabId: grokTabId },
       world: 'MAIN',
       func: () => {
-        // 넓은 범위: 최근 렌더링된 메뉴/팝오버/드롭다운 내 요소 탐색
-        const selectors = [
-          '[role="menu"] *',
-          '[role="menuitem"]',
-          '[role="option"]',
-          '[class*="menu"] *',
-          '[class*="dropdown"] *',
-          '[class*="popover"] *',
-          '[class*="overlay"] *',
-          '[class*="modal"] *',
-          '[data-radix-popper-content-wrapper] *', // Radix UI (일반적)
-          '[data-state="open"] *'
-        ];
+        function simulateClick(element) {
+          const rect = element.getBoundingClientRect();
+          const x = rect.left + rect.width / 2;
+          const y = rect.top + rect.height / 2;
+          const opts = { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0 };
+          element.dispatchEvent(new MouseEvent('pointerdown', { ...opts, pointerId: 1 }));
+          element.dispatchEvent(new MouseEvent('mousedown', opts));
+          element.dispatchEvent(new MouseEvent('pointerup', { ...opts, pointerId: 1 }));
+          element.dispatchEvent(new MouseEvent('mouseup', opts));
+          element.dispatchEvent(new MouseEvent('click', opts));
+        }
 
-        const seen = new Set();
-        const candidates = [];
-        for (const sel of selectors) {
-          try {
-            document.querySelectorAll(sel).forEach(el => {
-              if (!seen.has(el)) { seen.add(el); candidates.push(el); }
+        // 전략 1: "추가 옵션" 버튼 주변에 새로 나타난 팝업/드롭다운 탐색
+        // 팝업은 보통 fixed/absolute positioned이며 최근 렌더링됨
+        const moreBtn = document.querySelector('button[aria-label="추가 옵션"]');
+        const btnRect = moreBtn ? moreBtn.getBoundingClientRect() : null;
+
+        // 모든 요소에서 "업스케일" / "upscale" 텍스트 포함 요소 전체 검색
+        const allElements = document.querySelectorAll('*');
+        const upscaleCandidates = [];
+
+        for (const el of allElements) {
+          // 직접 텍스트 노드만 확인 (자식의 텍스트 제외)
+          let directText = '';
+          for (const node of el.childNodes) {
+            if (node.nodeType === Node.TEXT_NODE) {
+              directText += node.textContent;
+            }
+          }
+          directText = directText.trim();
+
+          // 또는 짧은 textContent
+          const fullText = (el.textContent || '').trim();
+
+          if ((directText && /업스케일|upscale/i.test(directText)) ||
+              (fullText.length < 30 && /업스케일|upscale/i.test(fullText))) {
+            const r = el.getBoundingClientRect();
+            if (r.width === 0) continue;
+            upscaleCandidates.push({
+              el,
+              text: fullText,
+              directText,
+              tag: el.tagName,
+              x: Math.round(r.left), y: Math.round(r.top),
+              w: Math.round(r.width), h: Math.round(r.height),
+              role: el.getAttribute('role'),
+              aria: el.getAttribute('aria-label') || ''
             });
-          } catch (e) { /* 무시 */ }
-        }
-
-        // "업스케일" / "upscale" / "HD" 텍스트 포함 항목
-        for (const el of candidates) {
-          const text = (el.textContent || '').trim();
-          if (text.length > 50) continue; // 너무 긴 텍스트는 부모 요소
-          if (/업스케일|upscale/i.test(text)) {
-            // 클릭 가능한 요소인지 확인 (또는 가장 가까운 클릭 가능 조상)
-            const clickTarget = el.closest('button, a, [role="menuitem"], [role="option"], [onclick]') || el;
-            console.log('[Grok Upscale] 업스케일 메뉴 항목 클릭:', text, clickTarget.tagName);
-            clickTarget.click();
-            return { success: true, text };
           }
         }
 
-        // 폴백: 전체 페이지에서 "업스케일" 텍스트 검색
-        const allClickable = document.querySelectorAll('button, a, div[role="button"], li, [role="menuitem"]');
-        for (const el of allClickable) {
-          const text = (el.textContent || '').trim();
-          if (/업스케일|upscale/i.test(text) && text.length < 30) {
-            console.log('[Grok Upscale] 업스케일 항목 폴백 클릭:', text);
-            el.click();
-            return { success: true, text };
+        console.log('[Grok Upscale] "업스케일" 텍스트 포함 요소:', upscaleCandidates.length,
+          upscaleCandidates.map(c => `${c.tag}:"${c.text}" (${c.x},${c.y}) ${c.w}x${c.h}`));
+
+        if (upscaleCandidates.length > 0) {
+          // 가장 적절한 클릭 대상: 가장 작은(구체적인) 요소, 또는 클릭 가능한 가장 가까운 요소
+          for (const c of upscaleCandidates) {
+            const clickTarget = c.el.closest('button, a, [role="menuitem"], [role="option"], [role="button"], li') || c.el;
+            console.log('[Grok Upscale] 업스케일 항목 클릭:', c.text, clickTarget.tagName);
+            simulateClick(clickTarget);
+            return { success: true, text: c.text };
           }
         }
 
-        // 진단: 메뉴 내 모든 텍스트 항목 로깅
+        // 폴백: 추가 옵션 버튼 근처(±300px)에 새로 나타난 모든 클릭 가능 요소 로깅
         const diag = [];
-        for (const el of candidates) {
-          const text = (el.textContent || '').trim();
-          if (text.length > 0 && text.length < 50 && el.children.length === 0) {
-            diag.push({ text, tag: el.tagName, role: el.getAttribute('role') });
+        if (btnRect) {
+          for (const el of document.querySelectorAll('button, a, div, span, li')) {
+            const r = el.getBoundingClientRect();
+            if (r.width === 0) continue;
+            // 버튼 주변 300px 범위
+            if (Math.abs(r.left - btnRect.left) < 300 && Math.abs(r.top - btnRect.top) < 300) {
+              const text = (el.textContent || '').trim();
+              if (text.length > 0 && text.length < 50 && el.children.length <= 2) {
+                diag.push({
+                  text, tag: el.tagName,
+                  pos: `(${Math.round(r.left)},${Math.round(r.top)})`,
+                  size: `${Math.round(r.width)}x${Math.round(r.height)}`
+                });
+              }
+            }
           }
         }
-        console.error('[Grok Upscale] 업스케일 항목 미발견. 메뉴 내용:', JSON.stringify(diag, null, 2));
-        return { success: false, reason: 'upscale-item-not-found', menuItems: diag };
+
+        console.error('[Grok Upscale] 업스케일 항목 미발견. 버튼 주변 요소들:',
+          JSON.stringify(diag, null, 2));
+        return { success: false, reason: 'upscale-item-not-found', nearbyElements: diag };
       }
     });
 
