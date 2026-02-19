@@ -1006,63 +1006,125 @@
   }
 
   // 더보기(...) 메뉴 → "동영상 업스케일" 클릭
+  // 스크린샷 기준: 영상 오버레이 상단 우측에 [이미지편집] [카메라HD] [핀] [...] 버튼 배열
   async function clickUpscaleInMenu() {
+    // ── 1단계: ... 더보기 버튼 찾기 & 클릭 ──
     const [result] = await chrome.scripting.executeScript({
       target: { tabId: grokTabId },
       world: 'MAIN',
       func: () => {
-        // ── 1단계: ... 더보기 버튼 찾기 ──
+        // 영상 요소 근처의 버튼들을 우선 탐색
+        const video = document.querySelector('video');
+        const videoContainer = video ? video.closest('div[class]') : null;
+
+        // 탐색 범위: 영상 컨테이너 또는 전체 페이지
+        const searchRoot = videoContainer?.parentElement?.parentElement || document;
+
         let moreBtn = null;
 
-        // aria-label로 탐색
-        const ariaSelectors = [
-          'button[aria-label*="옵션"]',
-          'button[aria-label*="more"]',
-          'button[aria-label*="메뉴"]',
-          'button[aria-label*="option"]',
-          'button[aria-label*="More"]'
-        ];
-        for (const sel of ariaSelectors) {
-          const btn = document.querySelector(sel);
-          if (btn) {
-            const r = btn.getBoundingClientRect();
-            if (r.width > 0) {
+        // 1순위: aria-label (다양한 변형)
+        const ariaPatterns = ['옵션', 'more', '더보기', '메뉴', 'option', 'More', 'menu', 'actions'];
+        const allBtns = searchRoot.querySelectorAll('button');
+        for (const btn of allBtns) {
+          const aria = btn.getAttribute('aria-label') || '';
+          const r = btn.getBoundingClientRect();
+          if (r.width === 0) continue;
+          for (const pattern of ariaPatterns) {
+            if (aria.toLowerCase().includes(pattern.toLowerCase())) {
               moreBtn = btn;
-              console.log('[Grok Upscale] ... 버튼 발견 (aria):', sel);
+              console.log('[Grok Upscale] ... 버튼 발견 (aria):', aria);
               break;
             }
           }
+          if (moreBtn) break;
         }
 
-        // 폴백: "..." 텍스트 또는 3-dot SVG가 있는 버튼
+        // 2순위: SVG 내 3개 원(circle) 또는 3-dot path
         if (!moreBtn) {
-          const allBtns = document.querySelectorAll('button');
+          for (const btn of allBtns) {
+            const r = btn.getBoundingClientRect();
+            if (r.width === 0) continue;
+            const svg = btn.querySelector('svg');
+            if (!svg) continue;
+            // circle 3개
+            const circles = svg.querySelectorAll('circle');
+            if (circles.length >= 3) {
+              moreBtn = btn;
+              console.log('[Grok Upscale] ... 버튼 발견 (SVG circles)');
+              break;
+            }
+            // path로 그린 3-dot (ellipsis)
+            const paths = svg.querySelectorAll('path');
+            for (const p of paths) {
+              const d = p.getAttribute('d') || '';
+              // 일반적인 ... 아이콘: 3개의 원호/원 모양이 d 속성에 반복
+              if ((d.match(/[aA]/g) || []).length >= 6 || (d.match(/[cC]/g) || []).length >= 9) {
+                moreBtn = btn;
+                console.log('[Grok Upscale] ... 버튼 발견 (SVG path dots)');
+                break;
+              }
+            }
+            if (moreBtn) break;
+          }
+        }
+
+        // 3순위: 텍스트 매치 ("..." / "⋯" / "⋮")
+        if (!moreBtn) {
           for (const btn of allBtns) {
             const text = (btn.textContent || '').trim();
             const r = btn.getBoundingClientRect();
             if (r.width === 0) continue;
-            // "..." 또는 "⋯" 또는 "⋮" 텍스트
-            if (/^[.…⋯⋮]{3}$/.test(text) || text === '···' || text === '⋯') {
+            if (/^[.…⋯⋮·]{2,3}$/.test(text) || text === '···') {
               moreBtn = btn;
               console.log('[Grok Upscale] ... 버튼 발견 (텍스트):', text);
-              break;
-            }
-            // 3개의 원(dot) SVG
-            const circles = btn.querySelectorAll('svg circle');
-            if (circles.length >= 3 && text.length === 0) {
-              moreBtn = btn;
-              console.log('[Grok Upscale] ... 버튼 발견 (SVG dots)');
               break;
             }
           }
         }
 
-        if (!moreBtn) {
-          console.error('[Grok Upscale] ... 버튼 미발견');
-          return { success: false, reason: 'more-button-not-found' };
+        // 4순위: 영상 영역 내 가장 오른쪽 작은 원형 버튼 (스크린샷 기준 마지막 버튼)
+        if (!moreBtn && video) {
+          const vRect = video.getBoundingClientRect();
+          const nearbyBtns = [];
+          for (const btn of document.querySelectorAll('button')) {
+            const r = btn.getBoundingClientRect();
+            if (r.width === 0) continue;
+            // 영상 영역 위에 있는 버튼들 (y 기준 영상 상단~중간)
+            if (r.top >= vRect.top - 20 && r.top <= vRect.top + vRect.height * 0.3 &&
+                r.left >= vRect.left && r.right <= vRect.right + 20) {
+              nearbyBtns.push({ btn, right: r.right, width: r.width });
+            }
+          }
+          // 가장 오른쪽에 있는 작은 버튼 = ... 버튼
+          if (nearbyBtns.length > 0) {
+            nearbyBtns.sort((a, b) => b.right - a.right);
+            const candidate = nearbyBtns[0];
+            if (candidate.width < 60) { // 원형 아이콘 버튼
+              moreBtn = candidate.btn;
+              console.log('[Grok Upscale] ... 버튼 발견 (위치 기반: 영상 우상단 맨 오른쪽)');
+            }
+          }
         }
 
-        // 클릭하여 메뉴 열기
+        if (!moreBtn) {
+          // 진단: 페이지의 모든 버튼 정보 출력
+          const diag = [];
+          for (const btn of document.querySelectorAll('button')) {
+            const r = btn.getBoundingClientRect();
+            if (r.width === 0) continue;
+            diag.push({
+              text: (btn.textContent || '').trim().substring(0, 30),
+              aria: btn.getAttribute('aria-label'),
+              x: Math.round(r.left), y: Math.round(r.top),
+              size: `${Math.round(r.width)}x${Math.round(r.height)}`,
+              hasSvg: !!btn.querySelector('svg'),
+              classes: (btn.className || '').substring(0, 50)
+            });
+          }
+          console.error('[Grok Upscale] ... 버튼 미발견. 페이지 버튼:', JSON.stringify(diag, null, 2));
+          return { success: false, reason: 'more-button-not-found', buttons: diag };
+        }
+
         moreBtn.click();
         return { success: true, step: 'menu-opened' };
       }
@@ -1070,33 +1132,60 @@
 
     if (!result?.result?.success) {
       console.error('[Grok] 더보기 메뉴 열기 실패:', result?.result?.reason);
+      // 진단 정보 콘솔에 표시
+      if (result?.result?.buttons) {
+        console.log('[Grok] 페이지 버튼 목록:', result.result.buttons);
+      }
       return false;
     }
 
     // 메뉴 렌더링 대기
     await sleep(1000);
 
-    // ── 2단계: 메뉴에서 "동영상 업스케일" 항목 클릭 ──
+    // ── 2단계: 메뉴에서 "동영상 업스케일" 항목 찾아 클릭 ──
     const [menuResult] = await chrome.scripting.executeScript({
       target: { tabId: grokTabId },
       world: 'MAIN',
       func: () => {
-        // 메뉴 항목 탐색
-        const candidates = document.querySelectorAll(
-          '[role="menuitem"], [role="option"], [class*="menu"] button, [class*="menu"] div, [class*="dropdown"] button, [class*="dropdown"] div, [class*="popover"] button, [class*="popover"] div'
-        );
+        // 넓은 범위: 최근 렌더링된 메뉴/팝오버/드롭다운 내 요소 탐색
+        const selectors = [
+          '[role="menu"] *',
+          '[role="menuitem"]',
+          '[role="option"]',
+          '[class*="menu"] *',
+          '[class*="dropdown"] *',
+          '[class*="popover"] *',
+          '[class*="overlay"] *',
+          '[class*="modal"] *',
+          '[data-radix-popper-content-wrapper] *', // Radix UI (일반적)
+          '[data-state="open"] *'
+        ];
 
+        const seen = new Set();
+        const candidates = [];
+        for (const sel of selectors) {
+          try {
+            document.querySelectorAll(sel).forEach(el => {
+              if (!seen.has(el)) { seen.add(el); candidates.push(el); }
+            });
+          } catch (e) { /* 무시 */ }
+        }
+
+        // "업스케일" / "upscale" / "HD" 텍스트 포함 항목
         for (const el of candidates) {
           const text = (el.textContent || '').trim();
-          if (/동영상\s*업스케일|upscale\s*video|video\s*upscale/i.test(text)) {
-            console.log('[Grok Upscale] "동영상 업스케일" 메뉴 항목 클릭:', text);
-            el.click();
+          if (text.length > 50) continue; // 너무 긴 텍스트는 부모 요소
+          if (/업스케일|upscale/i.test(text)) {
+            // 클릭 가능한 요소인지 확인 (또는 가장 가까운 클릭 가능 조상)
+            const clickTarget = el.closest('button, a, [role="menuitem"], [role="option"], [onclick]') || el;
+            console.log('[Grok Upscale] 업스케일 메뉴 항목 클릭:', text, clickTarget.tagName);
+            clickTarget.click();
             return { success: true, text };
           }
         }
 
-        // 넓은 범위 폴백: 모든 클릭 가능한 요소에서 검색
-        const allClickable = document.querySelectorAll('button, a, div[role="button"], span[role="button"], li');
+        // 폴백: 전체 페이지에서 "업스케일" 텍스트 검색
+        const allClickable = document.querySelectorAll('button, a, div[role="button"], li, [role="menuitem"]');
         for (const el of allClickable) {
           const text = (el.textContent || '').trim();
           if (/업스케일|upscale/i.test(text) && text.length < 30) {
@@ -1106,15 +1195,15 @@
           }
         }
 
-        // 진단 로그
+        // 진단: 메뉴 내 모든 텍스트 항목 로깅
         const diag = [];
         for (const el of candidates) {
           const text = (el.textContent || '').trim();
-          if (text.length > 0 && text.length < 50) {
-            diag.push(text);
+          if (text.length > 0 && text.length < 50 && el.children.length === 0) {
+            diag.push({ text, tag: el.tagName, role: el.getAttribute('role') });
           }
         }
-        console.error('[Grok Upscale] "동영상 업스케일" 메뉴 항목 미발견. 메뉴 항목들:', diag);
+        console.error('[Grok Upscale] 업스케일 항목 미발견. 메뉴 내용:', JSON.stringify(diag, null, 2));
         return { success: false, reason: 'upscale-item-not-found', menuItems: diag };
       }
     });
@@ -1124,12 +1213,13 @@
       console.log('[Grok] 업스케일 메뉴 클릭 성공:', menuRes.text);
       return true;
     } else {
-      console.error('[Grok] 업스케일 메뉴 클릭 실패:', menuRes?.reason, menuRes?.menuItems);
+      console.error('[Grok] 업스케일 메뉴 클릭 실패:', menuRes?.reason);
       return false;
     }
   }
 
   // 업스케일 완료 대기 (최대 5분)
+  // 완료 시그널: "HD" 배지 출현, video src 변경, 로딩 인디케이터 소멸
   async function waitForUpscale() {
     const maxWait = 5 * 60 * 1000; // 5분
     const pollInterval = 3000; // 3초
@@ -1156,45 +1246,49 @@
         target: { tabId: grokTabId },
         world: 'MAIN',
         func: (origSrc, shouldLog) => {
-          // 1. 로딩/프로그레스 인디케이터 확인
-          const loadingEls = document.querySelectorAll(
-            '[class*="loading"], [class*="spinner"], [class*="progress"], [role="progressbar"], [class*="generating"], [class*="upscal"]'
-          );
-          const isLoading = loadingEls.length > 0;
+          // 1. HD 배지 확인 (스크린샷: 업스케일 완료 후 "HD" 텍스트가 버튼에 표시됨)
+          let hdFound = false;
+          const allEls = document.querySelectorAll('button, span, div, p');
+          for (const el of allEls) {
+            const text = (el.textContent || '').trim();
+            // "HD" 텍스트가 정확히 매치 (다른 긴 텍스트 속 HD 제외)
+            if (text === 'HD' || text === 'hd') {
+              hdFound = true;
+              break;
+            }
+          }
+          // aria-label에 HD 포함된 버튼
+          if (!hdFound) {
+            const hdBtns = document.querySelectorAll('button[aria-label*="HD"], button[aria-label*="hd"]');
+            if (hdBtns.length > 0) hdFound = true;
+          }
 
           // 2. video src 변경 확인
           const video = document.querySelector('video');
           const currentSrc = video ? (video.src || video.currentSrc || '') : '';
           const srcChanged = currentSrc && currentSrc !== origSrc;
 
-          // 3. 다운로드 버튼 활성화 확인
-          const dlBtns = document.querySelectorAll('button');
-          let dlReady = false;
-          for (const btn of dlBtns) {
-            const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
-            if (/다운로드|download/.test(aria) && !btn.disabled) {
-              dlReady = true;
-              break;
-            }
-          }
+          // 3. 로딩 인디케이터
+          const loadingEls = document.querySelectorAll(
+            '[class*="loading"], [class*="spinner"], [class*="progress"], [role="progressbar"], [class*="generating"]'
+          );
+          const isLoading = loadingEls.length > 0;
 
           if (shouldLog) {
             console.log('[Grok Upscale] 대기 중...',
+              'HD:', hdFound, 'srcChanged:', srcChanged,
               'loading:', isLoading,
-              'srcChanged:', srcChanged,
-              'dlReady:', dlReady,
               'elapsed:', Math.round((Date.now() - startTime) / 1000) + 's');
           }
 
-          // 완료 조건: src가 변경되었고 로딩이 없음
-          if (srcChanged && !isLoading) {
-            return { done: true, videoUrl: currentSrc };
+          // 완료 조건 1: HD 배지가 나타남
+          if (hdFound) {
+            return { done: true, videoUrl: currentSrc || null, method: 'hd-badge' };
           }
 
-          // 대안: 로딩이 사라지고 다운로드 준비됨 (src 변경 감지 불가 시)
-          if (!isLoading && dlReady && !srcChanged) {
-            // src가 안 바뀌었지만 로딩도 없으면 업스케일이 같은 URL에서 완료된 것일 수 있음
-            return { done: true, videoUrl: currentSrc || null };
+          // 완료 조건 2: src가 변경되고 로딩 없음
+          if (srcChanged && !isLoading) {
+            return { done: true, videoUrl: currentSrc, method: 'src-changed' };
           }
 
           return { done: false, isLoading };
@@ -1204,7 +1298,7 @@
 
       const res = result?.result;
       if (res?.done) {
-        console.log('[Grok Upscale] 업스케일 완료!', res.videoUrl?.substring(0, 80));
+        console.log('[Grok Upscale] 업스케일 완료!', res.method, res.videoUrl?.substring(0, 80));
         return res.videoUrl;
       }
 
