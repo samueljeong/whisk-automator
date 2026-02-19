@@ -196,6 +196,22 @@
         </ul>
       </section>
 
+      <!-- 모션 프롬프트 -->
+      <section class="grok-motion-section">
+        <div class="input-header">
+          <h2>모션 프롬프트</h2>
+          <div class="input-header-actions">
+            <button id="grokAiPromptBtn" class="btn btn-small btn-ai">AI 프롬프트 생성</button>
+            <label class="file-input-label">
+              <input type="file" id="grokPromptFileInput" accept=".txt" hidden>
+              📁 프롬프트 불러오기
+            </label>
+          </div>
+        </div>
+        <p class="hint" id="grokPromptHint">AI로 모션 프롬프트 생성 → txt 저장 → 불러오기 (줄별로 대기열에 매칭)</p>
+        <div id="grokPromptLoadResult" class="grok-prompt-result" hidden></div>
+      </section>
+
       <!-- 설정 -->
       <section class="grok-settings-section">
         <h2>설정</h2>
