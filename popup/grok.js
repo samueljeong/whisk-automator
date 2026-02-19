@@ -482,9 +482,19 @@
           await sleep(500);
         }
 
-        // Step 3: 생성 버튼 클릭
+        // Step 3: 생성 버튼 클릭 (최대 3회 재시도)
         updateProgress(completed, total, `${item.name}: 생성 요청 중...`);
-        await clickGenerateButton();
+        let clickResult = null;
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          clickResult = await clickGenerateButton();
+          if (clickResult?.found) break;
+          console.log(`[Grok] 생성 버튼 클릭 ${attempt}차 실패, ${attempt < 3 ? '재시도...' : '중단'}`);
+          updateProgress(completed, total, `${item.name}: 버튼 찾기 ${attempt}/3...`);
+          await sleep(2000);
+        }
+        if (!clickResult?.found) {
+          throw new Error('생성 버튼을 찾을 수 없습니다. 콘솔에서 버튼 목록을 확인하세요.');
+        }
         await sleep(2000);
 
         // Step 4: A/B 테스트 팝업 자동 처리
