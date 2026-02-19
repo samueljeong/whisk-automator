@@ -536,6 +536,24 @@
   // 자동화 헬퍼 함수들
   // ============================================================
 
+  // Imagine 새 생성 페이지로 이동
+  async function navigateToImagine() {
+    await chrome.tabs.update(grokTabId, { url: 'https://grok.com/imagine' });
+    // 페이지 로드 대기
+    for (let i = 0; i < 20; i++) {
+      await sleep(500);
+      try {
+        const [result] = await chrome.scripting.executeScript({
+          target: { tabId: grokTabId },
+          func: () => document.readyState === 'complete' && !!document.querySelector('input[type="file"], [contenteditable], textarea, button')
+        });
+        if (result?.result) return;
+      } catch (e) {
+        // 페이지 로딩 중 — 재시도
+      }
+    }
+  }
+
   // 이미지 업로드: data-grok-upload 속성 설정 후 파일 입력 트리거
   async function uploadImageToGrok(dataUrl) {
     await chrome.scripting.executeScript({
