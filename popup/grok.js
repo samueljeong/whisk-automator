@@ -52,6 +52,11 @@
       whiskContainer.hidden = false;
       grokContainer.hidden = true;
     } else {
+      // 라이선스 인증 확인
+      if (!window.licenseValid) {
+        alert('Whisk 라이선스 인증 후 사용할 수 있습니다.');
+        return;
+      }
       modeTabWhisk.classList.remove('active');
       modeTabGrok.classList.add('active');
       whiskContainer.hidden = true;
