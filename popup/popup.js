@@ -98,6 +98,7 @@ function showMainUI(licenseResult) {
 }
 
 function showLicenseScreen() {
+  window.licenseValid = false;
   document.getElementById('licenseScreen').hidden = false;
   document.getElementById('mainContainer').hidden = true;
 
