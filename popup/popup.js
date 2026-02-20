@@ -85,6 +85,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // License UI functions
 function showMainUI(licenseResult) {
+  window.licenseValid = true;
   document.getElementById('licenseScreen').hidden = true;
   document.getElementById('mainContainer').hidden = false;
   const statusEl = document.getElementById('licenseStatus');
