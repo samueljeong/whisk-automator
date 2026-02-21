@@ -1315,9 +1315,12 @@ async function startAutomation() {
     }
 
     // 4. 안전 치환 (위험 표현 → 안전 표현)
+    // 긴 패턴 먼저 매칭되도록 길이 역순 정렬 후 적용
     if (typeof PROMPT_REPLACEMENTS !== 'undefined') {
-      for (const [risky, safe] of PROMPT_REPLACEMENTS) {
-        finalPrompt = finalPrompt.replace(new RegExp(risky.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), safe);
+      const sorted = [...PROMPT_REPLACEMENTS].sort((a, b) => b[0].length - a[0].length);
+      for (const [risky, safe] of sorted) {
+        const escaped = risky.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        finalPrompt = finalPrompt.replace(new RegExp(`\\b${escaped}\\b`, 'gi'), safe);
       }
     }
 
