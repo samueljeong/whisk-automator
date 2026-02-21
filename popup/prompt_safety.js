@@ -49,5 +49,31 @@ const PROMPT_REPLACEMENTS = [
   // === 기타 (Misc) ===
   ["black-robed cult warriors", "dark-robed elite warriors"],
   ["cult warriors", "dark-robed elite warriors"],
-  ["chained to stone wall", "confined against stone wall"]
+  ["chained to stone wall", "confined against stone wall"],
+
+  // === 유명인/실존 인물 (Public Figures → Generic Descriptions) ===
+  // 정치인
+  ["Donald Trump", "an older Caucasian man in a navy suit with a red tie, confident posture"],
+  ["Trump", "an older Caucasian man in a navy suit with a red tie"],
+  ["Joe Biden", "an elderly Caucasian man with white hair in a dark suit"],
+  ["Biden", "an elderly Caucasian man with white hair in a dark suit"],
+  ["Barack Obama", "a middle-aged man in a dark suit with a warm smile"],
+  ["Obama", "a middle-aged man in a dark suit with a warm smile"],
+  ["Xi Jinping", "an East Asian leader in a dark formal suit"],
+  ["Putin", "a stern-looking older man in a dark suit"],
+  ["Vladimir Putin", "a stern-looking older man in a dark suit"],
+  ["Elon Musk", "a tech entrepreneur in a dark casual outfit"],
+  ["Kim Jong Un", "an East Asian leader in a dark Mao suit"],
+  ["Shinzo Abe", "a Japanese politician in a dark suit with glasses"],
+  ["Fumio Kishida", "a Japanese politician in a dark suit with glasses"],
+  ["Kishida", "a Japanese politician in a dark suit with glasses"],
+  ["Yoon Suk Yeol", "a Korean politician in a dark suit"],
+  ["윤석열", "a Korean politician in a dark suit"],
+  ["Moon Jae-in", "a Korean politician with gray hair in a dark suit"],
+  ["Park Geun-hye", "a Korean female politician in formal attire"],
+  ["Zelenskyy", "a middle-aged man in an olive green military shirt"],
+
+  // 연예인/셀럽 (필요 시 추가)
+  ["Taylor Swift", "a young blonde woman in an elegant outfit"],
+  ["BTS", "a group of young Korean men in stylish outfits"]
 ];
