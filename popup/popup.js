@@ -1262,14 +1262,16 @@ async function startAutomation() {
 
   // 프로젝트 스타일 설정 가져오기
   const project = PROJECTS[currentProject] || {};
-  const projectStyleImage = project.styleImage || styleUrl.value.trim();
   const projectStylePrefix = project.stylePrefix || '';
   const projectStyleSuffix = project.styleSuffix || '';
+  const selectedModel = modelSelect ? modelSelect.value : 'nano-banana-2';
+  const selectedOutputType = outputType ? document.getElementById('outputType').value : 'image';
 
   console.log('[Popup] 프로젝트 스타일:', {
-    image: projectStyleImage ? '설정됨' : '없음',
     prefix: projectStylePrefix || '없음',
-    suffix: projectStyleSuffix || '없음'
+    suffix: projectStyleSuffix || '없음',
+    model: selectedModel,
+    outputType: selectedOutputType
   });
 
   // 프롬프트에서 파일명, 캐릭터 정보 추출 + 스타일 적용
