@@ -752,20 +752,34 @@ function getCharacterImageByName(name) {
 
 // Build flat character map for automation (name/alias -> image)
 // 원본 키 + NFC 정규화 키 모두 등록 (macOS NFD/NFC 호환)
+// flowTagMap: 캐릭터 이름 → Flow 태그 (에셋 검색용 영문명)
 function buildCharacterMap() {
   const map = {};
+  const flowTagMap = {};
+
+  function addCharacter(name, data) {
+    map[name] = data.image;
+    map[name.normalize('NFC')] = data.image;
+    if (data.flowTag) {
+      flowTagMap[name] = data.flowTag;
+      flowTagMap[name.normalize('NFC')] = data.flowTag;
+    }
+    if (data.aliases) {
+      data.aliases.forEach(alias => {
+        map[alias] = data.image;
+        map[alias.normalize('NFC')] = data.image;
+        if (data.flowTag) {
+          flowTagMap[alias] = data.flowTag;
+          flowTagMap[alias.normalize('NFC')] = data.flowTag;
+        }
+      });
+    }
+  }
 
   // 공통 캐릭터 먼저
   if (PROJECTS.common) {
     for (const [name, data] of Object.entries(PROJECTS.common.characters)) {
-      map[name] = data.image;
-      map[name.normalize('NFC')] = data.image;
-      if (data.aliases) {
-        data.aliases.forEach(alias => {
-          map[alias] = data.image;
-          map[alias.normalize('NFC')] = data.image;
-        });
-      }
+      addCharacter(name, data);
     }
   }
 
@@ -773,17 +787,11 @@ function buildCharacterMap() {
   const project = PROJECTS[currentProject];
   if (project) {
     for (const [name, data] of Object.entries(project.characters)) {
-      map[name] = data.image;
-      map[name.normalize('NFC')] = data.image;
-      if (data.aliases) {
-        data.aliases.forEach(alias => {
-          map[alias] = data.image;
-          map[alias.normalize('NFC')] = data.image;
-        });
-      }
+      addCharacter(name, data);
     }
   }
 
+  map.__flowTagMap = flowTagMap;
   return map;
 }
 
