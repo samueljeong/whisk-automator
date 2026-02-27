@@ -360,7 +360,7 @@
     return -1;
   }
 
-  // Whisk에서 가져오기 - 이미지 + Whisk 프롬프트 자동 매칭
+  // Flow에서 가져오기 - 이미지 + Flow 프롬프트 자동 매칭
   grokImportFlowBtn.addEventListener('click', async () => {
     try {
       const handles = await window.showOpenFilePicker({
