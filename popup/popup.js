@@ -2727,15 +2727,8 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
             if (img.src) preGenSrcs.add(img.src);
           });
 
-          // Phase 2: 프롬프트 연속 제출
-          // 레퍼런스 보존: 생성 후 프롬프트 영역이 초기화되면 레퍼런스 재업로드
-          var expectedVoids = 0;
-          if (thisGroup) {
-            var promptEl = findPromptInput();
-            expectedVoids = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]').length;
-            console.log('[Flow Auto] 레퍼런스 void 기준: ' + expectedVoids + '개');
-          }
-
+          // Phase 2: 프롬프트 순차 제출
+          // Flow는 생성 후 프롬프트 영역을 초기화하므로, 매번 에셋을 다시 추가해야 함
           for (var j = batchStart; j < batchEnd; j++) {
             if (isStopRequested()) {
               try { chrome.runtime.sendMessage({ action: 'AUTOMATION_STOPPED' }); } catch(e) {}
@@ -2743,6 +2736,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
             }
 
             var batchItem = promptsWithCharacters[j];
+            var charForThisPrompt = batchItem.character || item.character;
             var logPrefix = '[' + (batchItem.index + 1) + ']' + (batchItem.filename ? ' [' + batchItem.filename + ']' : '');
 
             console.log('[Flow Auto] 제출 ' + (j + 1) + '/' + promptsWithCharacters.length + ': ' + logPrefix);
@@ -2758,15 +2752,16 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
               });
             } catch(e) {}
 
-            // 레퍼런스 보존 확인: void 수가 줄었으면 재업로드
-            if (thisGroup && expectedVoids > 0 && j > batchStart) {
+            // 매 프롬프트마다 레퍼런스 에셋 추가 (Flow가 생성 후 초기화하므로)
+            if (thisGroup && charForThisPrompt) {
               var promptEl = findPromptInput();
               var currentVoids = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]').length;
-              if (currentVoids < expectedVoids) {
-                console.log('[Flow Auto] 레퍼런스 유실 감지! void: ' + currentVoids + '/' + expectedVoids + ' → 재업로드');
-                await uploadReferences(batchItem.character || item.character, characters);
+              if (currentVoids === 0) {
+                console.log('[Flow Auto] 레퍼런스 추가: ' + charForThisPrompt);
+                await uploadReferences(charForThisPrompt, characters);
                 await sleep(1000);
-                expectedVoids = findPromptInput().querySelectorAll('[contenteditable="false"], [data-slate-void]').length;
+              } else {
+                console.log('[Flow Auto] 레퍼런스 이미 있음 (void: ' + currentVoids + ')');
               }
             }
 
