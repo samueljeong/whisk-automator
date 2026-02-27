@@ -1,6 +1,6 @@
 # Flow 셀렉터 매핑 (Whisk → Flow)
 
-## 상태: 3차 조사 완료 (2026-02-27)
+## 상태: 4차 조사 완료 (2026-02-27)
 
 URL: `labs.google/fx/ko/tools/flow/project/{uuid}`
 
