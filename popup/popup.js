@@ -2067,37 +2067,38 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         current = parent;
       }
 
-      // clickTarget 자체가 <a> 태그이면 내부 div/img로 교체
-      if (clickTarget.tagName === 'A' && clickTarget.href) {
-        var inner = clickTarget.querySelector('div, img, span');
-        if (inner) {
-          console.log('[Flow Auto] clickTarget이 <a> → 내부 ' + inner.tagName + '으로 교체');
-          clickTarget = inner;
-        }
-      }
-
       var targetRect = clickTarget.getBoundingClientRect();
       console.log('[Flow Auto] 에셋 발견: "' + (matchedEl.textContent || '').trim().substring(0, 30) +
         '" → 클릭 대상: ' + clickTarget.tagName + ' ' +
         Math.round(targetRect.width) + 'x' + Math.round(targetRect.height) +
         ' at(' + Math.round(targetRect.left) + ',' + Math.round(targetRect.top) + ')');
 
-      // URL 변경 감지용 스냅샷
-      var urlBefore = window.location.href;
-
-      // simulateRealClick 1회만 실행 (3중 클릭은 과도하여 네비게이션 유발)
-      simulateRealClick(clickTarget);
-      await sleep(500);
-
-      // URL 변경 감지 → 페이지 이동 발생 시 즉시 복구
-      if (window.location.href !== urlBefore) {
-        console.warn('[Flow Auto] 에셋 클릭으로 페이지 이동 감지! ' + window.location.href);
-        console.log('[Flow Auto] history.back() 복귀');
-        window.history.back();
-        await sleep(1500);
-        return 'navigated';
+      // 조상 <a> 태그의 href를 일시 제거하여 네비게이션 차단
+      var savedLinks = [];
+      var ancestor = clickTarget;
+      while (ancestor && ancestor !== document.body) {
+        if (ancestor.tagName === 'A' && ancestor.hasAttribute('href')) {
+          savedLinks.push({ el: ancestor, href: ancestor.getAttribute('href') });
+          ancestor.removeAttribute('href');
+          console.log('[Flow Auto] <a> href 일시 제거: ' + savedLinks[savedLinks.length - 1].href.substring(0, 60));
+        }
+        ancestor = ancestor.parentElement;
       }
 
+      // 캡처링 단계에서 click의 기본 동작 차단 (이중 안전장치)
+      var preventNav = function(e) { e.preventDefault(); };
+      document.addEventListener('click', preventNav, true);
+
+      // simulateRealClick 1회 실행
+      simulateRealClick(clickTarget);
+
+      // href 복원 + 리스너 제거
+      for (var sl = 0; sl < savedLinks.length; sl++) {
+        savedLinks[sl].el.setAttribute('href', savedLinks[sl].href);
+      }
+      document.removeEventListener('click', preventNav, true);
+
+      await sleep(500);
       assetFound = true;
     }
 
