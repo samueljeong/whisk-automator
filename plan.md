@@ -44,11 +44,19 @@ Grok.com(React)과 Flow(Google)에서 네이티브 `.click()`이 이벤트 핸�
 
 ### popup.js — selectAssetByName 에셋 클릭 시 페이지 이동 버그 (핵심)
 
-- [x] **6. 에셋 카드 클릭 로직 전면 수정 (line 2046-2092)**
-  - 부모 탐색 시 `<a>` 태그를 클릭 대상에서 배제 (href가 있으면 건너뜀)
-  - 3중 클릭(simulateRealClick + 직접 MouseEvent + 썸네일) → `simulateRealClick` 1회로 축소
-  - 클릭 전 `window.location.href` 저장 → 클릭 후 URL 변경 감지 시 즉시 `history.back()`
-  - 클릭 후 ref 카운트 확인까지 기다린 뒤 다음 단계로 진행
+- [x] **6. (실패) 에셋 카드 클릭 — `<a>` 태그 회피 + 1회 클릭 방식**
+  - 부모 탐색에서 `<a>` 건너뛰기 → 자식 클릭해도 이벤트가 부모 `<a>`로 버블링되어 네비게이션 발생
+  - URL 감지 + history.back() → 이미 이동 후 복구라 느리고 불안정
+
+- [ ] **7. (재수정) 에셋 카드 클릭 — 조상 `<a>` 태그 href 일시 제거 방식**
+  - **근본 원인**: 클릭 이벤트가 `bubbles: true`로 발생 → 조상 `<a href="...">` 태그까지 버블링 → 브라우저 기본 네비게이션 동작
+  - **해결**: 클릭 전 조상 `<a>` 태그의 href를 일시적으로 제거, 클릭 후 복원
+  - 구현:
+    1. clickTarget의 조상 중 모든 `<a>` 태그를 탐색
+    2. href가 있는 `<a>`의 href를 data-saved-href에 백업, href 제거
+    3. simulateRealClick 실행
+    4. 즉시 href 복원 (원래대로)
+  - 추가로 click 이벤트에 캡처링 단계에서 preventDefault 리스너 설치 → 클릭 후 제거
 
 ## 주의사항
 - grok.js의 각 executeScript 블록은 독립 실행되므로, simulateClick 헬퍼를 사용하는 **각 블록 내부에 별도 정의** 필요 (클로저 공유 불가)
