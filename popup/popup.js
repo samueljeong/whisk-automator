@@ -1999,144 +1999,47 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     searchInput.dispatchEvent(new Event('change', { bubbles: true }));
     await sleep(1000); // 검색 결과 대기
 
-    // 4. 검색 결과에서 에셋 클릭
-    //    검색바 아래 결과 영역에서 이름 매칭 → 부모 컨테이너까지 올라가서 클릭
-    var assetFound = false;
+    // 4. 검색 결과 존재 확인 ("일치하는 결과 없음" 체크)
     var searchRect = searchInput.getBoundingClientRect();
-
-    // 검색바 아래 모든 요소에서 캐릭터 이름 포함된 것 찾기
-    var allEls = document.querySelectorAll('*');
-    var matchedEl = null;
-    for (var ae = 0; ae < allEls.length; ae++) {
-      var el = allEls[ae];
-      var elRect = el.getBoundingClientRect();
-      // 검색바 아래, 화면 내, 보이는 요소
-      if (elRect.top < searchRect.bottom || elRect.top > searchRect.bottom + 500) continue;
-      if (elRect.width < 10 || elRect.height < 10) continue;
-      // 직접 텍스트만 확인 (자식 제외)
-      var directText = '';
-      for (var cn = 0; cn < el.childNodes.length; cn++) {
-        if (el.childNodes[cn].nodeType === 3) directText += el.childNodes[cn].textContent;
-      }
-      if (directText.trim().includes(charName)) {
-        matchedEl = el;
-        break;
-      }
-    }
-
-    // 텍스트 직접 매칭 실패 시 textContent로 재시도
-    if (!matchedEl) {
-      var candidates = [];
-      var divs = document.querySelectorAll('div, button, li, a, span, label');
-      for (var ci = 0; ci < divs.length; ci++) {
-        var cRect = divs[ci].getBoundingClientRect();
-        var cTxt = (divs[ci].textContent || '').trim();
-        if (cRect.top > searchRect.bottom && cRect.top < searchRect.bottom + 500 &&
-            cRect.width > 30 && cRect.height > 15 && cTxt.includes(charName)) {
-          candidates.push({ el: divs[ci], text: cTxt, area: cRect.width * cRect.height });
-        }
-      }
-      // 가장 작은 영역(가장 구체적인 요소) 선택
-      candidates.sort(function(a, b) { return a.area - b.area; });
-      if (candidates.length > 0) {
-        matchedEl = candidates[0].el;
-      }
-    }
-
-    if (matchedEl) {
-      // 디버그: matchedEl의 조상 체인 전체 로깅
-      var debugEl = matchedEl;
-      var debugChain = [];
-      for (var dbg = 0; dbg < 12 && debugEl && debugEl !== document.body; dbg++) {
-        var dbgRect = debugEl.getBoundingClientRect();
-        debugChain.push(
-          debugEl.tagName +
-          (debugEl.id ? '#' + debugEl.id : '') +
-          (debugEl.className ? '.' + String(debugEl.className).substring(0, 30).replace(/\s+/g, '.') : '') +
-          (debugEl.tagName === 'A' ? '[href=' + (debugEl.getAttribute('href') || 'none').substring(0, 40) + ']' : '') +
-          ' ' + Math.round(dbgRect.width) + 'x' + Math.round(dbgRect.height)
-        );
-        debugEl = debugEl.parentElement;
-      }
-      console.log('[Flow Auto] DOM 체인:\n  ' + debugChain.join('\n  → '));
-
-      // 에셋 카드 찾기: matchedEl(텍스트)에서 올라가며 카드 크기(height 60~250) 컨테이너 탐색
-      // DOM: 텍스트(95x24) → 이름행(607x56) → 래퍼(607x56) → 카드(607x112) → 리스트(607x367)
-      var clickTarget = matchedEl;
-      var current = matchedEl.parentElement;
-      while (current && current !== document.body) {
-        var cRect = current.getBoundingClientRect();
-        if (cRect.height > 300) break; // 리스트 컨테이너 → 멈춤
-        if (cRect.height > 60) {       // 카드 크기 → 클릭 대상
-          clickTarget = current;
+    var noResults = false;
+    var checkEls = document.querySelectorAll('div, span, p');
+    for (var nr = 0; nr < checkEls.length; nr++) {
+      var nrRect = checkEls[nr].getBoundingClientRect();
+      if (nrRect.top > searchRect.bottom && nrRect.top < searchRect.bottom + 400 && nrRect.width > 50) {
+        var nrText = (checkEls[nr].textContent || '').trim();
+        if (nrText === '일치하는 결과 없음' || nrText === 'No matching results' || nrText === 'No results found') {
+          noResults = true;
           break;
         }
-        current = current.parentElement;
       }
-
-      var targetRect = clickTarget.getBoundingClientRect();
-      console.log('[Flow Auto] 에셋 발견: "' + (matchedEl.textContent || '').trim().substring(0, 30) +
-        '" → 클릭 대상: ' + clickTarget.tagName +
-        '.' + (clickTarget.className || '').toString().substring(0, 30) + ' ' +
-        Math.round(targetRect.width) + 'x' + Math.round(targetRect.height) +
-        ' at(' + Math.round(targetRect.left) + ',' + Math.round(targetRect.top) + ')');
-
-      // SPA 네비게이션 차단: history.pushState/replaceState를 일시 오버라이드
-      var urlBefore = window.location.href;
-      var origPushState = history.pushState;
-      var origReplaceState = history.replaceState;
-      var navBlocked = false;
-      history.pushState = function() {
-        navBlocked = true;
-        console.log('[Flow Auto] pushState 차단됨: ' + (arguments[2] || '').toString().substring(0, 60));
-      };
-      history.replaceState = function() {
-        navBlocked = true;
-        console.log('[Flow Auto] replaceState 차단됨: ' + (arguments[2] || '').toString().substring(0, 60));
-      };
-
-      console.log('[Flow Auto] 에셋 카드 클릭 시작 (SPA 네비게이션 차단)');
-
-      // 전략 A: simulateRealClick
-      simulateRealClick(clickTarget);
-      await sleep(300);
-
-      // 전략 B: simulateRealClick 실패 시 네이티브 .click() 시도
-      var promptCheck = findPromptInput();
-      var midRef = countRefImages(promptCheck);
-      if (midRef <= beforeVoids) {
-        console.log('[Flow Auto] simulateRealClick 실패 (ref: ' + midRef + '), 네이티브 .click() 시도');
-        clickTarget.click();
-        await sleep(300);
-      }
-
-      // history 복원
-      history.pushState = origPushState;
-      history.replaceState = origReplaceState;
-
-      if (navBlocked) {
-        console.log('[Flow Auto] SPA 네비게이션 차단 성공');
-      }
-
-      // URL 변경 복구 (pushState 외의 방법으로 이동한 경우)
-      if (window.location.href !== urlBefore) {
-        console.warn('[Flow Auto] 클릭 후 URL 변경! → history.back()');
-        window.history.back();
-        await sleep(1500);
-      }
-
-      assetFound = true;
     }
 
-    if (!assetFound) {
+    if (noResults) {
       console.warn('[Flow Auto] 에셋 "' + charName + '" 검색 결과 없음');
-      // 패널 닫기 (Esc)
       document.dispatchEvent(new KeyboardEvent('keydown', {
         key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true
       }));
       await sleep(300);
       return false;
     }
+
+    // 5. 키보드로 첫 번째 검색 결과 선택 (ArrowDown → Enter)
+    console.log('[Flow Auto] 에셋 "' + charName + '" 키보드 선택 시도');
+    searchInput.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, bubbles: true, cancelable: true
+    }));
+    searchInput.dispatchEvent(new KeyboardEvent('keyup', {
+      key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, bubbles: true
+    }));
+    await sleep(300);
+
+    searchInput.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true
+    }));
+    searchInput.dispatchEvent(new KeyboardEvent('keyup', {
+      key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true
+    }));
+    await sleep(500);
 
     // 5. 에셋 패널 닫기 (먼저 닫아야 프롬프트에 삽입됨)
     console.log('[Flow Auto] 에셋 클릭 완료, 패널 닫기');
