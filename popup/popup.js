@@ -1508,8 +1508,13 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     promptEl.focus();
     await sleep(200);
 
-    // 레퍼런스 썸네일 보존: void 노드(레퍼런스)는 건드리지 않고 텍스트만 교체
-    var voidsBefore = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]').length;
+    // 레퍼런스 썸네일 보존: void 내부 img가 있는 것만 실제 레퍼런스로 판별
+    var refImgs = promptEl.querySelectorAll('[contenteditable="false"] img, [data-slate-void] img');
+    var voidsBefore = 0;
+    for (var vi = 0; vi < refImgs.length; vi++) {
+      var viRect = refImgs[vi].getBoundingClientRect();
+      if (viRect.width > 10 && viRect.height > 10) voidsBefore++;
+    }
 
     // 방법 1: Ctrl+A 대신 텍스트 끝으로 이동 후 Shift+Home으로 텍스트만 선택
     // 방법 2: Slate 텍스트 노드만 직접 선택
