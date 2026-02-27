@@ -2401,9 +2401,9 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       }
 
       // Step 4.5: 데이터 설정 + 섹션 스크롤
-      document.documentElement.setAttribute('data-whisk-upload', dataUrl);
+      document.documentElement.setAttribute('data-flow-upload', dataUrl);
       document.documentElement.removeAttribute('data-flow-upload-done');
-      console.log('[Flow Auto] data-whisk-upload 설정 완료 (길이: ' + dataUrl.length + ')');
+      console.log('[Flow Auto] data-flow-upload 설정 완료 (길이: ' + dataUrl.length + ')');
 
       var preClickRanges = getSectionRanges();
       for (var psi = 0; psi < preClickRanges.length; psi++) {
@@ -2488,7 +2488,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         }
 
         // 데이터 재설정 (이전 시도에서 소모됐을 수 있음)
-        document.documentElement.setAttribute('data-whisk-upload', dataUrl);
+        document.documentElement.setAttribute('data-flow-upload', dataUrl);
         document.documentElement.removeAttribute('data-flow-upload-done');
 
         var retryUploadBtn = findSectionUploadButton(labelText);
@@ -2518,8 +2518,8 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         var fileInputsBefore = document.querySelectorAll('input[type="file"]').length;
         var btn3 = findSectionUploadButton(labelText);
         if (btn3) {
-          // data-whisk-upload 설정해둔 상태에서 클릭 → interceptor가 잡을 수도 있음
-          document.documentElement.setAttribute('data-whisk-upload', dataUrl);
+          // data-flow-upload 설정해둔 상태에서 클릭 → interceptor가 잡을 수도 있음
+          document.documentElement.setAttribute('data-flow-upload', dataUrl);
           document.documentElement.removeAttribute('data-flow-upload-done');
           btn3.click();
           await sleep(1000);
@@ -2545,7 +2545,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       }
 
       // 정리
-      document.documentElement.removeAttribute('data-whisk-upload');
+      document.documentElement.removeAttribute('data-flow-upload');
       document.documentElement.removeAttribute('data-flow-upload-done');
       console.log('[Flow Auto] 업로드 완료 (success=' + uploadSuccess + ')');
       return uploadSuccess;
