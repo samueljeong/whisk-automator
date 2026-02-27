@@ -36,15 +36,35 @@ innerHTML 구조:
 </p>
 ```
 
-**입력 방법** (Slate.js 호환):
+**입력 방법** (Slate.js 호환 — 4차 테스트 결과):
+
+`execCommand('insertText')`는 DOM에 텍스트를 삽입하지만,
+Slate 내부 상태가 동기화 안 될 수 있음 (placeholder가 남아있음).
+
+시도할 입력 방법 (우선순위):
 ```javascript
-const promptEl = document.querySelector('[role="textbox"][contenteditable]');
+// 방법 1: InputEvent (beforeinput) — Slate가 감시하는 이벤트
 promptEl.focus();
-// 기존 텍스트 전체 선택 후 삭제
+const sel = window.getSelection();
+const range = document.createRange();
+range.selectNodeContents(promptEl);
+sel.removeAllRanges();
+sel.addRange(range);
+promptEl.dispatchEvent(new InputEvent('beforeinput', {
+  inputType: 'insertText', data: '텍스트', bubbles: true, cancelable: true
+}));
+
+// 방법 2: 클립보드 붙여넣기 — Slate가 paste 이벤트 처리
+const dt = new DataTransfer();
+dt.setData('text/plain', '텍스트');
+promptEl.dispatchEvent(new ClipboardEvent('paste', {
+  clipboardData: dt, bubbles: true, cancelable: true
+}));
+
+// 방법 3: execCommand — DOM은 변경되지만 Slate 동기화 미보장
 document.execCommand('selectAll');
 document.execCommand('delete');
-// 새 텍스트 삽입
-document.execCommand('insertText', false, '프롬프트 텍스트');
+document.execCommand('insertText', false, '텍스트');
 ```
 
 ⚠️ 단순 `textContent = '...'`는 Slate 내부 상태에 반영 안 됨
