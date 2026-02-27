@@ -3220,7 +3220,7 @@ async function handleHardReset(completedCount) {
     }
 
     // UI 요소 감지 폴링 (textarea 또는 contenteditable 찾기, 최대 20초)
-    console.log('[Popup] Whisk UI 요소 감지 대기 (최대 20초)...');
+    console.log('[Popup] Flow UI 요소 감지 대기 (최대 20초)...');
     const maxWaitMs = 20000;
     const pollMs = 2000;
     let waited = 0;
