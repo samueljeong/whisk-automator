@@ -1,5 +1,38 @@
 # 위스크 자동화 버그 리서치
 
+## 핵심 버그: selectAssetByName 에셋 클릭 시 페이지 이동
+
+### 증상
+에셋 패널에서 검색 결과를 클릭하면 에셋이 프롬프트에 삽입되는 대신 Flow 메인 화면으로 이동됨.
+
+### 원인 분석
+
+**1. candidates 탐색에 `a` 태그 포함 (line 2030)**
+```js
+var divs = document.querySelectorAll('div, button, li, a, span, label');
+```
+에셋 카드가 `<a href="/fx/ko/tools/flow/asset/...">`이면 클릭 시 해당 에셋 상세 페이지로 이동.
+
+**2. 부모 탐색이 `<a>` 링크를 클릭 대상으로 선택할 수 있음 (line 2049-2062)**
+matchedEl의 부모를 5단계까지 올라가면서 "적절한 크기"의 부모를 clickTarget으로 잡는데,
+`<a>` 태그가 그 범위 안에 들어가면 링크가 클릭 대상이 됨.
+
+**3. 3중 클릭이 과도 (line 2070-2089)**
+- 전략 1: simulateRealClick (pointer+mouse 시퀀스)
+- 전략 2: 직접 MouseEvent (중복)
+- 전략 3: 썸네일 img도 클릭
+첫 번째 클릭이 성공해서 에셋 삽입이 시작되어도, 두 번째/세 번째 클릭이
+다른 동작(네비게이션 등)을 유발할 수 있음.
+
+### 해결 방향
+
+1. **클릭 대상에서 `<a>` 태그 배제** — 또는 `<a>` 태그이면 `event.preventDefault()` 처리
+2. **부모 탐색 시 `<a>` 태그가 걸리면 건너뜀** — 부모가 링크이면 클릭 대상으로 삼지 않음
+3. **3중 클릭 제거** — 첫 번째 simulateRealClick만 사용하고, 클릭 후 ref 카운트 변화 확인
+4. **클릭 후 URL 변경 감지** — 클릭 전 URL을 저장하고, 클릭 후 URL이 바뀌면 즉시 복구
+
+---
+
 ## 핵심 문제: `.click()` vs `simulateClick()`
 
 Grok.com은 React 기반이라 네이티브 `.click()`이 React 이벤트 핸들러를 트리거하지 못함.
