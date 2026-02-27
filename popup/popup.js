@@ -2040,39 +2040,14 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       var selected = await selectAssetByName(searchName);
 
       if (!selected) {
-        // 에셋 미발견 → dataUrl이 있으면 새 업로드 시도 (Drag & Drop fallback)
+        // 에셋 미발견 → 새 에셋 업로드 시도
         var dataUrl = characterMap[name] || characterMap[name.normalize('NFC')];
         if (dataUrl) {
-          console.log('[Flow Auto] 에셋 미발견, Drag&Drop으로 새 업로드: ' + searchName);
-          var promptEl = findPromptInput();
-          var beforeVoids = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]').length;
-
-          // 파일명을 Flow 태그로 설정 (에셋 검색 시 매칭)
-          document.documentElement.setAttribute('data-flow-upload-name', searchName);
-          document.documentElement.setAttribute('data-flow-upload', dataUrl);
-          document.documentElement.removeAttribute('data-flow-upload-done');
-          document.documentElement.setAttribute('data-flow-upload-dragdrop', '[role="textbox"][contenteditable]');
-
-          // 파일 전달 대기
-          var waited = 0;
-          while (waited < 10000) {
-            var done = document.documentElement.getAttribute('data-flow-upload-done');
-            if (done === 'true') {
-              document.documentElement.removeAttribute('data-flow-upload-done');
-              break;
-            }
-            if (done === 'error') {
-              document.documentElement.removeAttribute('data-flow-upload-done');
-              console.error('[Flow Auto] Drag&Drop 실패: ' + searchName);
-              break;
-            }
-            await sleep(300);
-            waited += 300;
+          console.log('[Flow Auto] 에셋 미발견, 새 에셋 업로드: ' + searchName);
+          var uploaded = await uploadNewAsset(searchName, dataUrl);
+          if (!uploaded) {
+            console.warn('[Flow Auto] 에셋 업로드 실패: ' + searchName + ', 스킵');
           }
-
-          // 분석 완료 대기 (새 업로드이므로 시간 소요)
-          console.log('[Flow Auto] 새 에셋 분석 대기: ' + searchName);
-          await waitForAnalysisComplete(promptEl, beforeVoids, searchName);
         } else {
           console.warn('[Flow Auto] 캐릭터 "' + name + '" 이미지 없음, 스킵');
         }
