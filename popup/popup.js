@@ -2681,21 +2681,9 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       var item = promptsWithCharacters[i];
       var thisGroup = item.characterGroup || ''; // "" = 캐릭터 없음
 
-      // === 레퍼런스 전환 체크 ===
+      // 레퍼런스 그룹 로깅 (실제 업로드는 Phase 2에서 매 프롬프트마다 처리)
       if (thisGroup !== currentRefGroup) {
-        if (thisGroup && item.character) {
-          // 새 캐릭터 조합 → 레퍼런스 교체
-          console.log('[Flow Auto] 레퍼런스 전환: "' + (currentRefGroup || '없음') + '" → "' + thisGroup + '"');
-          await clearReferences();
-          await sleep(500);
-          await uploadReferences(item.character, characters);
-          await sleep(1000);
-        } else if (currentRefGroup) {
-          // 캐릭터 없는 프롬프트 → 레퍼런스 제거
-          console.log('[Flow Auto] 레퍼런스 제거 (캐릭터 없음)');
-          await clearReferences();
-          await sleep(500);
-        }
+        console.log('[Flow Auto] 캐릭터 그룹 변경: "' + (currentRefGroup || '없음') + '" → "' + (thisGroup || '없음') + '"');
         currentRefGroup = thisGroup;
       }
 
