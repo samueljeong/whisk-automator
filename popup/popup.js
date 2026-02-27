@@ -2286,6 +2286,10 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       var selected = await selectAssetByName(searchName);
 
       if (!selected) {
+        // 에셋 클릭이 상세 페이지로 이동했을 수 있으므로 원래 페이지로 복귀
+        window.history.back();
+        await sleep(1500);
+
         // 에셋 미발견 → 새 에셋 업로드 시도
         var dataUrl = characterMap[name] || characterMap[name.normalize('NFC')];
         if (dataUrl) {
