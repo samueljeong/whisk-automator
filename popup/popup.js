@@ -2103,21 +2103,12 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         ancestor = ancestor.parentElement;
       }
 
-      // 모든 click/pointerup 이벤트에 preventDefault + 네비게이션 차단
+      // click의 기본 동작(네비게이션)만 차단, 이벤트 전파는 유지 (Flow 핸들러가 동작해야 함)
       var preventNav = function(e) {
         e.preventDefault();
-        e.stopPropagation();
-        console.log('[Flow Auto] click preventDefault 실행: ' + e.target.tagName);
-        return false;
-      };
-      // beforeunload로 하드 네비게이션 차단
-      var preventUnload = function(e) {
-        e.preventDefault();
-        console.log('[Flow Auto] beforeunload 차단');
-        return '';
+        console.log('[Flow Auto] click preventDefault 실행 (전파 유지): ' + e.target.tagName);
       };
       document.addEventListener('click', preventNav, true);
-      window.addEventListener('beforeunload', preventUnload);
 
       // URL 감시 시작
       var urlBefore = window.location.href;
