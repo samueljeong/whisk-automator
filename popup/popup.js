@@ -2719,7 +2719,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, styleIm
       }
     }
 
-    // 위치 기준 정렬 (위→아래, 왼쪽→오른쪽) → 첫 번째 = Whisk 첫 번째 결과
+    // 위치 기준 정렬 (위→아래, 왼쪽→오른쪽) → 첫 번째 = Flow 첫 번째 결과
     newImages.sort((a, b) => {
       const ar = a.getBoundingClientRect();
       const br = b.getBoundingClientRect();
