@@ -75,9 +75,9 @@ async function injectFileInterceptor(tabId) {
     target: { tabId: tabId },
     world: 'MAIN',
     func: () => {
-      if (window.__whiskAutoInterceptorInstalled) {
-        console.log('[Whisk Interceptor] 이미 설치됨');
-        document.documentElement.setAttribute('data-whisk-interceptor-ready', 'true');
+      if (window.__flowAutoInterceptorInstalled) {
+        console.log('[Flow Interceptor] 이미 설치됨');
+        document.documentElement.setAttribute('data-flow-interceptor-ready', 'true');
         return;
       }
 
@@ -94,10 +94,10 @@ async function injectFileInterceptor(tabId) {
       // 방법 1: showOpenFilePicker 가로채기
       var origPicker = window.showOpenFilePicker;
       var interceptedPicker = async function() {
-        var dataUrl = document.documentElement.getAttribute('data-whisk-upload');
+        var dataUrl = document.documentElement.getAttribute('data-flow-upload');
         if (dataUrl) {
-          document.documentElement.removeAttribute('data-whisk-upload');
-          console.log('[Whisk Interceptor] showOpenFilePicker 가로채기!');
+          document.documentElement.removeAttribute('data-flow-upload');
+          console.log('[Flow Interceptor] showOpenFilePicker 가로채기!');
           try {
             var file = dataUrlToFile(dataUrl);
             var handle = {
@@ -107,10 +107,10 @@ async function injectFileInterceptor(tabId) {
               queryPermission: function() { return Promise.resolve('granted'); },
               requestPermission: function() { return Promise.resolve('granted'); }
             };
-            document.documentElement.setAttribute('data-whisk-upload-done', 'true');
+            document.documentElement.setAttribute('data-flow-upload-done', 'true');
             return [handle];
           } catch (e) {
-            document.documentElement.setAttribute('data-whisk-upload-done', 'error');
+            document.documentElement.setAttribute('data-flow-upload-done', 'error');
             if (origPicker) return origPicker.apply(this, arguments);
             throw e;
           }
@@ -131,10 +131,10 @@ async function injectFileInterceptor(tabId) {
       var origInputClick = HTMLInputElement.prototype.click;
       HTMLInputElement.prototype.click = function() {
         if (this.type === 'file') {
-          var dataUrl = document.documentElement.getAttribute('data-whisk-upload');
+          var dataUrl = document.documentElement.getAttribute('data-flow-upload');
           if (dataUrl) {
-            document.documentElement.removeAttribute('data-whisk-upload');
-            console.log('[Whisk Interceptor] input[type=file].click() 가로채기!');
+            document.documentElement.removeAttribute('data-flow-upload');
+            console.log('[Flow Interceptor] input[type=file].click() 가로채기!');
             try {
               var file = dataUrlToFile(dataUrl);
               var dt = new DataTransfer();
@@ -142,10 +142,10 @@ async function injectFileInterceptor(tabId) {
               this.files = dt.files;
               this.dispatchEvent(new Event('change', { bubbles: true }));
               this.dispatchEvent(new Event('input', { bubbles: true }));
-              document.documentElement.setAttribute('data-whisk-upload-done', 'true');
+              document.documentElement.setAttribute('data-flow-upload-done', 'true');
               return;
             } catch (e) {
-              document.documentElement.setAttribute('data-whisk-upload-done', 'error');
+              document.documentElement.setAttribute('data-flow-upload-done', 'error');
             }
           }
         }
@@ -156,28 +156,28 @@ async function injectFileInterceptor(tabId) {
       document.addEventListener('click', function(e) {
         var el = e.target;
         if (el && el.tagName === 'INPUT' && el.type === 'file') {
-          var dataUrl = document.documentElement.getAttribute('data-whisk-upload');
+          var dataUrl = document.documentElement.getAttribute('data-flow-upload');
           if (dataUrl) {
             e.preventDefault();
             e.stopPropagation();
-            document.documentElement.removeAttribute('data-whisk-upload');
+            document.documentElement.removeAttribute('data-flow-upload');
             try {
               var file = dataUrlToFile(dataUrl);
               var dt = new DataTransfer();
               dt.items.add(file);
               el.files = dt.files;
               el.dispatchEvent(new Event('change', { bubbles: true }));
-              document.documentElement.setAttribute('data-whisk-upload-done', 'true');
+              document.documentElement.setAttribute('data-flow-upload-done', 'true');
             } catch (e2) {
-              document.documentElement.setAttribute('data-whisk-upload-done', 'error');
+              document.documentElement.setAttribute('data-flow-upload-done', 'error');
             }
           }
         }
       }, true);
 
-      window.__whiskAutoInterceptorInstalled = true;
-      document.documentElement.setAttribute('data-whisk-interceptor-ready', 'true');
-      console.log('[Whisk Interceptor] background 주입 완료: showOpenFilePicker + input[type=file] + click 캡처');
+      window.__flowAutoInterceptorInstalled = true;
+      document.documentElement.setAttribute('data-flow-interceptor-ready', 'true');
+      console.log('[Flow Interceptor] background 주입 완료: showOpenFilePicker + input[type=file] + click 캡처');
     }
   });
   console.log('[Background] MAIN world interceptor 주입 완료');
