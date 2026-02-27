@@ -2045,7 +2045,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
     if (matchedEl) {
       // 부모 컨테이너까지 올라가기 (에셋 카드 = 썸네일+이름을 감싸는 div)
-      // 클릭 가능한 적절한 크기의 부모를 찾음
+      // <a> 태그는 href로 페이지 이동을 유발하므로 클릭 대상에서 제외
       var clickTarget = matchedEl;
       var current = matchedEl;
       for (var up = 0; up < 5; up++) {
@@ -2054,11 +2054,26 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         var pRect = parent.getBoundingClientRect();
         // 부모가 리스트 컨테이너처럼 너무 크면 멈춤
         if (pRect.height > 200 || pRect.width > 400) break;
+        // <a> 태그(링크)는 클릭 시 페이지 이동 → 클릭 대상에서 제외
+        if (parent.tagName === 'A' && parent.href) {
+          console.log('[Flow Auto] <a> 태그 건너뜀: href=' + parent.href.substring(0, 60));
+          current = parent;
+          continue;
+        }
         // 적절한 크기의 카드 (40~150px 높이)면 이 부모를 클릭 대상으로
         if (pRect.height >= 30 && pRect.height <= 150 && pRect.width >= 50) {
           clickTarget = parent;
         }
         current = parent;
+      }
+
+      // clickTarget 자체가 <a> 태그이면 내부 div/img로 교체
+      if (clickTarget.tagName === 'A' && clickTarget.href) {
+        var inner = clickTarget.querySelector('div, img, span');
+        if (inner) {
+          console.log('[Flow Auto] clickTarget이 <a> → 내부 ' + inner.tagName + '으로 교체');
+          clickTarget = inner;
+        }
       }
 
       var targetRect = clickTarget.getBoundingClientRect();
@@ -2067,25 +2082,20 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         Math.round(targetRect.width) + 'x' + Math.round(targetRect.height) +
         ' at(' + Math.round(targetRect.left) + ',' + Math.round(targetRect.top) + ')');
 
-      // 여러 클릭 전략 시도
-      // 전략 1: simulateRealClick (pointer events 시퀀스)
+      // URL 변경 감지용 스냅샷
+      var urlBefore = window.location.href;
+
+      // simulateRealClick 1회만 실행 (3중 클릭은 과도하여 네비게이션 유발)
       simulateRealClick(clickTarget);
-      await sleep(300);
+      await sleep(500);
 
-      // 전략 2: 직접 마우스 이벤트 (중앙 좌표)
-      var cx = targetRect.left + targetRect.width / 2;
-      var cy = targetRect.top + targetRect.height / 2;
-      clickTarget.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, clientX: cx, clientY: cy }));
-      clickTarget.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, clientX: cx, clientY: cy }));
-      clickTarget.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: cx, clientY: cy }));
-      await sleep(300);
-
-      // 전략 3: 이미지 썸네일이 있으면 그것도 클릭
-      var thumbImg = clickTarget.querySelector('img');
-      if (thumbImg) {
-        console.log('[Flow Auto] 썸네일 이미지도 클릭');
-        simulateRealClick(thumbImg);
-        await sleep(300);
+      // URL 변경 감지 → 페이지 이동 발생 시 즉시 복구
+      if (window.location.href !== urlBefore) {
+        console.warn('[Flow Auto] 에셋 클릭으로 페이지 이동 감지! ' + window.location.href);
+        console.log('[Flow Auto] history.back() 복귀');
+        window.history.back();
+        await sleep(1500);
+        return 'navigated';
       }
 
       assetFound = true;
