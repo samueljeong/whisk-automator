@@ -54,7 +54,6 @@ const DEFAULT_PROJECTS = {
     characters: {},
     scenes: {},
     inheritCommon: false,
-    styleImage: "",
     stylePrefix: "",
     styleSuffix: "",
     characterStyleMap: {}
