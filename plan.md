@@ -42,6 +42,14 @@ Grok.com(React)과 Flow(Google)에서 네이티브 `.click()`이 이벤트 핸�
 | popup.js line 3157 `a.click()` | `createElement('a')` + `.download` 네이티브 다운로드 |
 | grok.js line 1280 `links[].click()` | `<a download>` 링크 네이티브 다운로드 |
 
+### popup.js — selectAssetByName 에셋 클릭 시 페이지 이동 버그 (핵심)
+
+- [ ] **6. 에셋 카드 클릭 로직 전면 수정 (line 2046-2092)**
+  - 부모 탐색 시 `<a>` 태그를 클릭 대상에서 배제 (href가 있으면 건너뜀)
+  - 3중 클릭(simulateRealClick + 직접 MouseEvent + 썸네일) → `simulateRealClick` 1회로 축소
+  - 클릭 전 `window.location.href` 저장 → 클릭 후 URL 변경 감지 시 즉시 `history.back()`
+  - 클릭 후 ref 카운트 확인까지 기다린 뒤 다음 단계로 진행
+
 ## 주의사항
 - grok.js의 각 executeScript 블록은 독립 실행되므로, simulateClick 헬퍼를 사용하는 **각 블록 내부에 별도 정의** 필요 (클로저 공유 불가)
 - 이미 simulateClick이 정의된 블록 (clickUpscaleInMenu)은 변경하지 않음
