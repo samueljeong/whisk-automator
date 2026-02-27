@@ -2279,24 +2279,18 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       var flowTag = flowTagMap[name] || flowTagMap[name.normalize('NFC')] || null;
       var searchName = flowTag || name; // flowTag 있으면 영문명으로 검색
 
-      console.log('[Flow Auto] 레퍼런스 선택 ' + (i + 1) + '/' + names.length + ': ' + name +
-        (flowTag ? ' (Flow태그: ' + flowTag + ')' : ' (태그 미설정, 한글 검색)'));
+      console.log('[Flow Auto] 레퍼런스 업로드 ' + (i + 1) + '/' + names.length + ': ' + name +
+        (flowTag ? ' (Flow태그: ' + flowTag + ')' : ' (태그 미설정, 한글명 사용)'));
 
-      // 에셋 패널에서 검색 → 선택 (flowTag 우선)
-      var selected = await selectAssetByName(searchName);
-
-      if (!selected) {
-        // 에셋 미발견 → 새 에셋 업로드 시도
-        var dataUrl = characterMap[name] || characterMap[name.normalize('NFC')];
-        if (dataUrl) {
-          console.log('[Flow Auto] 에셋 미발견, 새 에셋 업로드: ' + searchName);
-          var uploaded = await uploadNewAsset(searchName, dataUrl);
-          if (!uploaded) {
-            console.warn('[Flow Auto] 에셋 업로드 실패: ' + searchName + ', 스킵');
-          }
-        } else {
-          console.warn('[Flow Auto] 캐릭터 "' + name + '" 이미지 없음, 스킵');
+      // 항상 새 에셋으로 업로드 (selectAssetByName은 페이지 이동 유발하므로 사용 안 함)
+      var dataUrl = characterMap[name] || characterMap[name.normalize('NFC')];
+      if (dataUrl) {
+        var uploaded = await uploadNewAsset(searchName, dataUrl);
+        if (!uploaded) {
+          console.warn('[Flow Auto] 에셋 업로드 실패: ' + searchName + ', 스킵');
         }
+      } else {
+        console.warn('[Flow Auto] 캐릭터 "' + name + '" 이미지 없음, 스킵');
       }
 
       await sleep(500);
