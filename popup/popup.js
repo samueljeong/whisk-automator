@@ -2064,17 +2064,9 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     }));
     await sleep(1000);
 
-    // 6. 패널 닫힌 후 void 수 재측정 → 분석 완료 대기
+    // 6. 에셋 패널에 있는 건 이미 분석 완료 → 대기 불필요
     var afterCloseVoids = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]').length;
-    console.log('[Flow Auto] 패널 닫은 후 void 수: ' + afterCloseVoids + ' (이전: ' + beforeVoids + ')');
-
-    if (afterCloseVoids > beforeVoids) {
-      // 이미 삽입됨 (이전에 분석 완료된 에셋)
-      console.log('[Flow Auto] 에셋 "' + charName + '" 즉시 삽입 완료');
-    } else {
-      // 아직 삽입 안 됨 → 분석 대기
-      await waitForAnalysisComplete(promptEl, beforeVoids, charName);
-    }
+    console.log('[Flow Auto] 에셋 "' + charName + '" 삽입 완료 (분석 완료 에셋), void: ' + beforeVoids + ' → ' + afterCloseVoids);
 
     return true;
   }
