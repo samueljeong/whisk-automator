@@ -1,6 +1,6 @@
-// Background Service Worker for Whisk Automator
+// Background Service Worker for Flow Automator
 
-console.log('[Whisk Automator] Background service worker started');
+console.log('[Flow Automator] Background service worker started');
 
 // 아이콘 클릭 시 사이드 패널 열기
 chrome.action.onClicked.addListener((tab) => {
