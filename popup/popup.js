@@ -2262,14 +2262,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       // 에셋 패널에서 검색 → 선택 (flowTag 우선)
       var selected = await selectAssetByName(searchName);
 
-      if (selected === 'navigated') {
-        // 에셋 클릭이 상세 페이지로 이동함 → 원래 페이지로 복귀
-        console.log('[Flow Auto] 페이지 이동 감지, history.back() 복귀');
-        window.history.back();
-        await sleep(1500);
-      }
-
-      if (!selected || selected === 'navigated') {
+      if (!selected) {
         // 에셋 미발견 또는 삽입 실패 → 새 에셋 업로드 시도
         var dataUrl = characterMap[name] || characterMap[name.normalize('NFC')];
         if (dataUrl) {
