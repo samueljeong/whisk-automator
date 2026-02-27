@@ -2402,7 +2402,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
 
       // Step 4.5: 데이터 설정 + 섹션 스크롤
       document.documentElement.setAttribute('data-whisk-upload', dataUrl);
-      document.documentElement.removeAttribute('data-whisk-upload-done');
+      document.documentElement.removeAttribute('data-flow-upload-done');
       console.log('[Flow Auto] data-whisk-upload 설정 완료 (길이: ' + dataUrl.length + ')');
 
       var preClickRanges = getSectionRanges();
@@ -2445,7 +2445,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
 
         for (var wait = 0; wait < 10; wait++) {
           await sleep(500);
-          var doneAttr = document.documentElement.getAttribute('data-whisk-upload-done');
+          var doneAttr = document.documentElement.getAttribute('data-flow-upload-done');
           if (doneAttr === 'true') {
             uploadSuccess = true;
             break;
@@ -2456,7 +2456,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
           }
         }
         if (uploadSuccess) {
-          document.documentElement.removeAttribute('data-whisk-upload-done');
+          document.documentElement.removeAttribute('data-flow-upload-done');
           console.log('[Flow Auto] 전략A 성공!');
           await sleep(500);
           debugSectionLayout('업로드후:' + slotName);
@@ -2489,7 +2489,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
 
         // 데이터 재설정 (이전 시도에서 소모됐을 수 있음)
         document.documentElement.setAttribute('data-whisk-upload', dataUrl);
-        document.documentElement.removeAttribute('data-whisk-upload-done');
+        document.documentElement.removeAttribute('data-flow-upload-done');
 
         var retryUploadBtn = findSectionUploadButton(labelText);
         if (retryUploadBtn) {
@@ -2497,13 +2497,13 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
           retryUploadBtn.click();
           for (var wait2 = 0; wait2 < 10; wait2++) {
             await sleep(500);
-            if (document.documentElement.getAttribute('data-whisk-upload-done') === 'true') {
+            if (document.documentElement.getAttribute('data-flow-upload-done') === 'true') {
               uploadSuccess = true;
               break;
             }
           }
           if (uploadSuccess) {
-            document.documentElement.removeAttribute('data-whisk-upload-done');
+            document.documentElement.removeAttribute('data-flow-upload-done');
             console.log('[Flow Auto] 전략B 성공!');
             await sleep(500);
             return true;
@@ -2520,7 +2520,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         if (btn3) {
           // data-whisk-upload 설정해둔 상태에서 클릭 → interceptor가 잡을 수도 있음
           document.documentElement.setAttribute('data-whisk-upload', dataUrl);
-          document.documentElement.removeAttribute('data-whisk-upload-done');
+          document.documentElement.removeAttribute('data-flow-upload-done');
           btn3.click();
           await sleep(1000);
         }
@@ -2546,7 +2546,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
 
       // 정리
       document.documentElement.removeAttribute('data-whisk-upload');
-      document.documentElement.removeAttribute('data-whisk-upload-done');
+      document.documentElement.removeAttribute('data-flow-upload-done');
       console.log('[Flow Auto] 업로드 완료 (success=' + uploadSuccess + ')');
       return uploadSuccess;
     } catch (e) {
