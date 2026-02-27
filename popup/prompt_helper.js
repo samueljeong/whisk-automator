@@ -33,7 +33,7 @@ Analyze the script/text below scene by scene and write one English image generat
 - Include specific visual details (composition, lighting, mood, color palette, style)
 - Describe characters with expressions, poses, and costumes if present
 - Output ONLY the prompts (no numbers, no explanations, no dividers)
-- Optimized for Whisk/image generation AI
+- Optimized for Flow/image generation AI
 
 ## Prompt style example
 a lone warrior standing on a misty mountain peak at dawn, dramatic backlight, cinematic composition, detailed armor with battle scars, determined expression, volumetric fog, epic fantasy style
