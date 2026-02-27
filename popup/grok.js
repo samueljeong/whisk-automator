@@ -54,7 +54,7 @@
     } else {
       // 라이선스 인증 확인
       if (!window.licenseValid) {
-        alert('Whisk 라이선스 인증 후 사용할 수 있습니다.');
+        alert('Flow 라이선스 인증 후 사용할 수 있습니다.');
         return;
       }
       modeTabFlow.classList.remove('active');
@@ -1352,7 +1352,7 @@
   // ============================================================
   grokStartBtn.addEventListener('click', () => {
     if (!window.licenseValid) {
-      alert('Whisk 라이선스 인증 후 사용할 수 있습니다.');
+      alert('Flow 라이선스 인증 후 사용할 수 있습니다.');
       return;
     }
     if (!grokIsRunning) {
