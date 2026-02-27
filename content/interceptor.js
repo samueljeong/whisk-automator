@@ -287,6 +287,7 @@
     for (var m = 0; m < mutations.length; m++) {
       if (mutations[m].attributeName === 'data-slate-debug') {
         var val = document.documentElement.getAttribute('data-slate-debug');
+        console.log('[Flow Interceptor] data-slate-debug 감지:', val);
         if (val === 'dump') {
           document.documentElement.removeAttribute('data-slate-debug');
           handleSlateDebug();
@@ -295,6 +296,7 @@
     }
   });
   slateObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-slate-debug'] });
+  console.log('[Flow Interceptor] Slate debug observer 등록 완료');
 
   window.__flowAutoInterceptorInstalled = true;
   // DOM 속성으로도 표시 (ISOLATED world에서 확인 가능)
