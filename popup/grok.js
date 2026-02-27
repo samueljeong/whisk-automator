@@ -1291,16 +1291,28 @@
       target: { tabId: grokTabId },
       world: 'MAIN',
       func: () => {
+        function simulateClick(element) {
+          const rect = element.getBoundingClientRect();
+          const x = rect.left + rect.width / 2;
+          const y = rect.top + rect.height / 2;
+          const opts = { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0 };
+          element.dispatchEvent(new PointerEvent('pointerdown', { ...opts, pointerId: 1 }));
+          element.dispatchEvent(new MouseEvent('mousedown', opts));
+          element.dispatchEvent(new PointerEvent('pointerup', { ...opts, pointerId: 1 }));
+          element.dispatchEvent(new MouseEvent('mouseup', opts));
+          element.dispatchEvent(new MouseEvent('click', opts));
+        }
+
         const btns = document.querySelectorAll('button');
         for (const btn of btns) {
           const aria = (btn.getAttribute('aria-label') || '');
           if (/다운로드|download/i.test(aria)) {
             console.log('[Grok] 페이지 다운로드 버튼 클릭:', aria);
-            btn.click();
+            simulateClick(btn);
             return { clicked: true, aria };
           }
         }
-        // a 태그 다운로드 링크
+        // a 태그 다운로드 링크 (네이티브 다운로드 → .click() 유지)
         const links = document.querySelectorAll('a[download]');
         if (links.length > 0) {
           links[links.length - 1].click();
