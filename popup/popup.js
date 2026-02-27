@@ -2271,13 +2271,12 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     }
 
     if (!searchInputAfter) {
-      console.warn('[Flow Auto] 업로드 후 검색바 미발견, 패널 닫고 selectAssetByName 시도');
+      console.warn('[Flow Auto] 업로드 후 검색바 미발견, 패널 닫기');
       document.dispatchEvent(new KeyboardEvent('keydown', {
         key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true
       }));
-      await sleep(1000);
-      var selected = await selectAssetByName(searchName);
-      return selected === true;
+      await sleep(500);
+      return false;
     }
 
     // 검색바에 에셋 이름 입력
