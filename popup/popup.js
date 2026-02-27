@@ -1789,99 +1789,162 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     return null;
   }
 
-  // 10. 단일 레퍼런스 이미지 업로드 (Drag & Drop → 프롬프트 영역)
-  async function uploadOneReference(dataUrl) {
+  // 10. "+" → 에셋 패널에서 캐릭터 검색 → 선택
+  async function selectAssetByName(charName) {
     var promptEl = findPromptInput();
-
-    // 업로드 전 썸네일 수 기록 (분석 완료 감지용)
     var beforeVoids = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]').length;
 
-    // 1. Drag & Drop으로 프롬프트 영역에 직접 이미지 드롭
-    document.documentElement.setAttribute('data-flow-upload', dataUrl);
-    document.documentElement.removeAttribute('data-flow-upload-done');
-    document.documentElement.setAttribute('data-flow-upload-dragdrop', '[role="textbox"][contenteditable]');
-    console.log('[Flow Auto] 프롬프트 영역에 이미지 Drag&Drop 시작');
+    // 1. "+" (ingredient) 버튼 클릭 → 에셋 패널 열기
+    var ingredientBtn = findIngredientButton();
+    if (!ingredientBtn) throw new Error('Ingredient(+) 버튼을 찾을 수 없습니다');
+    simulateRealClick(ingredientBtn);
+    await sleep(800);
 
-    // 2. 파일 전달 완료 대기
-    var maxWait = 10000;
-    var waited = 0;
-    while (waited < maxWait) {
-      var done = document.documentElement.getAttribute('data-flow-upload-done');
-      if (done === 'true') {
-        console.log('[Flow Auto] Drag&Drop 파일 전달 성공');
-        document.documentElement.removeAttribute('data-flow-upload-done');
+    // 2. 에셋 검색바 찾기 (placeholder "에셋 검색" 또는 검색 input)
+    var searchInput = null;
+    var inputs = document.querySelectorAll('input[type="text"], input[type="search"], input:not([type])');
+    for (var si = 0; si < inputs.length; si++) {
+      var ph = (inputs[si].placeholder || '').toLowerCase();
+      var rect = inputs[si].getBoundingClientRect();
+      if (rect.width > 0 && (ph.includes('에셋') || ph.includes('검색') || ph.includes('search') || ph.includes('asset'))) {
+        searchInput = inputs[si];
         break;
       }
-      if (done === 'error') {
-        document.documentElement.removeAttribute('data-flow-upload-done');
-        throw new Error('Drag&Drop 파일 전달 실패');
+    }
+
+    if (!searchInput) {
+      console.warn('[Flow Auto] 에셋 검색바 미발견, 패널 내 첫 input 사용');
+      // 패널 내 보이는 input 중 첫 번째
+      for (var fi = 0; fi < inputs.length; fi++) {
+        var fiRect = inputs[fi].getBoundingClientRect();
+        if (fiRect.width > 100 && fiRect.top > 0 && fiRect.top < window.innerHeight) {
+          searchInput = inputs[fi];
+          break;
+        }
       }
+    }
+
+    if (!searchInput) {
+      throw new Error('에셋 검색바를 찾을 수 없습니다');
+    }
+
+    console.log('[Flow Auto] 에셋 검색바 발견, "' + charName + '" 검색');
+
+    // 3. 검색바에 캐릭터 이름 입력
+    searchInput.focus();
+    await sleep(200);
+    // 기존 텍스트 지우기
+    searchInput.value = '';
+    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+    await sleep(200);
+    // 캐릭터 이름 입력
+    searchInput.value = charName;
+    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+    searchInput.dispatchEvent(new Event('change', { bubbles: true }));
+    await sleep(1000); // 검색 결과 대기
+
+    // 4. 검색 결과에서 에셋 클릭
+    //    에셋 목록은 검색바 아래에 썸네일+이름 리스트로 표시됨
+    var assetFound = false;
+    var assetItems = document.querySelectorAll('[class*="asset"], [class*="item"], [class*="result"], [role="option"], [role="listitem"]');
+
+    // 패널 내 클릭 가능한 요소들 중 캐릭터 이름이 포함된 것
+    if (assetItems.length === 0) {
+      // 클래스 기반으로 못 찾으면, 검색바 근처의 모든 클릭 가능 요소 탐색
+      var searchRect = searchInput.getBoundingClientRect();
+      var allClickable = document.querySelectorAll('div, button, li, a, span');
+      var candidates = [];
+      for (var ci = 0; ci < allClickable.length; ci++) {
+        var cRect = allClickable[ci].getBoundingClientRect();
+        var cTxt = (allClickable[ci].textContent || '').trim();
+        // 검색바 아래, 같은 패널 영역, 텍스트에 캐릭터 이름 포함
+        if (cRect.top > searchRect.bottom && cRect.top < searchRect.bottom + 500 &&
+            cRect.left >= searchRect.left - 50 && cRect.width > 30 && cRect.height > 20 &&
+            cTxt.includes(charName)) {
+          candidates.push({ el: allClickable[ci], text: cTxt, height: cRect.height });
+        }
+      }
+      // 가장 적절한 크기의 요소 선택 (목록 항목 크기: 30~80px 높이)
+      candidates.sort(function(a, b) {
+        var idealH = 50;
+        return Math.abs(a.height - idealH) - Math.abs(b.height - idealH);
+      });
+      if (candidates.length > 0) {
+        assetItems = [candidates[0].el];
+      }
+    }
+
+    for (var ai = 0; ai < assetItems.length; ai++) {
+      var assetTxt = (assetItems[ai].textContent || '').trim();
+      var assetRect = assetItems[ai].getBoundingClientRect();
+      if (assetRect.width > 0 && assetTxt.includes(charName)) {
+        console.log('[Flow Auto] 에셋 발견: "' + assetTxt.substring(0, 40) + '" → 클릭');
+        simulateRealClick(assetItems[ai]);
+        assetFound = true;
+        await sleep(500);
+        break;
+      }
+    }
+
+    if (!assetFound) {
+      console.warn('[Flow Auto] 에셋 "' + charName + '" 검색 결과 없음');
+      // 패널 닫기 (Esc)
+      document.dispatchEvent(new KeyboardEvent('keydown', {
+        key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true
+      }));
       await sleep(300);
-      waited += 300;
-    }
-    if (waited >= maxWait) {
-      throw new Error('Drag&Drop 파일 전달 타임아웃 (10초)');
+      return false;
     }
 
-    // 3. Flow 분석 완료 대기
-    //    이미지를 드롭하면 Flow가 분석을 시작하고, 완료되면 프롬프트 안에 썸네일이 나타남
-    //    분석 완료 전에 프롬프트를 제출하면 레퍼런스가 반영되지 않음
-    console.log('[Flow Auto] 레퍼런스 분석 대기 시작 (기존 썸네일: ' + beforeVoids + '개)...');
-    var analysisMaxWait = 60000; // 최대 60초
-    var analysisWaited = 0;
-
-    // 초기 대기 (분석 시작까지)
-    await sleep(2000);
-    analysisWaited += 2000;
-
-    while (analysisWaited < analysisMaxWait) {
-      if (isStopRequested()) throw new Error('__STOPPED__');
-
-      // 감지 1: 프롬프트 내 썸네일(void 요소) 증가 확인
-      var currentVoids = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]').length;
-
-      // 감지 2: 썸네일 위 로딩 오버레이/스피너/프로그레스 확인
-      var hasLoadingOverlay = false;
-      var voidEls = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]');
-      for (var vi = 0; vi < voidEls.length; vi++) {
-        // 썸네일 내부에 로딩/스피너/프로그레스 요소가 있는지
-        var loadingInThumb = voidEls[vi].querySelectorAll(
-          '[class*="loading"], [class*="spinner"], [class*="progress"], ' +
-          '[class*="Loading"], [class*="Spinner"], [class*="Progress"], ' +
-          '[role="progressbar"], svg circle[stroke-dasharray], svg circle[stroke-dashoffset]'
-        );
-        if (loadingInThumb.length > 0) {
-          hasLoadingOverlay = true;
-          break;
+    // 5. 프롬프트에 썸네일 삽입 확인 (이미 분석된 에셋은 즉시 삽입됨)
+    await sleep(1000);
+    var afterVoids = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]').length;
+    if (afterVoids > beforeVoids) {
+      console.log('[Flow Auto] 에셋 "' + charName + '" 삽입 완료 (즉시), 썸네일 ' + beforeVoids + ' → ' + afterVoids);
+    } else {
+      // 분석 대기 (새 에셋인 경우)
+      console.log('[Flow Auto] 에셋 "' + charName + '" 분석 대기...');
+      var analysisMaxWait = 60000;
+      var analysisWaited = 0;
+      while (analysisWaited < analysisMaxWait) {
+        if (isStopRequested()) throw new Error('__STOPPED__');
+        var currentVoids = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]').length;
+        if (currentVoids > beforeVoids) {
+          // 썸네일 추가됨 → 로딩 오버레이 확인
+          var hasLoading = false;
+          var voidEls = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]');
+          for (var vi = 0; vi < voidEls.length; vi++) {
+            var loadingInThumb = voidEls[vi].querySelectorAll(
+              '[class*="loading"], [class*="spinner"], [class*="progress"], ' +
+              '[role="progressbar"], svg circle[stroke-dasharray]'
+            );
+            if (loadingInThumb.length > 0) { hasLoading = true; break; }
+            var thumbOpacity = parseFloat(getComputedStyle(voidEls[vi]).opacity);
+            if (thumbOpacity < 0.9) { hasLoading = true; break; }
+          }
+          if (!hasLoading) {
+            console.log('[Flow Auto] 에셋 "' + charName + '" 분석 완료 (' + (analysisWaited / 1000) + '초)');
+            break;
+          }
         }
-        // opacity가 낮으면 아직 분석 중 (반투명 상태)
-        var thumbOpacity = parseFloat(getComputedStyle(voidEls[vi]).opacity);
-        if (thumbOpacity < 0.9) {
-          hasLoadingOverlay = true;
-          break;
+        if (analysisWaited % 5000 === 0 && analysisWaited > 0) {
+          console.log('[Flow Auto] 분석 대기 중... (' + (analysisWaited / 1000) + '초)');
         }
+        await sleep(1000);
+        analysisWaited += 1000;
       }
-
-      // 새 썸네일이 추가됐고 로딩 오버레이가 없으면 → 분석 완료
-      if (currentVoids > beforeVoids && !hasLoadingOverlay) {
-        console.log('[Flow Auto] 레퍼런스 분석 완료 (' + (analysisWaited / 1000) + '초), 썸네일 ' + beforeVoids + ' → ' + currentVoids);
-        return true;
-      }
-
-      if (analysisWaited % 5000 === 0) {
-        console.log('[Flow Auto] 분석 대기 중... (' + (analysisWaited / 1000) + '초) 썸네일: ' +
-          currentVoids + '개, 로딩: ' + hasLoadingOverlay);
-      }
-
-      await sleep(1000);
-      analysisWaited += 1000;
     }
 
-    console.warn('[Flow Auto] 레퍼런스 분석 대기 타임아웃 (60초), 계속 진행');
+    // 6. 에셋 패널 닫기 (ESC 또는 바깥 클릭)
+    document.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true
+    }));
+    await sleep(300);
+
     return true;
   }
 
-  // 11. 캐릭터별 레퍼런스 일괄 업로드
+  // 11. 캐릭터별 레퍼런스 일괄 선택
   async function uploadReferences(charNames, characterMap) {
     var names = charNames.split(',').map(function(n) { return n.trim(); });
 
@@ -1889,18 +1952,76 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       if (isStopRequested()) throw new Error('__STOPPED__');
 
       var name = names[i];
-      var dataUrl = characterMap[name] || characterMap[name.normalize('NFC')];
-      if (!dataUrl) {
-        console.warn('[Flow Auto] 캐릭터 "' + name + '" 이미지 없음, 스킵');
-        continue;
+      console.log('[Flow Auto] 레퍼런스 선택 ' + (i + 1) + '/' + names.length + ': ' + name);
+
+      // 에셋 패널에서 이름으로 검색 → 선택
+      var selected = await selectAssetByName(name);
+
+      if (!selected) {
+        // 에셋 미발견 → dataUrl이 있으면 새 업로드 시도 (Drag & Drop fallback)
+        var dataUrl = characterMap[name] || characterMap[name.normalize('NFC')];
+        if (dataUrl) {
+          console.log('[Flow Auto] 에셋 미발견, Drag&Drop으로 새 업로드: ' + name);
+          var promptEl = findPromptInput();
+          var beforeVoids = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]').length;
+
+          document.documentElement.setAttribute('data-flow-upload', dataUrl);
+          document.documentElement.removeAttribute('data-flow-upload-done');
+          document.documentElement.setAttribute('data-flow-upload-dragdrop', '[role="textbox"][contenteditable]');
+
+          // 파일 전달 대기
+          var waited = 0;
+          while (waited < 10000) {
+            var done = document.documentElement.getAttribute('data-flow-upload-done');
+            if (done === 'true') {
+              document.documentElement.removeAttribute('data-flow-upload-done');
+              break;
+            }
+            if (done === 'error') {
+              document.documentElement.removeAttribute('data-flow-upload-done');
+              console.error('[Flow Auto] Drag&Drop 실패: ' + name);
+              break;
+            }
+            await sleep(300);
+            waited += 300;
+          }
+
+          // 분석 완료 대기 (새 업로드이므로 시간 소요)
+          console.log('[Flow Auto] 새 에셋 분석 대기: ' + name);
+          var analysisWaited = 0;
+          await sleep(3000);
+          analysisWaited += 3000;
+          while (analysisWaited < 60000) {
+            if (isStopRequested()) throw new Error('__STOPPED__');
+            var currentVoids = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]').length;
+            if (currentVoids > beforeVoids) {
+              var hasLoading = false;
+              var voidEls = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]');
+              for (var vi = 0; vi < voidEls.length; vi++) {
+                var loadingInThumb = voidEls[vi].querySelectorAll(
+                  '[class*="loading"], [class*="spinner"], [class*="progress"], ' +
+                  '[role="progressbar"], svg circle[stroke-dasharray]'
+                );
+                if (loadingInThumb.length > 0) { hasLoading = true; break; }
+                if (parseFloat(getComputedStyle(voidEls[vi]).opacity) < 0.9) { hasLoading = true; break; }
+              }
+              if (!hasLoading) {
+                console.log('[Flow Auto] 새 에셋 분석 완료: ' + name + ' (' + (analysisWaited / 1000) + '초)');
+                break;
+              }
+            }
+            await sleep(1000);
+            analysisWaited += 1000;
+          }
+        } else {
+          console.warn('[Flow Auto] 캐릭터 "' + name + '" 이미지 없음, 스킵');
+        }
       }
 
-      console.log('[Flow Auto] 레퍼런스 업로드 ' + (i + 1) + '/' + names.length + ': ' + name);
-      await uploadOneReference(dataUrl);
-      await sleep(1000); // 썸네일 렌더링 대기
+      await sleep(500);
     }
 
-    console.log('[Flow Auto] 레퍼런스 업로드 완료: ' + names.length + '명');
+    console.log('[Flow Auto] 레퍼런스 선택 완료: ' + names.length + '명');
   }
 
   // 12. 기존 레퍼런스 제거 (프롬프트 영역 초기화)
