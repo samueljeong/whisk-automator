@@ -14,7 +14,14 @@
     var u8 = new Uint8Array(bstr.length);
     for (var i = 0; i < bstr.length; i++) u8[i] = bstr.charCodeAt(i);
     var blob = new Blob([u8], { type: mime });
-    return new File([blob], 'upload.png', { type: 'image/png' });
+    // data-flow-upload-name 속성에서 파일명 읽기 (에셋 검색 시 이름 매칭용)
+    var customName = document.documentElement.getAttribute('data-flow-upload-name');
+    var fileName = customName ? (customName + '.png') : 'upload.png';
+    if (customName) {
+      document.documentElement.removeAttribute('data-flow-upload-name');
+      console.log('[Flow Interceptor] 커스텀 파일명: ' + fileName);
+    }
+    return new File([blob], fileName, { type: 'image/png' });
   }
 
   // === 방법 1: showOpenFilePicker 가로채기 ===
