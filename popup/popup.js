@@ -2890,6 +2890,11 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
               }
             }
 
+            // 에셋 업로드 후 preGenSrcs 갱신 (에셋 이미지가 생성 결과로 오인되는 것 방지)
+            document.querySelectorAll('img').forEach(function(img) {
+              if (img.src) preGenSrcs.add(img.src);
+            });
+
             await fillPrompt(batchItem.prompt);
             await sleep(500);
             await clickGenerate();
