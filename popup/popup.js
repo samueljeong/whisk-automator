@@ -2011,28 +2011,34 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
   }
 
   // 11. 캐릭터별 레퍼런스 일괄 선택
+  // flowTagMap: 캐릭터 이름 → Flow 태그 (영문, 에셋 검색용)
   async function uploadReferences(charNames, characterMap) {
     var names = charNames.split(',').map(function(n) { return n.trim(); });
+    var flowTagMap = characterMap.__flowTagMap || {};
 
     for (var i = 0; i < names.length; i++) {
       if (isStopRequested()) throw new Error('__STOPPED__');
 
       var name = names[i];
-      console.log('[Flow Auto] 레퍼런스 선택 ' + (i + 1) + '/' + names.length + ': ' + name);
+      var flowTag = flowTagMap[name] || flowTagMap[name.normalize('NFC')] || null;
+      var searchName = flowTag || name; // flowTag 있으면 영문명으로 검색
 
-      // 에셋 패널에서 이름으로 검색 → 선택
-      var selected = await selectAssetByName(name);
+      console.log('[Flow Auto] 레퍼런스 선택 ' + (i + 1) + '/' + names.length + ': ' + name +
+        (flowTag ? ' (Flow태그: ' + flowTag + ')' : ' (태그 미설정, 한글 검색)'));
+
+      // 에셋 패널에서 검색 → 선택 (flowTag 우선)
+      var selected = await selectAssetByName(searchName);
 
       if (!selected) {
         // 에셋 미발견 → dataUrl이 있으면 새 업로드 시도 (Drag & Drop fallback)
         var dataUrl = characterMap[name] || characterMap[name.normalize('NFC')];
         if (dataUrl) {
-          console.log('[Flow Auto] 에셋 미발견, Drag&Drop으로 새 업로드: ' + name);
+          console.log('[Flow Auto] 에셋 미발견, Drag&Drop으로 새 업로드: ' + searchName);
           var promptEl = findPromptInput();
           var beforeVoids = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]').length;
 
-          // 파일명을 캐릭터 이름으로 설정 (에셋 검색 시 이름 매칭)
-          document.documentElement.setAttribute('data-flow-upload-name', name);
+          // 파일명을 Flow 태그로 설정 (에셋 검색 시 매칭)
+          document.documentElement.setAttribute('data-flow-upload-name', searchName);
           document.documentElement.setAttribute('data-flow-upload', dataUrl);
           document.documentElement.removeAttribute('data-flow-upload-done');
           document.documentElement.setAttribute('data-flow-upload-dragdrop', '[role="textbox"][contenteditable]');
@@ -2047,7 +2053,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
             }
             if (done === 'error') {
               document.documentElement.removeAttribute('data-flow-upload-done');
-              console.error('[Flow Auto] Drag&Drop 실패: ' + name);
+              console.error('[Flow Auto] Drag&Drop 실패: ' + searchName);
               break;
             }
             await sleep(300);
@@ -2055,8 +2061,8 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
           }
 
           // 분석 완료 대기 (새 업로드이므로 시간 소요)
-          console.log('[Flow Auto] 새 에셋 분석 대기: ' + name);
-          await waitForAnalysisComplete(promptEl, beforeVoids, name);
+          console.log('[Flow Auto] 새 에셋 분석 대기: ' + searchName);
+          await waitForAnalysisComplete(promptEl, beforeVoids, searchName);
         } else {
           console.warn('[Flow Auto] 캐릭터 "' + name + '" 이미지 없음, 스킵');
         }
