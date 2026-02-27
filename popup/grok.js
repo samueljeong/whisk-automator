@@ -66,7 +66,7 @@
     chrome.storage.local.set({ grok_activeMode: mode });
   }
 
-  modeTabFlow.addEventListener('click', () => switchMode('whisk'));
+  modeTabFlow.addEventListener('click', () => switchMode('flow'));
   modeTabGrok.addEventListener('click', () => switchMode('grok'));
 
   // ============================================================
