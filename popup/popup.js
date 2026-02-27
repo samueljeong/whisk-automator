@@ -1005,85 +1005,8 @@ function saveCapuredCharacter() {
 }
 
 // 스타일 이미지 캡처
-async function captureStyleFromFlow() {
-  try {
-    const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-    const tab = tabs[0];
-
-    const results = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: () => {
-        const images = document.querySelectorAll('img');
-        let targetImage = null;
-        let maxSize = 0;
-
-        for (const img of images) {
-          if (img.src && img.width > 100 && img.height > 100 && !img.src.includes('avatar')) {
-            const size = img.width * img.height;
-            if (size > maxSize) {
-              maxSize = size;
-              targetImage = img;
-            }
-          }
-        }
-
-        if (!targetImage) {
-          return { error: '이미지를 찾을 수 없습니다' };
-        }
-
-        const canvas = document.createElement('canvas');
-        canvas.width = targetImage.naturalWidth || targetImage.width;
-        canvas.height = targetImage.naturalHeight || targetImage.height;
-        const ctx = canvas.getContext('2d');
-
-        try {
-          ctx.drawImage(targetImage, 0, 0);
-          return { dataUrl: canvas.toDataURL('image/png') };
-        } catch (e) {
-          return { imageUrl: targetImage.src };
-        }
-      }
-    });
-
-    const result = results[0]?.result;
-
-    if (result?.error) {
-      alert(result.error);
-      return;
-    }
-
-    let imageData = null;
-    if (result?.dataUrl) {
-      imageData = result.dataUrl;
-    } else if (result?.imageUrl) {
-      try {
-        const response = await fetch(result.imageUrl);
-        const blob = await response.blob();
-        const reader = new FileReader();
-        imageData = await new Promise((resolve) => {
-          reader.onload = () => resolve(reader.result);
-          reader.readAsDataURL(blob);
-        });
-      } catch (e) {
-        alert('스타일 이미지를 캡처할 수 없습니다.');
-        return;
-      }
-    }
-
-    if (imageData) {
-      const project = PROJECTS[currentProject];
-      if (project) {
-        project.styleImage = imageData;
-        styleUrl.value = imageData.substring(0, 50) + '... (캡처됨)';
-        saveState();
-        alert('스타일 이미지가 저장되었습니다!');
-      }
-    }
-  } catch (error) {
-    console.error('스타일 캡처 실패:', error);
-    alert('스타일 캡처 실패: ' + error.message);
-  }
-}
+// captureStyleFromFlow - Flow에서는 스타일 이미지 슬롯이 없으므로 미사용
+// prefix/suffix 텍스트만 지원
 
 // Sanitize filename for cross-platform compatibility (Windows forbidden chars)
 function sanitizeFilename(name) {
