@@ -528,7 +528,7 @@ async function loadState() {
           } else {
             // Permission lost — 폴더 이름을 다운로드 하위 경로로 폴백
             await clearDirHandle();
-            var fallbackName = result.customDirName || 'whisk-images';
+            var fallbackName = result.customDirName || 'flow-images';
             saveLocation.value = fallbackName;
             saveLocation.readOnly = false;
             console.log('[Flow] 커스텀 폴더 권한 만료 → 다운로드/' + fallbackName + ' 으로 폴백');
@@ -555,7 +555,7 @@ async function saveState() {
       delay: parseInt(delayInput.value),
       projects: PROJECTS,
       currentProject: currentProject,
-      saveLocation: saveLocation.value.trim() || 'whisk-images',
+      saveLocation: saveLocation.value.trim() || 'flow-images',
       useCustomDir: !!customDirHandle,
       customDirName: customDirHandle ? customDirHandle.name : null
     });
@@ -1233,7 +1233,7 @@ async function startAutomation() {
   const indexMap = pendingPrompts.map(p => p.originalIndex);
   const delayMs = parseInt(delayInput.value) * 1000;
   const shouldDownload = autoDownload.checked;
-  const savePath = saveLocation.value.trim() || 'whisk-images';
+  const savePath = saveLocation.value.trim() || 'flow-images';
   promptIndexMap = indexMap; // PROGRESS_UPDATE 핸들러에서 사용
 
   // 프로젝트 스타일 설정 가져오기
@@ -3296,10 +3296,10 @@ saveLocation.addEventListener('input', saveState);
 resetLocationBtn.addEventListener('click', async () => {
   if (!window.showDirectoryPicker) {
     // Fallback: 텍스트 입력
-    const current = saveLocation.value.trim() || 'whisk-images';
+    const current = saveLocation.value.trim() || 'flow-images';
     const newPath = prompt('저장 위치 (다운로드 폴더 기준 하위 경로)', current);
     if (newPath !== null) {
-      saveLocation.value = newPath.trim() || 'whisk-images';
+      saveLocation.value = newPath.trim() || 'flow-images';
       saveState();
     }
     return;
@@ -3335,7 +3335,7 @@ openFolderBtn.addEventListener('click', async () => {
         alert('폴더 접근 권한이 만료되었습니다. "위치 변경"으로 다시 선택해주세요.');
         customDirHandle = null;
         await clearDirHandle();
-        saveLocation.value = 'whisk-images';
+        saveLocation.value = 'flow-images';
         saveLocation.readOnly = false;
         saveState();
       }
@@ -3344,7 +3344,7 @@ openFolderBtn.addEventListener('click', async () => {
     }
     return;
   }
-  const savePath = saveLocation.value.trim() || 'whisk-images';
+  const savePath = saveLocation.value.trim() || 'flow-images';
   chrome.runtime.sendMessage({ action: 'OPEN_FOLDER', savePath });
 });
 
@@ -3354,10 +3354,10 @@ const saveLocationHint = document.getElementById('saveLocationHint');
 resetToDefaultBtn.addEventListener('click', async () => {
   customDirHandle = null;
   await clearDirHandle();
-  saveLocation.value = 'whisk-images';
+  saveLocation.value = 'flow-images';
   saveLocation.readOnly = false;
   resetToDefaultBtn.hidden = true;
-  saveLocationHint.textContent = '다운로드 폴더 기준 하위 경로 (예: whisk-images)';
+  saveLocationHint.textContent = '다운로드 폴더 기준 하위 경로 (예: flow-images)';
   saveState();
 });
 
@@ -3368,7 +3368,7 @@ function updateCustomDirUI() {
     saveLocationHint.textContent = '선택된 폴더에 직접 저장됩니다';
   } else {
     resetToDefaultBtn.hidden = true;
-    saveLocationHint.textContent = '다운로드 폴더 기준 하위 경로 (예: whisk-images)';
+    saveLocationHint.textContent = '다운로드 폴더 기준 하위 경로 (예: flow-images)';
   }
 }
 updateCustomDirUI();
@@ -3684,7 +3684,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
         // 폴백: customDirHandle 없거나 저장 실패 시 chrome.downloads로 저장
         try {
-          const savePath = saveLocation.value.trim() || 'whisk-images';
+          const savePath = saveLocation.value.trim() || 'flow-images';
           const fullPath = savePath.replace(/^[\uD83D\uDCC1]\s*/, '') + '/' + message.filename;
           chrome.runtime.sendMessage({
             action: 'DOWNLOAD_IMAGE',
