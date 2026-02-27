@@ -1856,16 +1856,20 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     while (waited < maxWait) {
       if (isStopRequested()) throw new Error('__STOPPED__');
 
-      var currentVoids = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]').length;
+      var currentVoids = countRefImages(promptEl);
 
       if (currentVoids > beforeVoids) {
         // 썸네일이 추가됨 → 분석 상태 체크
+        // img가 있는 void 노드만 검사 (Slate 기본 void 제외)
         var voidEls = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]');
         var allReady = true;
 
         for (var vi = 0; vi < voidEls.length; vi++) {
-          // 방법 1: img src 체크 (blob: = 로딩 중, https: = 완료)
           var imgs = voidEls[vi].querySelectorAll('img');
+          // img가 없는 void는 Slate 기본 요소 → 스킵
+          if (imgs.length === 0) continue;
+
+          // 방법 1: img src 체크 (blob: = 로딩 중, https: = 완료)
           for (var ii = 0; ii < imgs.length; ii++) {
             var src = imgs[ii].src || '';
             if (src.startsWith('blob:') || !src) {
