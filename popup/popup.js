@@ -1397,7 +1397,7 @@ async function startAutomation() {
   try {
     await chrome.scripting.executeScript({
       target: { tabId: tab.id },
-      func: runWhiskAutomation,
+      func: runFlowAutomation,
       args: [promptsWithCharacters, delayMs, shouldDownload, projectStyleImage, characterMap, savePath, sceneMap, null, !!customDirHandle]
     });
   } catch (error) {
@@ -1409,7 +1409,7 @@ async function startAutomation() {
 }
 
 // 주입될 자동화 함수
-function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleImageUrl, characters, savePath, scenes, styles, useCustomDir) {
+function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, styleImageUrl, characters, savePath, scenes, styles, useCustomDir) {
   // 중복 실행 방지
   if (window.__flowAutoRunning) {
     console.log('[Flow Auto] 이미 실행 중, 중복 실행 방지');
@@ -3272,7 +3272,7 @@ async function handleHardReset(completedCount) {
 
     await chrome.scripting.executeScript({
       target: { tabId: tab.id },
-      func: runWhiskAutomation,
+      func: runFlowAutomation,
       args: [remaining, p.delayMs, p.shouldDownload, p.projectStyleImage, p.characterMap, p.savePath, p.sceneMap, null, p.useCustomDir]
     });
   } catch (error) {
