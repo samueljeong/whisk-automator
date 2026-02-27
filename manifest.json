@@ -32,7 +32,7 @@
       "matches": [
         "https://labs.google/*",
         "https://labs.google.com/*",
-        "https://*.google.com/*whisk*"
+        "https://*.google.com/*flow*"
       ],
       "js": ["content/interceptor.js"],
       "world": "MAIN",
@@ -42,7 +42,7 @@
       "matches": [
         "https://labs.google/*",
         "https://labs.google.com/*",
-        "https://*.google.com/*whisk*"
+        "https://*.google.com/*flow*"
       ],
       "js": ["content/content.js"]
     },
