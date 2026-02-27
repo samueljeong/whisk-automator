@@ -44,7 +44,7 @@ Grok.com(React)과 Flow(Google)에서 네이티브 `.click()`이 이벤트 핸�
 
 ### popup.js — selectAssetByName 에셋 클릭 시 페이지 이동 버그 (핵심)
 
-- [ ] **6. 에셋 카드 클릭 로직 전면 수정 (line 2046-2092)**
+- [x] **6. 에셋 카드 클릭 로직 전면 수정 (line 2046-2092)**
   - 부모 탐색 시 `<a>` 태그를 클릭 대상에서 배제 (href가 있으면 건너뜀)
   - 3중 클릭(simulateRealClick + 직접 MouseEvent + 썸네일) → `simulateRealClick` 1회로 축소
   - 클릭 전 `window.location.href` 저장 → 클릭 후 URL 변경 감지 시 즉시 `history.back()`
