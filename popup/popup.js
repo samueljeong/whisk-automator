@@ -2706,7 +2706,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, styleIm
   async function downloadImage(promptText, index, customFilename, preGenSrcs) {
     console.log('[Flow Auto] 다운로드 시도...');
 
-    // Whisk은 이미지 2개를 생성 → 첫 번째만 다운로드, 나머지는 스킵
+    // Flow는 이미지 2개를 생성 → 첫 번째만 다운로드, 나머지는 스킵
     // preGenSrcs: 생성 전 스냅샷 (레퍼런스/스타일 이미지 제외용)
     const images = document.querySelectorAll('img');
     const newImages = [];
