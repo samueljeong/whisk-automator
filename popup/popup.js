@@ -1390,7 +1390,7 @@ async function startAutomation() {
 
   // showOpenFilePicker interceptor는 manifest.json content_scripts에서
   // world:"MAIN" + run_at:"document_start"로 자동 주입됨 (interceptor.js)
-  // → Whisk JS보다 먼저 설치되므로 원본 참조 저장 문제 해결
+  // → Flow JS보다 먼저 설치되므로 원본 참조 저장 문제 해결
   console.log('[Popup] interceptor.js는 manifest에서 자동 주입됨');
 
   // 직접 스크립트 주입
