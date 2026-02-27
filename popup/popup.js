@@ -1861,66 +1861,58 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       throw new Error('레퍼런스 업로드 타임아웃 (10초)');
     }
 
-    // 5. Flow 분석 완료 대기 — 업로드 후 로딩 인디케이터가 사라질 때까지
-    //    Flow는 이미지 업로드 후 분석(약 5~15초)하며, 그동안 스피너/프로그레스가 표시됨
+    // 5. Flow 분석 완료 대기 — 생성 버튼이 활성화될 때까지
+    //    Flow는 이미지 업로드 후 분석(약 5~15초)하며, 분석 중에는 생성 버튼이 비활성화됨
     //    분석 완료 전에 프롬프트를 제출하면 레퍼런스가 반영되지 않음
     console.log('[Flow Auto] 레퍼런스 분석 대기 시작...');
-    var analysisMaxWait = 30000; // 최대 30초
+    var analysisMaxWait = 60000; // 최대 60초
     var analysisWaited = 0;
     var analysisCheckInterval = 1000;
 
-    // 초기 대기 (분석 시작까지)
-    await sleep(2000);
-    analysisWaited += 2000;
+    // 초기 대기 (업로드 처리 + 분석 시작)
+    await sleep(3000);
+    analysisWaited += 3000;
 
     while (analysisWaited < analysisMaxWait) {
       if (isStopRequested()) throw new Error('__STOPPED__');
 
-      // 로딩 인디케이터 탐색: 스피너, 프로그레스, 로딩 관련 요소
-      var loadingEls = document.querySelectorAll(
-        '[class*="loading"], [class*="spinner"], [class*="progress"], ' +
-        '[class*="Loading"], [class*="Spinner"], [class*="Progress"], ' +
-        '[role="progressbar"], [aria-busy="true"]'
-      );
+      // 방법 1: 생성 버튼("만들기") 활성화 상태 확인
+      var genBtn = null;
+      try { genBtn = findGenerateButton(); } catch(e) {}
 
-      // 프롬프트 영역 내 로딩 상태 확인
-      var promptEl = document.querySelector('[role="textbox"][contenteditable]');
-      var promptArea = promptEl ? promptEl.closest('[class*="prompt"], [class*="input"], [class*="editor"]') || promptEl.parentElement.parentElement : null;
+      if (genBtn) {
+        var isDisabled = genBtn.disabled ||
+          genBtn.getAttribute('aria-disabled') === 'true' ||
+          genBtn.classList.contains('disabled') ||
+          getComputedStyle(genBtn).pointerEvents === 'none' ||
+          getComputedStyle(genBtn).opacity < 0.5;
 
-      var isLoading = false;
-      for (var li = 0; li < loadingEls.length; li++) {
-        var elRect = loadingEls[li].getBoundingClientRect();
-        // 화면에 보이는 로딩 요소만 (프롬프트 영역 근처)
-        if (elRect.width > 0 && elRect.height > 0 && elRect.top > 400) {
-          isLoading = true;
-          console.log('[Flow Auto] 분석 중... (' + (analysisWaited / 1000) + '초) 로딩 요소: ' +
-            loadingEls[li].className.toString().substring(0, 60));
-          break;
-        }
-      }
-
-      // 로딩 요소 없으면 → 프롬프트 영역의 void 요소(썸네일)가 안정화됐는지 확인
-      if (!isLoading && promptEl) {
-        var voids = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]');
-        if (voids.length > 0) {
-          // 썸네일이 있고 로딩 중이 아니면 → 분석 완료로 판단
-          console.log('[Flow Auto] 레퍼런스 분석 완료 (' + (analysisWaited / 1000) + '초), 썸네일 ' + voids.length + '개 확인');
+        if (!isDisabled) {
+          console.log('[Flow Auto] 레퍼런스 분석 완료 — 생성 버튼 활성화 (' + (analysisWaited / 1000) + '초)');
           return true;
         }
+        console.log('[Flow Auto] 분석 중... (' + (analysisWaited / 1000) + '초) 생성 버튼 비활성화');
       }
 
-      // 로딩 요소도 없고 썸네일도 없으면 → 아직 처리 시작 전이거나 다른 구조
-      if (!isLoading && analysisWaited > 5000) {
-        // 5초 넘었는데 로딩도 없으면 완료된 것으로 간주
-        console.log('[Flow Auto] 로딩 인디케이터 미발견, 분석 완료로 간주 (' + (analysisWaited / 1000) + '초)');
-        return true;
+      // 방법 2: progressbar / busy 상태 확인 (보조)
+      var progressEls = document.querySelectorAll('[role="progressbar"], [aria-busy="true"]');
+      var hasProgress = false;
+      for (var pi = 0; pi < progressEls.length; pi++) {
+        if (progressEls[pi].getBoundingClientRect().width > 0) {
+          hasProgress = true;
+          var pctAttr = progressEls[pi].getAttribute('aria-valuenow') || '';
+          if (pctAttr) {
+            console.log('[Flow Auto] 분석 진행률: ' + pctAttr + '%');
+          }
+          break;
+        }
       }
 
       await sleep(analysisCheckInterval);
       analysisWaited += analysisCheckInterval;
     }
 
-    console.warn('[Flow Auto] 레퍼런스 분석 대기 타임아웃 (30초), 계속 진행');
+    console.warn('[Flow Auto] 레퍼런스 분석 대기 타임아웃 (60초), 계속 진행');
     return true;
   }
 
