@@ -1451,7 +1451,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, styleIm
     }
   }
 
-  // Whisk 팝업/모달 자동 닫기 (Discord 초대, 피드백 등)
+  // Flow 팝업/모달 자동 닫기 (Discord 초대, 피드백 등)
   function dismissPopups() {
     // 전략 1: 오버레이/백드롭 클릭으로 닫기
     document.querySelectorAll('[class*="overlay"], [class*="backdrop"], [class*="modal"]').forEach(function(el) {
