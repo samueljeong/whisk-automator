@@ -1965,6 +1965,8 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
           var promptEl = findPromptInput();
           var beforeVoids = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]').length;
 
+          // 파일명을 캐릭터 이름으로 설정 (에셋 검색 시 이름 매칭)
+          document.documentElement.setAttribute('data-flow-upload-name', name);
           document.documentElement.setAttribute('data-flow-upload', dataUrl);
           document.documentElement.removeAttribute('data-flow-upload-done');
           document.documentElement.setAttribute('data-flow-upload-dragdrop', '[role="textbox"][contenteditable]');
