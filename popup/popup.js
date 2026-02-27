@@ -2073,15 +2073,15 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     document.dispatchEvent(new KeyboardEvent('keydown', {
       key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true
     }));
-    await sleep(1000);
+    await sleep(1500);
 
-    // 6. 에셋 삽입 검증: 실제 레퍼런스 이미지가 증가했는지 확인
+    // 7. 에셋 삽입 검증: 실제 레퍼런스 이미지가 증가했는지 확인
     var afterCloseVoids = countRefImages(promptEl);
     console.log('[Flow Auto] 에셋 "' + charName + '" 삽입 결과, ref: ' + beforeVoids + ' → ' + afterCloseVoids);
 
     if (afterCloseVoids <= beforeVoids) {
       console.warn('[Flow Auto] 에셋 "' + charName + '" 삽입 실패 — 레퍼런스 이미지 증가 없음');
-      return 'navigated';
+      return false;
     }
 
     return true;
