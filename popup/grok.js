@@ -197,7 +197,7 @@
       statusEl.textContent = statusLabels[item.status] || item.status;
 
       info.appendChild(nameEl);
-      // 원본 Whisk 프롬프트 표시 (있으면)
+      // 원본 Flow 프롬프트 표시 (있으면)
       if (item.flowPrompt) {
         const origEl = document.createElement('div');
         origEl.className = 'grok-queue-item-origin';
