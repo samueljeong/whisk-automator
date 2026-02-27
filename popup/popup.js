@@ -1483,15 +1483,31 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     promptEl.focus();
     await sleep(200);
 
-    // 전체 선택 (Selection API)
+    // 레퍼런스 썸네일이 있을 수 있으므로 텍스트 노드만 선택해서 교체
+    // Slate.js에서 텍스트는 <span data-slate-string="true"> 안에 있음
+    var slateTexts = promptEl.querySelectorAll('[data-slate-string="true"]');
+
     var sel = window.getSelection();
     var range = document.createRange();
-    range.selectNodeContents(promptEl);
-    sel.removeAllRanges();
-    sel.addRange(range);
+
+    if (slateTexts.length > 0) {
+      // 텍스트 영역만 선택 (레퍼런스 썸네일 보존)
+      var firstText = slateTexts[0];
+      var lastText = slateTexts[slateTexts.length - 1];
+      range.setStartBefore(firstText);
+      range.setEndAfter(lastText);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      console.log('[Flow Auto] Slate 텍스트 노드 ' + slateTexts.length + '개 선택 (레퍼런스 보존)');
+    } else {
+      // 텍스트 없으면 전체 선택 (레퍼런스도 없는 상태이므로 안전)
+      range.selectNodeContents(promptEl);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
     await sleep(100);
 
-    // 기존 텍스트 삭제
+    // 선택된 텍스트 삭제
     promptEl.dispatchEvent(new InputEvent('beforeinput', {
       inputType: 'deleteContentBackward',
       bubbles: true, cancelable: true, composed: true
