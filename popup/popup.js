@@ -1956,46 +1956,95 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     await sleep(1000); // 검색 결과 대기
 
     // 4. 검색 결과에서 에셋 클릭
-    //    에셋 목록은 검색바 아래에 썸네일+이름 리스트로 표시됨
+    //    검색바 아래 결과 영역에서 이름 매칭 → 부모 컨테이너까지 올라가서 클릭
     var assetFound = false;
-    var assetItems = document.querySelectorAll('[class*="asset"], [class*="item"], [class*="result"], [role="option"], [role="listitem"]');
+    var searchRect = searchInput.getBoundingClientRect();
 
-    // 패널 내 클릭 가능한 요소들 중 캐릭터 이름이 포함된 것
-    if (assetItems.length === 0) {
-      // 클래스 기반으로 못 찾으면, 검색바 근처의 모든 클릭 가능 요소 탐색
-      var searchRect = searchInput.getBoundingClientRect();
-      var allClickable = document.querySelectorAll('div, button, li, a, span');
-      var candidates = [];
-      for (var ci = 0; ci < allClickable.length; ci++) {
-        var cRect = allClickable[ci].getBoundingClientRect();
-        var cTxt = (allClickable[ci].textContent || '').trim();
-        // 검색바 아래, 같은 패널 영역, 텍스트에 캐릭터 이름 포함
-        if (cRect.top > searchRect.bottom && cRect.top < searchRect.bottom + 500 &&
-            cRect.left >= searchRect.left - 50 && cRect.width > 30 && cRect.height > 20 &&
-            cTxt.includes(charName)) {
-          candidates.push({ el: allClickable[ci], text: cTxt, height: cRect.height });
-        }
+    // 검색바 아래 모든 요소에서 캐릭터 이름 포함된 것 찾기
+    var allEls = document.querySelectorAll('*');
+    var matchedEl = null;
+    for (var ae = 0; ae < allEls.length; ae++) {
+      var el = allEls[ae];
+      var elRect = el.getBoundingClientRect();
+      // 검색바 아래, 화면 내, 보이는 요소
+      if (elRect.top < searchRect.bottom || elRect.top > searchRect.bottom + 500) continue;
+      if (elRect.width < 10 || elRect.height < 10) continue;
+      // 직접 텍스트만 확인 (자식 제외)
+      var directText = '';
+      for (var cn = 0; cn < el.childNodes.length; cn++) {
+        if (el.childNodes[cn].nodeType === 3) directText += el.childNodes[cn].textContent;
       }
-      // 가장 적절한 크기의 요소 선택 (목록 항목 크기: 30~80px 높이)
-      candidates.sort(function(a, b) {
-        var idealH = 50;
-        return Math.abs(a.height - idealH) - Math.abs(b.height - idealH);
-      });
-      if (candidates.length > 0) {
-        assetItems = [candidates[0].el];
+      if (directText.trim().includes(charName)) {
+        matchedEl = el;
+        break;
       }
     }
 
-    for (var ai = 0; ai < assetItems.length; ai++) {
-      var assetTxt = (assetItems[ai].textContent || '').trim();
-      var assetRect = assetItems[ai].getBoundingClientRect();
-      if (assetRect.width > 0 && assetTxt.includes(charName)) {
-        console.log('[Flow Auto] 에셋 발견: "' + assetTxt.substring(0, 40) + '" → 클릭');
-        simulateRealClick(assetItems[ai]);
-        assetFound = true;
-        await sleep(500);
-        break;
+    // 텍스트 직접 매칭 실패 시 textContent로 재시도
+    if (!matchedEl) {
+      var candidates = [];
+      var divs = document.querySelectorAll('div, button, li, a, span, label');
+      for (var ci = 0; ci < divs.length; ci++) {
+        var cRect = divs[ci].getBoundingClientRect();
+        var cTxt = (divs[ci].textContent || '').trim();
+        if (cRect.top > searchRect.bottom && cRect.top < searchRect.bottom + 500 &&
+            cRect.width > 30 && cRect.height > 15 && cTxt.includes(charName)) {
+          candidates.push({ el: divs[ci], text: cTxt, area: cRect.width * cRect.height });
+        }
       }
+      // 가장 작은 영역(가장 구체적인 요소) 선택
+      candidates.sort(function(a, b) { return a.area - b.area; });
+      if (candidates.length > 0) {
+        matchedEl = candidates[0].el;
+      }
+    }
+
+    if (matchedEl) {
+      // 부모 컨테이너까지 올라가기 (에셋 카드 = 썸네일+이름을 감싸는 div)
+      // 클릭 가능한 적절한 크기의 부모를 찾음
+      var clickTarget = matchedEl;
+      var current = matchedEl;
+      for (var up = 0; up < 5; up++) {
+        var parent = current.parentElement;
+        if (!parent || parent === document.body) break;
+        var pRect = parent.getBoundingClientRect();
+        // 부모가 리스트 컨테이너처럼 너무 크면 멈춤
+        if (pRect.height > 200 || pRect.width > 400) break;
+        // 적절한 크기의 카드 (40~150px 높이)면 이 부모를 클릭 대상으로
+        if (pRect.height >= 30 && pRect.height <= 150 && pRect.width >= 50) {
+          clickTarget = parent;
+        }
+        current = parent;
+      }
+
+      var targetRect = clickTarget.getBoundingClientRect();
+      console.log('[Flow Auto] 에셋 발견: "' + (matchedEl.textContent || '').trim().substring(0, 30) +
+        '" → 클릭 대상: ' + clickTarget.tagName + ' ' +
+        Math.round(targetRect.width) + 'x' + Math.round(targetRect.height) +
+        ' at(' + Math.round(targetRect.left) + ',' + Math.round(targetRect.top) + ')');
+
+      // 여러 클릭 전략 시도
+      // 전략 1: simulateRealClick (pointer events 시퀀스)
+      simulateRealClick(clickTarget);
+      await sleep(300);
+
+      // 전략 2: 직접 마우스 이벤트 (중앙 좌표)
+      var cx = targetRect.left + targetRect.width / 2;
+      var cy = targetRect.top + targetRect.height / 2;
+      clickTarget.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, clientX: cx, clientY: cy }));
+      clickTarget.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, clientX: cx, clientY: cy }));
+      clickTarget.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: cx, clientY: cy }));
+      await sleep(300);
+
+      // 전략 3: 이미지 썸네일이 있으면 그것도 클릭
+      var thumbImg = clickTarget.querySelector('img');
+      if (thumbImg) {
+        console.log('[Flow Auto] 썸네일 이미지도 클릭');
+        simulateRealClick(thumbImg);
+        await sleep(300);
+      }
+
+      assetFound = true;
     }
 
     if (!assetFound) {
