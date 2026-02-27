@@ -2380,7 +2380,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       });
 
       // Step 4: 인터셉터 존재 확인 + 자동 주입
-      var interceptorReady = document.documentElement.getAttribute('data-whisk-interceptor-ready') === 'true';
+      var interceptorReady = document.documentElement.getAttribute('data-flow-interceptor-ready') === 'true';
       console.log('[Flow Auto] interceptor 상태:', interceptorReady ? '설치됨' : '미설치');
 
       if (!interceptorReady) {
@@ -2393,7 +2393,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
             });
           });
           await sleep(500);
-          interceptorReady = document.documentElement.getAttribute('data-whisk-interceptor-ready') === 'true';
+          interceptorReady = document.documentElement.getAttribute('data-flow-interceptor-ready') === 'true';
           console.log('[Flow Auto] interceptor 재주입 결과:', interceptorReady ? '성공' : '실패');
         } catch (e) {
           console.error('[Flow Auto] interceptor 주입 요청 실패:', e.message);
