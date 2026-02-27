@@ -2026,13 +2026,6 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     // 5. 키보드로 첫 번째 검색 결과 선택 (ArrowDown → Enter)
     // Enter 키가 SPA 네비게이션을 트리거하므로 history API를 임시 차단
     console.log('[Flow Auto] 에셋 "' + charName + '" 키보드 선택 시도');
-    searchInput.dispatchEvent(new KeyboardEvent('keydown', {
-      key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, bubbles: true, cancelable: true
-    }));
-    searchInput.dispatchEvent(new KeyboardEvent('keyup', {
-      key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, bubbles: true
-    }));
-    await sleep(300);
 
     // SPA 네비게이션 차단: history.pushState/replaceState 오버라이드
     var origPushState = history.pushState.bind(history);
@@ -2046,18 +2039,34 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       console.log('[Flow Auto] 네비게이션 차단됨 (replaceState):', arguments[2]);
       navBlocked = true;
     };
-    // popstate/beforeunload로 location 변경도 차단
     var blockNav = function(e) { e.preventDefault(); e.stopImmediatePropagation(); };
     window.addEventListener('popstate', blockNav, true);
     window.addEventListener('beforeunload', blockNav, true);
 
+    // ArrowDown → 첫 번째 결과 포커스
     searchInput.dispatchEvent(new KeyboardEvent('keydown', {
-      key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true
+      key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, bubbles: true, cancelable: true
     }));
     searchInput.dispatchEvent(new KeyboardEvent('keyup', {
+      key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, bubbles: true
+    }));
+    await sleep(300);
+
+    // ArrowDown 후 포커스된 요소 찾기 (Radix는 포커스를 리스트 아이템으로 이동시킴)
+    var focusedEl = document.activeElement;
+    var enterTarget = (focusedEl && focusedEl !== searchInput && focusedEl !== document.body) ? focusedEl : searchInput;
+    console.log('[Flow Auto] Enter 대상: ' + enterTarget.tagName + ' class="' +
+      (enterTarget.className || '').toString().substring(0, 60) + '"' +
+      (enterTarget === searchInput ? ' (searchInput)' : ' (포커스된 요소)'));
+
+    // Enter → 선택 확정
+    enterTarget.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true
+    }));
+    enterTarget.dispatchEvent(new KeyboardEvent('keyup', {
       key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true
     }));
-    await sleep(500);
+    await sleep(800);
 
     // SPA 네비게이션 차단 해제
     history.pushState = origPushState;
