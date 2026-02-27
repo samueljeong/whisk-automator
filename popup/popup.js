@@ -1920,7 +1920,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, styleIm
   }
 
   // 위치 기반으로 섹션별 슬롯 찾기 (부모 순회 대신 Y좌표로 매칭)
-  function findWhiskSlots() {
+  function findFlowSlots() {
     var sections = { 'subject': [], 'scene': [], 'style': [] };
     var sectionRanges = getSectionRanges();
 
