@@ -1412,16 +1412,16 @@ async function startAutomation() {
 function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleImageUrl, characters, savePath, scenes, styles, useCustomDir) {
   // 중복 실행 방지
   if (window.__whiskAutoRunning) {
-    console.log('[Whisk Auto] 이미 실행 중, 중복 실행 방지');
+    console.log('[Flow Auto] 이미 실행 중, 중복 실행 방지');
     return;
   }
   window.__whiskAutoRunning = true;
 
-  console.log('[Whisk Auto] Starting with', promptsWithCharacters.length, 'prompts');
-  console.log('[Whisk Auto] Style URL:', styleImageUrl || '없음');
-  console.log('[Whisk Auto] Characters:', Object.keys(characters || {}));
-  console.log('[Whisk Auto] Scenes:', Object.keys(scenes || {}));
-  console.log('[Whisk Auto] Style presets:', Object.keys(styles || {}));
+  console.log('[Flow Auto] Starting with', promptsWithCharacters.length, 'prompts');
+  console.log('[Flow Auto] Style URL:', styleImageUrl || '없음');
+  console.log('[Flow Auto] Characters:', Object.keys(characters || {}));
+  console.log('[Flow Auto] Scenes:', Object.keys(scenes || {}));
+  console.log('[Flow Auto] Style presets:', Object.keys(styles || {}));
 
   let currentCharacterGroup = ''; // 현재 피사체에 로드된 캐릭터 조합 (정렬된 키, ''=없음)
   let currentScene = '';           // 현재 장면 슬롯에 로드된 장면 (''=없음)
@@ -1458,7 +1458,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       var r = el.getBoundingClientRect();
       if (r.width > window.innerWidth * 0.5 && r.height > window.innerHeight * 0.5) {
         el.click();
-        console.log('[Whisk Auto] 팝업 오버레이 클릭 닫기');
+        console.log('[Flow Auto] 팝업 오버레이 클릭 닫기');
       }
     });
     // 전략 2: 닫기 버튼 (X, close, 닫기) 찾아서 클릭
@@ -1471,7 +1471,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
            aria.includes('close') || aria.includes('dismiss')) &&
           r.width > 0 && r.width <= 60) {
         btn.click();
-        console.log('[Whisk Auto] 팝업 닫기 버튼 클릭: "' + (text || aria) + '"');
+        console.log('[Flow Auto] 팝업 닫기 버튼 클릭: "' + (text || aria) + '"');
       }
     });
     // 전략 3: 팝업/모달 내부의 거절 버튼만 클릭 (일반 UI 버튼 오탐 방지)
@@ -1480,7 +1480,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       if (text.includes('no thanks') || text.includes('아니') || text.includes('skip') ||
           text.includes('later') || text.includes('나중에') || text.includes('dismiss')) {
         el.click();
-        console.log('[Whisk Auto] 팝업 거절 버튼 클릭: "' + text + '"');
+        console.log('[Flow Auto] 팝업 거절 버튼 클릭: "' + text + '"');
       }
     });
     // 전략 4: "예상했던 내용이 아닌가요?" 피드백 팝업 닫기 (구체적 셀렉터로 범위 축소)
@@ -1500,7 +1500,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         }
         if (closeBtn) {
           closeBtn.click();
-          console.log('[Whisk Auto] "예상했던 내용" 피드백 팝업 닫기');
+          console.log('[Flow Auto] "예상했던 내용" 피드백 팝업 닫기');
         }
       }
     });
@@ -1595,11 +1595,11 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     // 이미 열려있는지 확인
     var label = findSubjectLabel();
     if (label) {
-      console.log('[Whisk Auto] 사이드바 이미 열림 (' + label.source + ')');
+      console.log('[Flow Auto] 사이드바 이미 열림 (' + label.source + ')');
       return true;
     }
 
-    console.log('[Whisk Auto] 사이드바 닫힌 상태, 열기 시도...');
+    console.log('[Flow Auto] 사이드바 닫힌 상태, 열기 시도...');
 
     var buttons = document.querySelectorAll('button');
 
@@ -1607,7 +1607,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     for (var i = 0; i < buttons.length; i++) {
       var txt = (buttons[i].textContent || '').trim();
       if (txt.includes('이미지') && txt.includes('추가')) {
-        console.log('[Whisk Auto] "이미지 추가" 버튼 클릭: "' + txt + '"');
+        console.log('[Flow Auto] "이미지 추가" 버튼 클릭: "' + txt + '"');
         buttons[i].click();
         await sleep(1500);
         return true;
@@ -1622,7 +1622,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
           var bg = getComputedStyle(buttons[i]).backgroundColor;
           var m = bg.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
           if (m && Number(m[1]) < 80 && Number(m[2]) < 80 && Number(m[3]) < 80) {
-            console.log('[Whisk Auto] 토글 버튼(검정) 클릭: ' + Math.round(r.width) + 'x' + Math.round(r.height) +
+            console.log('[Flow Auto] 토글 버튼(검정) 클릭: ' + Math.round(r.width) + 'x' + Math.round(r.height) +
               ' at(' + Math.round(r.left) + ',' + Math.round(r.top) + ')');
             buttons[i].click();
             await sleep(1500);
@@ -1641,7 +1641,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
           ariaLabel.includes('panel') || ariaLabel.includes('sidebar')) {
         var r = ariaEls[i].getBoundingClientRect();
         if (r.width > 10 && r.left < 200) {
-          console.log('[Whisk Auto] aria-label 토글 클릭: "' + ariaLabel + '"');
+          console.log('[Flow Auto] aria-label 토글 클릭: "' + ariaLabel + '"');
           ariaEls[i].click();
           await sleep(1500);
           return true;
@@ -1649,20 +1649,20 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       }
     }
 
-    console.log('[Whisk Auto] 사이드바 열기 실패 - 열 수 있는 버튼 미발견');
+    console.log('[Flow Auto] 사이드바 열기 실패 - 열 수 있는 버튼 미발견');
     return false;
   }
 
   // 페이지 구조 진단 덤프
   function dumpPageDiagnostics() {
-    console.log('[Whisk Auto] === 페이지 진단 ===');
-    console.log('[Whisk Auto] URL:', window.location.href.substring(0, 100));
+    console.log('[Flow Auto] === 페이지 진단 ===');
+    console.log('[Flow Auto] URL:', window.location.href.substring(0, 100));
 
     // headings
     var allHeadings = document.querySelectorAll('h1,h2,h3,h4,h5,h6');
-    console.log('[Whisk Auto] heading 수 (light DOM):', allHeadings.length);
+    console.log('[Flow Auto] heading 수 (light DOM):', allHeadings.length);
     for (var i = 0; i < Math.min(allHeadings.length, 10); i++) {
-      console.log('[Whisk Auto]   ' + allHeadings[i].tagName + ': ' + allHeadings[i].textContent.trim().substring(0, 40));
+      console.log('[Flow Auto]   ' + allHeadings[i].tagName + ': ' + allHeadings[i].textContent.trim().substring(0, 40));
     }
 
     // Shadow roots
@@ -1676,39 +1676,39 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         }
       });
     } catch(e) {}
-    console.log('[Whisk Auto] Shadow root 수:', shadowCount, shadowHostTags.length > 0 ? '호스트: ' + shadowHostTags.join(', ') : '');
+    console.log('[Flow Auto] Shadow root 수:', shadowCount, shadowHostTags.length > 0 ? '호스트: ' + shadowHostTags.join(', ') : '');
 
     // Shadow DOM 내 heading 검색
     if (shadowCount > 0) {
       var deepH4s = deepQueryAll('h4');
-      console.log('[Whisk Auto] Shadow DOM 포함 H4 수:', deepH4s.length);
+      console.log('[Flow Auto] Shadow DOM 포함 H4 수:', deepH4s.length);
       for (var i = 0; i < Math.min(deepH4s.length, 10); i++) {
         var rootType = deepH4s[i].getRootNode() === document ? 'light' : 'shadow';
-        console.log('[Whisk Auto]   [' + rootType + '] ' + deepH4s[i].textContent.trim().substring(0, 40));
+        console.log('[Flow Auto]   [' + rootType + '] ' + deepH4s[i].textContent.trim().substring(0, 40));
       }
     }
 
     // iframes
     var iframes = document.querySelectorAll('iframe');
-    console.log('[Whisk Auto] iframe 수:', iframes.length);
+    console.log('[Flow Auto] iframe 수:', iframes.length);
     for (var i = 0; i < iframes.length; i++) {
       var src = (iframes[i].src || '').substring(0, 80);
       try {
         var iDoc = iframes[i].contentDocument;
         if (iDoc) {
           var iH4Count = iDoc.querySelectorAll('h4').length;
-          console.log('[Whisk Auto]   iframe[' + i + '] h4:' + iH4Count + ' src:' + src);
+          console.log('[Flow Auto]   iframe[' + i + '] h4:' + iH4Count + ' src:' + src);
         } else {
-          console.log('[Whisk Auto]   iframe[' + i + '] doc:null src:' + src);
+          console.log('[Flow Auto]   iframe[' + i + '] doc:null src:' + src);
         }
       } catch(e) {
-        console.log('[Whisk Auto]   iframe[' + i + '] cross-origin src:' + src);
+        console.log('[Flow Auto]   iframe[' + i + '] cross-origin src:' + src);
       }
     }
 
     // file inputs
     var fileInputs = document.querySelectorAll('input[type="file"]');
-    console.log('[Whisk Auto] file input 수:', fileInputs.length);
+    console.log('[Flow Auto] file input 수:', fileInputs.length);
 
     // 큰 버튼
     var bigBtns = [];
@@ -1718,33 +1718,33 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         bigBtns.push(Math.round(r.width) + 'x' + Math.round(r.height) + '@' + Math.round(r.left) + ',' + Math.round(r.top));
       }
     });
-    console.log('[Whisk Auto] 큰 버튼(>80px):', bigBtns.length, bigBtns.slice(0, 5).join(' | '));
+    console.log('[Flow Auto] 큰 버튼(>80px):', bigBtns.length, bigBtns.slice(0, 5).join(' | '));
 
     // "피사체" / "Subject" 텍스트 존재 여부
     try {
       var bodyText = document.body.innerText;
       ['피사체', 'Subject', 'subject', '장면', 'Scene', '스타일', 'Style'].forEach(function(keyword) {
         if (bodyText.indexOf(keyword) >= 0) {
-          console.log('[Whisk Auto] "' + keyword + '" 텍스트 body.innerText에 존재');
+          console.log('[Flow Auto] "' + keyword + '" 텍스트 body.innerText에 존재');
         }
       });
       if (bodyText.indexOf('피사체') < 0 && bodyText.indexOf('Subject') < 0) {
-        console.log('[Whisk Auto] "피사체"/"Subject" 텍스트 body.innerText에 없음');
+        console.log('[Flow Auto] "피사체"/"Subject" 텍스트 body.innerText에 없음');
       }
     } catch(e) {}
 
     // textarea
     var ta = document.querySelector('textarea');
-    console.log('[Whisk Auto] textarea:', ta ? 'found (' + ta.placeholder.substring(0, 50) + ')' : 'not found');
+    console.log('[Flow Auto] textarea:', ta ? 'found (' + ta.placeholder.substring(0, 50) + ')' : 'not found');
 
     // 모든 버튼 (크기 무관)
     var allBtns = document.querySelectorAll('button');
-    console.log('[Whisk Auto] 전체 button 수:', allBtns.length);
+    console.log('[Flow Auto] 전체 button 수:', allBtns.length);
     allBtns.forEach(function(b, i) {
       var r = b.getBoundingClientRect();
       var txt = (b.textContent || '').trim().substring(0, 30);
       var aria = b.getAttribute('aria-label') || '';
-      console.log('[Whisk Auto]   btn[' + i + '] ' + Math.round(r.width) + 'x' + Math.round(r.height) +
+      console.log('[Flow Auto]   btn[' + i + '] ' + Math.round(r.width) + 'x' + Math.round(r.height) +
         ' at(' + Math.round(r.left) + ',' + Math.round(r.top) + ')' +
         (txt ? ' text:"' + txt + '"' : '') +
         (aria ? ' aria:"' + aria + '"' : ''));
@@ -1752,11 +1752,11 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
 
     // aria-label이 있는 요소들
     var ariaEls = document.querySelectorAll('[aria-label]');
-    console.log('[Whisk Auto] aria-label 요소 수:', ariaEls.length);
+    console.log('[Flow Auto] aria-label 요소 수:', ariaEls.length);
     ariaEls.forEach(function(el, i) {
       var r = el.getBoundingClientRect();
       if (r.width > 5) {
-        console.log('[Whisk Auto]   aria[' + i + '] ' + el.tagName + ' ' +
+        console.log('[Flow Auto]   aria[' + i + '] ' + el.tagName + ' ' +
           Math.round(r.width) + 'x' + Math.round(r.height) +
           ' label:"' + el.getAttribute('aria-label').substring(0, 50) + '"');
       }
@@ -1769,7 +1769,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       var role = el.getAttribute('role');
       roleGroups[role] = (roleGroups[role] || 0) + 1;
     });
-    console.log('[Whisk Auto] role 요소:', JSON.stringify(roleGroups));
+    console.log('[Flow Auto] role 요소:', JSON.stringify(roleGroups));
 
     // 커서 pointer인 작은 요소들 (사이드바 토글 버튼 후보)
     var pointerEls = [];
@@ -1785,12 +1785,12 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         }
       } catch(e) {}
     });
-    console.log('[Whisk Auto] pointer 요소(' + pointerEls.length + '개):');
+    console.log('[Flow Auto] pointer 요소(' + pointerEls.length + '개):');
     pointerEls.slice(0, 15).forEach(function(s, i) {
-      console.log('[Whisk Auto]   ptr[' + i + '] ' + s);
+      console.log('[Flow Auto]   ptr[' + i + '] ' + s);
     });
 
-    console.log('[Whisk Auto] === 진단 끝 ===');
+    console.log('[Flow Auto] === 진단 끝 ===');
   }
 
   // 사이드바 열기 + 라벨 대기
@@ -1805,12 +1805,12 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       var result = findSubjectLabel();
       if (result) {
         sidebarRoot = result.root;
-        console.log('[Whisk Auto] 사이드바 라벨 발견 (' + result.source + ', ' + (Date.now() - start) + 'ms)');
+        console.log('[Flow Auto] 사이드바 라벨 발견 (' + result.source + ', ' + (Date.now() - start) + 'ms)');
         return true;
       }
       await sleep(500);
     }
-    console.log('[Whisk Auto] 사이드바 라벨 ' + maxWaitMs + 'ms 내 미발견');
+    console.log('[Flow Auto] 사이드바 라벨 ' + maxWaitMs + 'ms 내 미발견');
     dumpPageDiagnostics();
     return false;
   }
@@ -1825,14 +1825,14 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       if (!el) break;
       var rect = el.getBoundingClientRect();
       if (rect.left < -100 && rect.width > 200) {
-        console.log('[Whisk Auto] 사이드바 컨테이너 발견: 레벨' + up +
+        console.log('[Flow Auto] 사이드바 컨테이너 발견: 레벨' + up +
           ' left:' + Math.round(rect.left) + ' width:' + Math.round(rect.width) +
           ' tag:' + el.tagName + ' class:' + (typeof el.className === 'string' ? el.className.substring(0, 40) : ''));
         return el;
       }
       el = el.parentElement;
     }
-    console.log('[Whisk Auto] 사이드바 컨테이너 미발견 (on-screen이거나 구조 불일치)');
+    console.log('[Flow Auto] 사이드바 컨테이너 미발견 (on-screen이거나 구조 불일치)');
     return null;
   }
 
@@ -1842,7 +1842,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     var rect = container.getBoundingClientRect();
 
     if (rect.left >= 0) {
-      console.log('[Whisk Auto] 사이드바 이미 화면에 있음');
+      console.log('[Flow Auto] 사이드바 이미 화면에 있음');
       return { style: original, wasOnScreen: true };
     }
 
@@ -1866,7 +1866,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     }
 
     var newRect = container.getBoundingClientRect();
-    console.log('[Whisk Auto] 사이드바 CSS 오버라이드: left ' + Math.round(rect.left) + ' → ' + Math.round(newRect.left));
+    console.log('[Flow Auto] 사이드바 CSS 오버라이드: left ' + Math.round(rect.left) + ' → ' + Math.round(newRect.left));
 
     return { style: original, wasOnScreen: false, parents: parents };
   }
@@ -1890,7 +1890,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         }
       }
     }
-    console.log('[Whisk Auto] 사이드바 CSS 복원');
+    console.log('[Flow Auto] 사이드바 CSS 복원');
   }
 
   // 핵심 함수: 3개 섹션 라벨의 위치+Y범위를 한 번에 반환
@@ -1925,13 +1925,13 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     var sectionRanges = getSectionRanges();
 
     if (sectionRanges.length === 0) {
-      console.log('[Whisk Auto] 라벨 없음 → 슬롯 검색 불가');
+      console.log('[Flow Auto] 라벨 없음 → 슬롯 검색 불가');
       return sections;
     }
 
-    console.log('[Whisk Auto] 라벨 ' + sectionRanges.length + '개 발견');
+    console.log('[Flow Auto] 라벨 ' + sectionRanges.length + '개 발견');
     for (var lr = 0; lr < sectionRanges.length; lr++) {
-      console.log('[Whisk Auto] 라벨 "' + sectionRanges[lr].label + '" pos:' + Math.round(sectionRanges[lr].labelLeft) + ',' + Math.round(sectionRanges[lr].top));
+      console.log('[Flow Auto] 라벨 "' + sectionRanges[lr].label + '" pos:' + Math.round(sectionRanges[lr].labelLeft) + ',' + Math.round(sectionRanges[lr].top));
     }
 
     // 모든 큰 클릭 가능 요소를 찾아서 Y 위치로 섹션에 배정
@@ -1953,7 +1953,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     });
     // 합치기
     var combinedClickables = Array.from(allClickables).concat(extraClickables);
-    console.log('[Whisk Auto] 전체 clickable 요소:', allClickables.length, '+ cursor:pointer/dashed div:', extraClickables.length);
+    console.log('[Flow Auto] 전체 clickable 요소:', allClickables.length, '+ cursor:pointer/dashed div:', extraClickables.length);
 
     // 사이드바 너비 추정: 라벨의 X 위치 기준으로 사이드바 영역 결정
     var sidebarMaxX = 260; // 기본값
@@ -1962,7 +1962,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       var labelX = sectionRanges[0].labelLeft || 18;
       sidebarMaxX = Math.max(260, labelX + 250);
     }
-    console.log('[Whisk Auto] 사이드바 X 경계: ' + sidebarMaxX + 'px');
+    console.log('[Flow Auto] 사이드바 X 경계: ' + sidebarMaxX + 'px');
 
     var matched = 0;
     for (var b = 0; b < combinedClickables.length; b++) {
@@ -1977,7 +1977,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         if (midY >= sectionRanges[sr].top && midY < sectionRanges[sr].end) {
           sections[sectionRanges[sr].key].push(combinedClickables[b]);
           matched++;
-          console.log('[Whisk Auto] 슬롯 매칭: ' + combinedClickables[b].tagName +
+          console.log('[Flow Auto] 슬롯 매칭: ' + combinedClickables[b].tagName +
             ' ' + Math.round(rect.width) + 'x' + Math.round(rect.height) +
             ' at(' + Math.round(rect.left) + ',' + Math.round(rect.top) + ')' +
             ' border:' + (getComputedStyle(combinedClickables[b]).borderStyle || '-') +
@@ -1987,7 +1987,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       }
     }
 
-    console.log('[Whisk Auto] 섹션별 슬롯: subject=' + sections.subject.length +
+    console.log('[Flow Auto] 섹션별 슬롯: subject=' + sections.subject.length +
       ', scene=' + sections.scene.length + ', style=' + sections.style.length +
       ' (총 매칭: ' + matched + ')');
     return sections;
@@ -2004,7 +2004,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
 
   // 디버그: 현재 섹션 레이아웃 전체 출력
   function debugSectionLayout(tag) {
-    var prefix = '[Whisk Auto] [LAYOUT' + (tag ? ':' + tag : '') + '] ';
+    var prefix = '[Flow Auto] [LAYOUT' + (tag ? ':' + tag : '') + '] ';
     var ranges = getSectionRanges();
     console.log(prefix + '=== 섹션 Y좌표 ===');
     for (var i = 0; i < ranges.length; i++) {
@@ -2069,7 +2069,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     for (var i = 0; i < styleImgs.length; i++) {
       var checkInfo = findCheckmarkFor(styleImgs[i]);
       if (checkInfo.el && !checkInfo.checked) {
-        console.log('[Whisk Auto] ⚠️ 스타일 체크 해제 감지, 재활성화...');
+        console.log('[Flow Auto] ⚠️ 스타일 체크 해제 감지, 재활성화...');
         await toggleCheckmark(styleImgs[i]);
       }
     }
@@ -2117,14 +2117,14 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     }
 
     if (!closest || closestDist > 100) {
-      console.log('[Whisk Auto] 토글: 선택 버튼 미발견 (거리: ' + closestDist + ')');
+      console.log('[Flow Auto] 토글: 선택 버튼 미발견 (거리: ' + closestDist + ')');
       return false;
     }
 
     var beforeBg = window.getComputedStyle(closest).backgroundColor;
     var wasSelected = beforeBg === 'rgb(250, 212, 0)';
 
-    console.log('[Whisk Auto] 토글: .click() (현재: ' + (wasSelected ? 'ON' : 'OFF') + ')');
+    console.log('[Flow Auto] 토글: .click() (현재: ' + (wasSelected ? 'ON' : 'OFF') + ')');
     closest.click();
     await sleep(800);
 
@@ -2132,11 +2132,11 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     var isNowSelected = afterBg === 'rgb(250, 212, 0)';
 
     if (wasSelected !== isNowSelected) {
-      console.log('[Whisk Auto] 토글 성공: ' + (wasSelected ? 'ON→OFF' : 'OFF→ON'));
+      console.log('[Flow Auto] 토글 성공: ' + (wasSelected ? 'ON→OFF' : 'OFF→ON'));
       return true;
     }
 
-    console.log('[Whisk Auto] 토글 실패: 상태 변화 없음');
+    console.log('[Flow Auto] 토글 실패: 상태 변화 없음');
     return false;
   }
 
@@ -2145,11 +2145,11 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
   async function setActiveCharacters(targetNames) {
     var subjectImgs = getSubjectImages();
     if (subjectImgs.length === 0) {
-      console.log('[Whisk Auto] setActive: 피사체 이미지 없음');
+      console.log('[Flow Auto] setActive: 피사체 이미지 없음');
       return false;
     }
 
-    console.log('[Whisk Auto] setActive: 이미지 ' + subjectImgs.length + '개, 활성화 대상: ' + targetNames.join(', '));
+    console.log('[Flow Auto] setActive: 이미지 ' + subjectImgs.length + '개, 활성화 대상: ' + targetNames.join(', '));
 
     var changed = 0;
     for (var i = 0; i < subjectImgs.length; i++) {
@@ -2162,19 +2162,19 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       var checkInfo = findCheckmarkFor(subjectImgs[i]);
 
       if (shouldBeChecked && !checkInfo.checked) {
-        console.log('[Whisk Auto]   ✓ ON: ' + charName + ' (index ' + i + ')');
+        console.log('[Flow Auto]   ✓ ON: ' + charName + ' (index ' + i + ')');
         var toggled = await toggleCheckmark(subjectImgs[i]);
         if (toggled) changed++;
       } else if (!shouldBeChecked && checkInfo.checked) {
-        console.log('[Whisk Auto]   ✓ OFF: ' + charName + ' (index ' + i + ')');
+        console.log('[Flow Auto]   ✓ OFF: ' + charName + ' (index ' + i + ')');
         var toggled = await toggleCheckmark(subjectImgs[i]);
         if (toggled) changed++;
       } else {
-        console.log('[Whisk Auto]   유지: ' + charName + ' (' + (checkInfo.checked ? 'ON' : 'OFF') + ')');
+        console.log('[Flow Auto]   유지: ' + charName + ' (' + (checkInfo.checked ? 'ON' : 'OFF') + ')');
       }
     }
 
-    console.log('[Whisk Auto] setActive: ' + changed + '개 변경');
+    console.log('[Flow Auto] setActive: ' + changed + '개 변경');
     return true;
   }
 
@@ -2199,7 +2199,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     for (var attempt = 0; attempt < maxAttempts; attempt++) {
       var range = getSectionYRange(labelText);
       if (!range) {
-        console.log('[Whisk Auto] clearSlot: 섹션 ' + labelText + ' 미발견');
+        console.log('[Flow Auto] clearSlot: 섹션 ' + labelText + ' 미발견');
         return totalDeleted;
       }
 
@@ -2216,20 +2216,20 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
 
       if (!targetBtn) {
         if (totalDeleted > 0) {
-          console.log('[Whisk Auto] clearSlot(' + labelText + '): ' + totalDeleted + '개 삭제 완료');
+          console.log('[Flow Auto] clearSlot(' + labelText + '): ' + totalDeleted + '개 삭제 완료');
         } else {
-          console.log('[Whisk Auto] clearSlot(' + labelText + '): 삭제할 이미지 없음');
+          console.log('[Flow Auto] clearSlot(' + labelText + '): 삭제할 이미지 없음');
         }
         return totalDeleted;
       }
 
-      console.log('[Whisk Auto] clearSlot(' + labelText + '): 이미지 삭제 (' + (totalDeleted + 1) + '번째)');
+      console.log('[Flow Auto] clearSlot(' + labelText + '): 이미지 삭제 (' + (totalDeleted + 1) + '번째)');
       targetBtn.click();
       totalDeleted++;
       await sleep(800);
     }
 
-    console.log('[Whisk Auto] clearSlot(' + labelText + '): 총 ' + totalDeleted + '개 삭제 완료');
+    console.log('[Flow Auto] clearSlot(' + labelText + '): 총 ' + totalDeleted + '개 삭제 완료');
     return totalDeleted;
   }
 
@@ -2241,7 +2241,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       if (ranges[r].label === labelText) { targetRange = ranges[r]; break; }
     }
     if (!targetRange) {
-      console.log('[Whisk Auto] 업로드 버튼 미발견 (' + labelText + '): 라벨 없음');
+      console.log('[Flow Auto] 업로드 버튼 미발견 (' + labelText + '): 라벨 없음');
       return null;
     }
 
@@ -2261,12 +2261,12 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     if (uploadBtns.length > 0) {
       // 가장 위에 있는 업로드 버튼 선택
       uploadBtns.sort(function(a, b) { return a.top - b.top; });
-      console.log('[Whisk Auto] "이미지 업로드" 버튼 발견 (' + labelText + '): ' +
+      console.log('[Flow Auto] "이미지 업로드" 버튼 발견 (' + labelText + '): ' +
         uploadBtns.length + '개 중 첫번째 at(' + Math.round(uploadBtns[0].left) + ',' + Math.round(uploadBtns[0].top) + ')');
       return uploadBtns[0].el;
     }
 
-    console.log('[Whisk Auto] "이미지 업로드" 버튼 없음 (' + labelText + '), Y범위=' +
+    console.log('[Flow Auto] "이미지 업로드" 버튼 없음 (' + labelText + '), Y범위=' +
       Math.round(targetRange.top) + '~' + Math.round(targetRange.end));
     return null;
   }
@@ -2279,7 +2279,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       if (ranges[r].label === labelText) { targetRange = ranges[r]; break; }
     }
     if (!targetRange || !targetRange.el) {
-      console.log('[Whisk Auto] ⊕ 버튼 미발견 (' + labelText + '): 라벨 없음');
+      console.log('[Flow Auto] ⊕ 버튼 미발견 (' + labelText + '): 라벨 없음');
       return null;
     }
 
@@ -2318,12 +2318,12 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
 
     if (addBtn) {
       var abr = addBtn.el.getBoundingClientRect();
-      console.log('[Whisk Auto] ⊕ 버튼 발견 (' + labelText + '): ' + addBtn.el.tagName +
+      console.log('[Flow Auto] ⊕ 버튼 발견 (' + labelText + '): ' + addBtn.el.tagName +
         ' at(' + Math.round(addBtn.left) + ',' + Math.round(abr.top) + ')' +
         ' aria="' + addBtn.aria + '"');
       return addBtn.el;
     }
-    console.log('[Whisk Auto] ⊕ 버튼 미발견 (' + labelText + '), 후보 ' + rowButtons.length + '개 중 "추가" 없음');
+    console.log('[Flow Auto] ⊕ 버튼 미발견 (' + labelText + '), 후보 ' + rowButtons.length + '개 중 "추가" 없음');
     return null;
   }
 
@@ -2332,13 +2332,13 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
 
     var labelText = SLOT_TO_LABEL[slotName];
     var isBase64 = imageUrl.startsWith('data:');
-    console.log('[Whisk Auto] ' + slotName + '(' + labelText + ') 업로드' + (skipClear ? ' (추가)' : '') + ':', isBase64 ? 'Base64' : imageUrl.substring(0, 80));
+    console.log('[Flow Auto] ' + slotName + '(' + labelText + ') 업로드' + (skipClear ? ' (추가)' : '') + ':', isBase64 ? 'Base64' : imageUrl.substring(0, 80));
 
     try {
       // Step 1: 사이드바 열기/대기
       var sidebarReady = await waitForSidebar(5000);
       if (!sidebarReady) {
-        console.log('[Whisk Auto] 사이드바 미발견, 업로드 건너뜀');
+        console.log('[Flow Auto] 사이드바 미발견, 업로드 건너뜀');
         return false;
       }
 
@@ -2348,7 +2348,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         if (scrollRanges[si].label === labelText && scrollRanges[si].el) {
           scrollRanges[si].el.scrollIntoView({ block: 'start', behavior: 'instant' });
           await sleep(300); // 스크롤 완료 대기
-          console.log('[Whisk Auto] ' + labelText + ' 섹션으로 스크롤 완료');
+          console.log('[Flow Auto] ' + labelText + ' 섹션으로 스크롤 완료');
           break;
         }
       }
@@ -2357,12 +2357,12 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       if (!skipClear) {
         var clearedCount = await clearSlotImages(slotName);
         if (clearedCount > 0) {
-          console.log('[Whisk Auto] 기존 이미지 ' + clearedCount + '개 해제');
+          console.log('[Flow Auto] 기존 이미지 ' + clearedCount + '개 해제');
           await sleep(1000);
           // 해제 후 사이드바가 닫힐 수 있으므로 다시 열기
           var reopened = await waitForSidebar(5000);
           if (!reopened) {
-            console.log('[Whisk Auto] 해제 후 사이드바 재열기 실패, 재시도...');
+            console.log('[Flow Auto] 해제 후 사이드바 재열기 실패, 재시도...');
             await sleep(2000);
             await waitForSidebar(5000);
           }
@@ -2381,29 +2381,29 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
 
       // Step 4: 인터셉터 존재 확인 + 자동 주입
       var interceptorReady = document.documentElement.getAttribute('data-whisk-interceptor-ready') === 'true';
-      console.log('[Whisk Auto] interceptor 상태:', interceptorReady ? '설치됨' : '미설치');
+      console.log('[Flow Auto] interceptor 상태:', interceptorReady ? '설치됨' : '미설치');
 
       if (!interceptorReady) {
-        console.warn('[Whisk Auto] interceptor 미설치! background에 주입 요청...');
+        console.warn('[Flow Auto] interceptor 미설치! background에 주입 요청...');
         try {
           await new Promise(function(resolve) {
             chrome.runtime.sendMessage({ action: 'INJECT_INTERCEPTOR' }, function(resp) {
-              console.log('[Whisk Auto] interceptor 주입 응답:', resp);
+              console.log('[Flow Auto] interceptor 주입 응답:', resp);
               resolve(resp);
             });
           });
           await sleep(500);
           interceptorReady = document.documentElement.getAttribute('data-whisk-interceptor-ready') === 'true';
-          console.log('[Whisk Auto] interceptor 재주입 결과:', interceptorReady ? '성공' : '실패');
+          console.log('[Flow Auto] interceptor 재주입 결과:', interceptorReady ? '성공' : '실패');
         } catch (e) {
-          console.error('[Whisk Auto] interceptor 주입 요청 실패:', e.message);
+          console.error('[Flow Auto] interceptor 주입 요청 실패:', e.message);
         }
       }
 
       // Step 4.5: 데이터 설정 + 섹션 스크롤
       document.documentElement.setAttribute('data-whisk-upload', dataUrl);
       document.documentElement.removeAttribute('data-whisk-upload-done');
-      console.log('[Whisk Auto] data-whisk-upload 설정 완료 (길이: ' + dataUrl.length + ')');
+      console.log('[Flow Auto] data-whisk-upload 설정 완료 (길이: ' + dataUrl.length + ')');
 
       var preClickRanges = getSectionRanges();
       for (var psi = 0; psi < preClickRanges.length; psi++) {
@@ -2420,7 +2420,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       var uploadBtn = findSectionUploadButton(labelText);
 
       if (!uploadBtn) {
-        console.log('[Whisk Auto] "이미지 업로드" 버튼 없음, ⊕로 새 슬롯 생성...');
+        console.log('[Flow Auto] "이미지 업로드" 버튼 없음, ⊕로 새 슬롯 생성...');
         var addBtn = findSectionAddButton(labelText);
         if (addBtn) {
           addBtn.click();
@@ -2440,7 +2440,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       // Step 6: 전략 A - 버튼 클릭 + interceptor 대기
       if (uploadBtn) {
         var uploadBtnR = uploadBtn.getBoundingClientRect();
-        console.log('[Whisk Auto] 전략A: "이미지 업로드" 클릭 (' + slotName + ') pos=(' + Math.round(uploadBtnR.left) + ',' + Math.round(uploadBtnR.top) + ')');
+        console.log('[Flow Auto] 전략A: "이미지 업로드" 클릭 (' + slotName + ') pos=(' + Math.round(uploadBtnR.left) + ',' + Math.round(uploadBtnR.top) + ')');
         uploadBtn.click();
 
         for (var wait = 0; wait < 10; wait++) {
@@ -2451,23 +2451,23 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
             break;
           }
           if (doneAttr === 'error') {
-            console.error('[Whisk Auto] 전략A: 변환 오류');
+            console.error('[Flow Auto] 전략A: 변환 오류');
             break;
           }
         }
         if (uploadSuccess) {
           document.documentElement.removeAttribute('data-whisk-upload-done');
-          console.log('[Whisk Auto] 전략A 성공!');
+          console.log('[Flow Auto] 전략A 성공!');
           await sleep(500);
           debugSectionLayout('업로드후:' + slotName);
           return true;
         }
-        console.log('[Whisk Auto] 전략A 실패 (5초 대기 초과), 전략B로...');
+        console.log('[Flow Auto] 전략A 실패 (5초 대기 초과), 전략B로...');
       }
 
       // Step 7: 전략 B - 재스크롤 + 재주입 + 재시도
       if (!uploadSuccess) {
-        console.log('[Whisk Auto] 전략B: interceptor 재주입 후 재시도');
+        console.log('[Flow Auto] 전략B: interceptor 재주입 후 재시도');
 
         // 재주입 요청
         try {
@@ -2493,7 +2493,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
 
         var retryUploadBtn = findSectionUploadButton(labelText);
         if (retryUploadBtn) {
-          console.log('[Whisk Auto] 전략B: 재시도 클릭');
+          console.log('[Flow Auto] 전략B: 재시도 클릭');
           retryUploadBtn.click();
           for (var wait2 = 0; wait2 < 10; wait2++) {
             await sleep(500);
@@ -2504,7 +2504,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
           }
           if (uploadSuccess) {
             document.documentElement.removeAttribute('data-whisk-upload-done');
-            console.log('[Whisk Auto] 전략B 성공!');
+            console.log('[Flow Auto] 전략B 성공!');
             await sleep(500);
             return true;
           }
@@ -2513,7 +2513,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
 
       // Step 8: 전략 C - 숨겨진 file input 직접 조작 (interceptor 우회)
       if (!uploadSuccess) {
-        console.log('[Whisk Auto] 전략C: input[type=file] 직접 조작');
+        console.log('[Flow Auto] 전략C: input[type=file] 직접 조작');
         // 먼저 버튼 클릭으로 file input이 생성되게 한 후 찾기
         var fileInputsBefore = document.querySelectorAll('input[type="file"]').length;
         var btn3 = findSectionUploadButton(labelText);
@@ -2527,7 +2527,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
 
         var fileInputs = document.querySelectorAll('input[type="file"]');
         if (fileInputs.length > 0) {
-          console.log('[Whisk Auto] 전략C: file input ' + fileInputs.length + '개 발견');
+          console.log('[Flow Auto] 전략C: file input ' + fileInputs.length + '개 발견');
           var file = new File([blob], 'upload.png', { type: 'image/png' });
           var dt = new DataTransfer();
           dt.items.add(file);
@@ -2538,7 +2538,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
           await sleep(2000);
           uploadSuccess = verifySlotHasImage(slotName);
           if (uploadSuccess) {
-            console.log('[Whisk Auto] 전략C 성공!');
+            console.log('[Flow Auto] 전략C 성공!');
             return true;
           }
         }
@@ -2547,10 +2547,10 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       // 정리
       document.documentElement.removeAttribute('data-whisk-upload');
       document.documentElement.removeAttribute('data-whisk-upload-done');
-      console.log('[Whisk Auto] 업로드 완료 (success=' + uploadSuccess + ')');
+      console.log('[Flow Auto] 업로드 완료 (success=' + uploadSuccess + ')');
       return uploadSuccess;
     } catch (e) {
-      console.log('[Whisk Auto] ' + slotName + ' 업로드 실패:', e.message);
+      console.log('[Flow Auto] ' + slotName + ' 업로드 실패:', e.message);
       return false;
     }
   }
@@ -2569,7 +2569,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       if (text.includes('문제가 발생') || text.includes('error') || text.includes('실패') || text.includes('problem')) {
         var elRect = el.getBoundingClientRect();
         if (elRect.top >= range.top && elRect.top < range.end) {
-          console.log('[Whisk Auto] ' + slotName + ' 슬롯에 에러 감지: "' + text + '"');
+          console.log('[Flow Auto] ' + slotName + ' 슬롯에 에러 감지: "' + text + '"');
           return true;
         }
       }
@@ -2629,7 +2629,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         // 어두운 색: r < 100, g < 100, b < 100
         if (r < 100 && g < 100 && b < 100 && btn.offsetWidth > 30) {
           generateBtn = btn;
-          console.log('[Whisk Auto] 검은색 버튼 발견:', bg);
+          console.log('[Flow Auto] 검은색 버튼 발견:', bg);
           break;
         }
       }
@@ -2640,7 +2640,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       const allBtns = Array.from(buttons).filter(b => b.offsetWidth > 30 && b.offsetHeight > 30);
       if (allBtns.length > 0) {
         generateBtn = allBtns[allBtns.length - 1];
-        console.log('[Whisk Auto] 마지막 버튼 사용');
+        console.log('[Flow Auto] 마지막 버튼 사용');
       }
     }
 
@@ -2648,14 +2648,14 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       throw new Error('생성 버튼을 찾을 수 없습니다');
     }
 
-    console.log('[Whisk Auto] Generate 버튼 클릭...');
+    console.log('[Flow Auto] Generate 버튼 클릭...');
     generateBtn.click();
 
     return true;
   }
 
   async function waitForGeneration() {
-    console.log('[Whisk Auto] 이미지 생성 대기 (최대 30초)...');
+    console.log('[Flow Auto] 이미지 생성 대기 (최대 30초)...');
 
     // 현재 이미지 src 목록 스냅샷
     const knownSrcs = new Set();
@@ -2684,27 +2684,27 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
 
       // 2개 모두 렌더링 완료
       if (newCount >= 2) {
-        console.log(`[Whisk Auto] 새 이미지 ${newCount}개 모두 감지 (${waited / 1000}초)`);
+        console.log(`[Flow Auto] 새 이미지 ${newCount}개 모두 감지 (${waited / 1000}초)`);
         return true;
       }
 
       // 1개만 감지 → 두 번째 이미지 추가 대기 (최대 6초)
       if (newCount >= 1 && !firstDetectedAt) {
         firstDetectedAt = waited;
-        console.log(`[Whisk Auto] 첫 이미지 감지, 두 번째 대기 중... (${waited / 1000}초)`);
+        console.log(`[Flow Auto] 첫 이미지 감지, 두 번째 대기 중... (${waited / 1000}초)`);
       }
       if (firstDetectedAt && waited - firstDetectedAt >= 6000) {
-        console.log(`[Whisk Auto] 두 번째 이미지 6초 내 미감지, ${newCount}개로 진행`);
+        console.log(`[Flow Auto] 두 번째 이미지 6초 내 미감지, ${newCount}개로 진행`);
         return true;
       }
     }
 
-    console.log('[Whisk Auto] 30초 내 새 이미지 미감지');
+    console.log('[Flow Auto] 30초 내 새 이미지 미감지');
     return false;
   }
 
   async function downloadImage(promptText, index, customFilename, preGenSrcs) {
-    console.log('[Whisk Auto] 다운로드 시도...');
+    console.log('[Flow Auto] 다운로드 시도...');
 
     // Whisk은 이미지 2개를 생성 → 첫 번째만 다운로드, 나머지는 스킵
     // preGenSrcs: 생성 전 스냅샷 (레퍼런스/스타일 이미지 제외용)
@@ -2728,7 +2728,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     });
 
     if (newImages.length > 1) {
-      console.log('[Whisk Auto] 생성된 이미지 ' + newImages.length + '개 중 첫 번째만 다운로드');
+      console.log('[Flow Auto] 생성된 이미지 ' + newImages.length + '개 중 첫 번째만 다운로드');
     }
 
     // 모든 새 이미지를 "처리 완료"로 마킹 (2번째 이미지가 다음 프롬프트로 밀리는 것 방지)
@@ -2740,7 +2740,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
 
     // 새 이미지가 없으면 가장 큰 이미지 사용 (fallback)
     if (!targetImage) {
-      console.log('[Whisk Auto] 새 이미지 없음, 가장 큰 이미지 사용');
+      console.log('[Flow Auto] 새 이미지 없음, 가장 큰 이미지 사용');
       let maxSize = 0;
       for (const img of images) {
         if (img.src && img.width > 100 && img.height > 100) {
@@ -2754,7 +2754,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     }
 
     if (targetImage && targetImage.src) {
-      console.log('[Whisk Auto] 이미지 발견:', targetImage.width, 'x', targetImage.height);
+      console.log('[Flow Auto] 이미지 발견:', targetImage.width, 'x', targetImage.height);
 
       // 파일명 결정: 지정된 파일명 또는 자동 생성
       let fullFilename;
@@ -2762,7 +2762,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         // Windows 금지 문자 제거 + 확장자 없으면 .png 추가
         var safeName = customFilename.replace(/[<>:"|?*]/g, '_').replace(/_+/g, '_');
         fullFilename = safeName.includes('.') ? safeName : `${safeName}.png`;
-        console.log('[Whisk Auto] 지정된 파일명 사용:', fullFilename);
+        console.log('[Flow Auto] 지정된 파일명 사용:', fullFilename);
       } else {
         // 기존 방식: 프롬프트에서 파일명 생성
         const autoFilename = promptText
@@ -2777,7 +2777,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       // 다운로드한 이미지 src 기록 (중복 방지)
       const imageSrc = targetImage.src;
       downloadedSrcs.add(imageSrc);
-      console.log('[Whisk Auto] 이미지 src 기록됨, 총', downloadedSrcs.size, '개');
+      console.log('[Flow Auto] 이미지 src 기록됨, 총', downloadedSrcs.size, '개');
 
       try {
         // fetch로 이미지 가져오기
@@ -2797,7 +2797,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
             dataUrl: dataUrl,
             filename: fullFilename
           });
-          console.log('[Whisk Auto] 커스텀 폴더 저장 요청:', fullFilename);
+          console.log('[Flow Auto] 커스텀 폴더 저장 요청:', fullFilename);
         } else {
           // Blob URL → Background → chrome.downloads
           var blobUrl = URL.createObjectURL(blob);
@@ -2806,11 +2806,11 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
             url: blobUrl,
             filename: fullPath
           });
-          console.log('[Whisk Auto] 다운로드 요청:', fullPath);
+          console.log('[Flow Auto] 다운로드 요청:', fullPath);
         }
         return true;
       } catch (e) {
-        console.log('[Whisk Auto] fetch 다운로드 실패, 직접 요청 시도');
+        console.log('[Flow Auto] fetch 다운로드 실패, 직접 요청 시도');
         if (!useCustomDir) {
           chrome.runtime.sendMessage({
             action: 'DOWNLOAD_IMAGE',
@@ -2822,7 +2822,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       }
     }
 
-    console.log('[Whisk Auto] 다운로드할 이미지를 찾지 못함');
+    console.log('[Flow Auto] 다운로드할 이미지를 찾지 못함');
     return false;
   }
 
@@ -2832,12 +2832,12 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     if (styleImageUrl) {
       var styleResult = await uploadImageToSlot(styleImageUrl, 'style');
       if (!styleResult) {
-        console.log('[Whisk Auto] 스타일 업로드 실패, 3초 후 재시도...');
+        console.log('[Flow Auto] 스타일 업로드 실패, 3초 후 재시도...');
         await sleep(3000);
         styleResult = await uploadImageToSlot(styleImageUrl, 'style');
       }
       if (!styleResult) {
-        console.error('[Whisk Auto] 스타일 업로드 2회 실패, 자동화 중단');
+        console.error('[Flow Auto] 스타일 업로드 2회 실패, 자동화 중단');
         window.__whiskAutoRunning = false;
         clearInterval(popupWatcher);
         try {
@@ -2847,7 +2847,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         return;
       }
       styleUploaded = true;
-      console.log('[Whisk Auto] 스타일 이미지 업로드 완료 (분석은 캐릭터와 함께 대기)');
+      console.log('[Flow Auto] 스타일 이미지 업로드 완료 (분석은 캐릭터와 함께 대기)');
       await sleep(2000);
       await ensureStyleChecked();
     }
@@ -2856,27 +2856,27 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     document.documentElement.removeAttribute('data-whisk-stop');
 
     // 시작 전 레이아웃 진단
-    console.log('[Whisk Auto] ====== 자동화 시작 전 레이아웃 진단 ======');
+    console.log('[Flow Auto] ====== 자동화 시작 전 레이아웃 진단 ======');
     debugSectionLayout('시작전');
 
     // 시작 시 장면/피사체 슬롯 강제 초기화 (수동 잔여 레퍼런스 제거)
     try {
       var preSceneCleared = await clearSlotImages('scene');
       if (preSceneCleared > 0) {
-        console.log('[Whisk Auto] 장면 슬롯 사전 초기화: ' + preSceneCleared + '개 삭제');
+        console.log('[Flow Auto] 장면 슬롯 사전 초기화: ' + preSceneCleared + '개 삭제');
         await sleep(2000); // DOM 안정화 대기
       }
       var preSubjectCleared = await clearSlotImages('subject');
       if (preSubjectCleared > 0) {
-        console.log('[Whisk Auto] 피사체 슬롯 사전 초기화: ' + preSubjectCleared + '개 삭제');
+        console.log('[Flow Auto] 피사체 슬롯 사전 초기화: ' + preSubjectCleared + '개 삭제');
         await sleep(2000); // DOM 안정화 대기
       }
       if (preSceneCleared > 0 || preSubjectCleared > 0) {
-        console.log('[Whisk Auto] 초기화 후 레이아웃 재확인');
+        console.log('[Flow Auto] 초기화 후 레이아웃 재확인');
         debugSectionLayout('초기화후');
       }
     } catch (clearErr) {
-      console.warn('[Whisk Auto] 슬롯 사전 초기화 실패 (무시):', clearErr.message);
+      console.warn('[Flow Auto] 슬롯 사전 초기화 실패 (무시):', clearErr.message);
     }
 
     // 미등록 캐릭터 사전 검사
@@ -2891,17 +2891,17 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       }
       var missingChars = allCharNames.filter(function(name) { return characters && !characters[name] && !characters[name.normalize('NFC')]; });
       if (missingChars.length > 0) {
-        console.warn('[Whisk Auto] ⚠️ 미등록 캐릭터 ' + missingChars.length + '건: ' + missingChars.join(', '));
-        console.warn('[Whisk Auto] → 해당 캐릭터는 레퍼런스 없이 생성됩니다');
+        console.warn('[Flow Auto] ⚠️ 미등록 캐릭터 ' + missingChars.length + '건: ' + missingChars.join(', '));
+        console.warn('[Flow Auto] → 해당 캐릭터는 레퍼런스 없이 생성됩니다');
       }
     } catch (preCheckErr) {
-      console.error('[Whisk Auto] 미등록 캐릭터 검사 오류 (무시):', preCheckErr);
+      console.error('[Flow Auto] 미등록 캐릭터 검사 오류 (무시):', preCheckErr);
     }
 
     for (let i = 0; i < promptsWithCharacters.length; i++) {
       // 정지 플래그 확인 (DOM 속성 기반 — 모든 월드에서 공유)
       if (isStopRequested()) {
-        console.log('[Whisk Auto] 사용자 정지 요청 — 자동화 중단');
+        console.log('[Flow Auto] 사용자 정지 요청 — 자동화 중단');
         try {
           chrome.runtime.sendMessage({ action: 'AUTOMATION_STOPPED' });
         } catch(e) {}
@@ -2920,7 +2920,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
         character ? `[${character}]` : '[배경]'
       ].filter(Boolean).join(' ');
 
-      console.log(`[Whisk Auto] ${i + 1}/${promptsWithCharacters.length}: ${logPrefix} ${prompt}`);
+      console.log(`[Flow Auto] ${i + 1}/${promptsWithCharacters.length}: ${logPrefix} ${prompt}`);
 
       // 진행 상황을 팝업으로 전달
       try {
@@ -2945,13 +2945,13 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
           const charGroup = item.characterGroup || ''; // 정렬된 캐릭터 조합 키
 
           // [진단] 캐릭터 업로드 판단 로그
-          console.log('[Whisk Auto] [DIAG] charGroup="' + charGroup + '" current="' + currentCharacterGroup + '" character="' + (item.character || '') + '" hasChars=' + (characters ? Object.keys(characters).length : 'null'));
+          console.log('[Flow Auto] [DIAG] charGroup="' + charGroup + '" current="' + currentCharacterGroup + '" character="' + (item.character || '') + '" hasChars=' + (characters ? Object.keys(characters).length : 'null'));
 
           // 캐릭터 조합이 바뀌었는지 확인 (재시도 시 이미 같은 캐릭터이므로 자연스럽게 건너뜀)
           if (charGroup !== currentCharacterGroup) {
             // 1. 기존 피사체 모두 해제
             if (currentCharacterGroup) {
-              console.log(`[Whisk Auto] 피사체 전환: ${currentCharacterGroup} → ${charGroup || '배경'}`);
+              console.log(`[Flow Auto] 피사체 전환: ${currentCharacterGroup} → ${charGroup || '배경'}`);
               await clearSlotImages('subject');
               await sleep(1500);
               // 해제 후 사이드바가 닫힐 수 있으므로 다시 확인
@@ -2964,28 +2964,28 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
               // Whisk precise mode 에셋 제한: 피사체 최대 2개 (스타일/장면 슬롯 포함 시 초과 방지)
               var MAX_SUBJECTS = 2;
               if (charNames.length > MAX_SUBJECTS) {
-                console.log(`[Whisk Auto] ⚠️ 캐릭터 ${charNames.length}명 → 상위 ${MAX_SUBJECTS}명만 업로드 (precise mode 제한)`);
+                console.log(`[Flow Auto] ⚠️ 캐릭터 ${charNames.length}명 → 상위 ${MAX_SUBJECTS}명만 업로드 (precise mode 제한)`);
                 charNames = charNames.slice(0, MAX_SUBJECTS);
               }
-              console.log(`[Whisk Auto] 캐릭터 ${charNames.length}명 빠른 업로드: ${charNames.join(', ')}`);
+              console.log(`[Flow Auto] 캐릭터 ${charNames.length}명 빠른 업로드: ${charNames.join(', ')}`);
 
               // 모든 캐릭터 빠르게 업로드 (개별 분석 대기 없음)
               for (var ci = 0; ci < charNames.length; ci++) {
                 var charName = charNames[ci].trim();
                 var charImageUrl = characters[charName] || characters[charName.normalize('NFC')];
                 if (!charImageUrl) {
-                  console.warn(`[Whisk Auto] ⚠️ 캐릭터 "${charName}" 미등록 — 레퍼런스 없이 생성`);
+                  console.warn(`[Flow Auto] ⚠️ 캐릭터 "${charName}" 미등록 — 레퍼런스 없이 생성`);
                   continue;
                 }
 
-                console.log(`[Whisk Auto] [${ci + 1}/${charNames.length}] ${charName} 업로드...`);
+                console.log(`[Flow Auto] [${ci + 1}/${charNames.length}] ${charName} 업로드...`);
                 // 첫 번째 캐릭터만 기존 이미지 해제, 나머지는 추가
                 var charUploadOk = await uploadImageToSlot(charImageUrl, 'subject', ci > 0);
                 await sleep(1500); // 업로드 UI 반응 대기만 (분석 대기 X)
 
                 // 업로드 후 에러 확인
                 if (!charUploadOk || checkSlotError('subject')) {
-                  console.log(`[Whisk Auto] 피사체 업로드 실패 감지, 재시도...`);
+                  console.log(`[Flow Auto] 피사체 업로드 실패 감지, 재시도...`);
                   await sleep(2000);
                   await uploadImageToSlot(charImageUrl, 'subject', ci > 0);
                   await sleep(1500);
@@ -3000,10 +3000,10 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
 
               // 모든 업로드 완료 후 한번만 분석 대기
               var waitTime = styleUploaded ? 9000 : 7000;
-              console.log(`[Whisk Auto] 전체 분석 대기 (${waitTime / 1000}초)...`);
+              console.log(`[Flow Auto] 전체 분석 대기 (${waitTime / 1000}초)...`);
               await sleep(waitTime);
               styleUploaded = false;
-              console.log('[Whisk Auto] 분석 완료, 생성 시작');
+              console.log('[Flow Auto] 분석 완료, 생성 시작');
               await ensureStyleChecked();
             }
 
@@ -3016,13 +3016,13 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
             const sceneImageUrl = scenes ? (scenes[sceneTag] || scenes[sceneTag.normalize('NFC')]) : null;
 
             if (sceneTag && sceneImageUrl) {
-              console.log(`[Whisk Auto] 장면 전환: ${currentScene || '없음'} → ${sceneTag}`);
+              console.log(`[Flow Auto] 장면 전환: ${currentScene || '없음'} → ${sceneTag}`);
               var sceneUploadOk = await uploadImageToSlot(sceneImageUrl, 'scene');
               await sleep(2000); // 장면 분석 대기
 
               // 업로드 후 에러 확인
               if (!sceneUploadOk || checkSlotError('scene')) {
-                console.log(`[Whisk Auto] 장면 업로드 실패 감지, 재시도...`);
+                console.log(`[Flow Auto] 장면 업로드 실패 감지, 재시도...`);
                 await sleep(2000);
                 await uploadImageToSlot(sceneImageUrl, 'scene');
                 await sleep(2000);
@@ -3032,11 +3032,11 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
               }
             } else if (!sceneTag && currentScene) {
               // 장면 태그 없으면 장면 슬롯 비우기
-              console.log(`[Whisk Auto] 장면 해제: ${currentScene} → 없음`);
+              console.log(`[Flow Auto] 장면 해제: ${currentScene} → 없음`);
               await clearSlotImages('scene');
               await sleep(500);
             } else if (sceneTag && !sceneImageUrl) {
-              console.log(`[Whisk Auto] 장면 "${sceneTag}" 이미지 미등록, 건너뜀`);
+              console.log(`[Flow Auto] 장면 "${sceneTag}" 이미지 미등록, 건너뜀`);
             }
 
             currentScene = sceneTag;
@@ -3068,7 +3068,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
 
           success = true;
           consecutiveFailures = 0;  // 성공 시 연속 실패 카운터 리셋
-          console.log(`[Whisk Auto] ${i + 1} 완료 (씬${origIndex + 1})`);
+          console.log(`[Flow Auto] ${i + 1} 완료 (씬${origIndex + 1})`);
 
           // 완료 진행 상황 전달
           try {
@@ -3083,33 +3083,33 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
           } catch(e) {}
 
           if (i < promptsWithCharacters.length - 1) {
-            console.log(`[Whisk Auto] ${delayMs}ms 대기...`);
+            console.log(`[Flow Auto] ${delayMs}ms 대기...`);
             await sleep(delayMs);
           }
         } catch (error) {
           // 정지 요청에 의한 중단
           if (error.message === '__STOPPED__' || isStopRequested()) {
-            console.log('[Whisk Auto] 사용자 정지 요청 — 자동화 중단');
+            console.log('[Flow Auto] 사용자 정지 요청 — 자동화 중단');
             try { chrome.runtime.sendMessage({ action: 'AUTOMATION_STOPPED' }); } catch(e) {}
             return;
           }
           retryCount++;
           if (retryCount <= MAX_RETRIES) {
-            console.log(`[Whisk Auto] 재시도 ${retryCount}/${MAX_RETRIES} (씬${origIndex + 1})... ${error.message}`);
+            console.log(`[Flow Auto] 재시도 ${retryCount}/${MAX_RETRIES} (씬${origIndex + 1})... ${error.message}`);
             // 캐릭터 해제 실패 시 캐릭터 그룹 리셋 → 다음 시도에서 다시 전환
             if (error.message.includes('캐릭터 해제 실패')) {
               currentCharacterGroup = '__reset__';
-              console.log('[Whisk Auto] 캐릭터 그룹 리셋, 다음 시도에서 재전환');
+              console.log('[Flow Auto] 캐릭터 그룹 리셋, 다음 시도에서 재전환');
             }
             await sleep(3000 * retryCount); // 3초, 6초, 9초 대기
           } else {
-            console.error(`[Whisk Auto] ${MAX_RETRIES}회 재시도 실패 (씬${origIndex + 1}):`, error);
+            console.error(`[Flow Auto] ${MAX_RETRIES}회 재시도 실패 (씬${origIndex + 1}):`, error);
             currentCharacterGroup = '__reset__';
             consecutiveFailures++;
 
             // 연속 2회 실패 시 페이지 리로드로 복구 시도
             if (consecutiveFailures >= 2 && i < promptsWithCharacters.length - 1) {
-              console.log(`[Whisk Auto] === 연속 ${consecutiveFailures}회 실패, 페이지 리로드 요청 ===`);
+              console.log(`[Flow Auto] === 연속 ${consecutiveFailures}회 실패, 페이지 리로드 요청 ===`);
               window.__whiskAutoRunning = false;
               clearInterval(popupWatcher);
               try {
@@ -3125,7 +3125,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       }
     }
 
-    console.log('[Whisk Auto] 모든 프롬프트 완료!');
+    console.log('[Flow Auto] 모든 프롬프트 완료!');
     window.__whiskAutoRunning = false;
     clearInterval(popupWatcher);
     try {
