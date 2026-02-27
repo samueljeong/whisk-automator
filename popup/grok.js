@@ -46,7 +46,7 @@
   // 모드 탭 전환
   // ============================================================
   function switchMode(mode) {
-    if (mode === 'whisk') {
+    if (mode === 'flow') {
       modeTabFlow.classList.add('active');
       modeTabGrok.classList.remove('active');
       flowContainer.hidden = false;
