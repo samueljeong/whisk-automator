@@ -2041,8 +2041,8 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     }));
     await sleep(500);
 
-    // 5. 에셋 패널 닫기 (먼저 닫아야 프롬프트에 삽입됨)
-    console.log('[Flow Auto] 에셋 클릭 완료, 패널 닫기');
+    // 6. 에셋 패널 닫기
+    console.log('[Flow Auto] 에셋 키보드 선택 완료, 패널 닫기');
     document.dispatchEvent(new KeyboardEvent('keydown', {
       key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true
     }));
