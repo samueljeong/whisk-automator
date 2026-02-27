@@ -286,7 +286,7 @@ function parseStyleTxt(text) {
 
 // 폴더에서 캐릭터 스캔
 // 구조: rootFolder/ → 프로젝트폴더/ → 캐릭터이미지.jpg
-// 폴더 구조: whisk / 피사체|장면|스타일 / 프로젝트명 / 이미지.jpg
+// 폴더 구조: flow / 피사체|장면|스타일 / 프로젝트명 / 이미지.jpg
 async function scanCharacterFolder(rootHandle) {
   const imageExts = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
   let totalCount = 0;
