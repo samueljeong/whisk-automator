@@ -15,7 +15,7 @@
   // DOM 요소
   // ============================================================
   const $ = (sel) => document.querySelector(sel);
-  const modeTabWhisk = $('#modeTabWhisk');
+  const modeTabFlow = $('#modeTabFlow');
   const modeTabGrok = $('#modeTabGrok');
   const whiskContainer = $('#whiskContainer');
   const grokContainer = $('#grokContainer');
@@ -47,7 +47,7 @@
   // ============================================================
   function switchMode(mode) {
     if (mode === 'whisk') {
-      modeTabWhisk.classList.add('active');
+      modeTabFlow.classList.add('active');
       modeTabGrok.classList.remove('active');
       whiskContainer.hidden = false;
       grokContainer.hidden = true;
@@ -57,7 +57,7 @@
         alert('Whisk 라이선스 인증 후 사용할 수 있습니다.');
         return;
       }
-      modeTabWhisk.classList.remove('active');
+      modeTabFlow.classList.remove('active');
       modeTabGrok.classList.add('active');
       whiskContainer.hidden = true;
       grokContainer.hidden = false;
@@ -66,7 +66,7 @@
     chrome.storage.local.set({ grok_activeMode: mode });
   }
 
-  modeTabWhisk.addEventListener('click', () => switchMode('whisk'));
+  modeTabFlow.addEventListener('click', () => switchMode('whisk'));
   modeTabGrok.addEventListener('click', () => switchMode('grok'));
 
   // ============================================================
