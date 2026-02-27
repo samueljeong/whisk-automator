@@ -2008,14 +2008,24 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       return false;
     }
 
-    // 5. 분석 완료 대기 (이미 분석된 에셋은 빠르게, 새 에셋은 오래 걸림)
-    await waitForAnalysisComplete(promptEl, beforeVoids, charName);
-
-    // 6. 에셋 패널 닫기 (ESC 또는 바깥 클릭)
+    // 5. 에셋 패널 닫기 (먼저 닫아야 프롬프트에 삽입됨)
+    console.log('[Flow Auto] 에셋 클릭 완료, 패널 닫기');
     document.dispatchEvent(new KeyboardEvent('keydown', {
       key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true
     }));
-    await sleep(300);
+    await sleep(1000);
+
+    // 6. 패널 닫힌 후 void 수 재측정 → 분석 완료 대기
+    var afterCloseVoids = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]').length;
+    console.log('[Flow Auto] 패널 닫은 후 void 수: ' + afterCloseVoids + ' (이전: ' + beforeVoids + ')');
+
+    if (afterCloseVoids > beforeVoids) {
+      // 이미 삽입됨 (이전에 분석 완료된 에셋)
+      console.log('[Flow Auto] 에셋 "' + charName + '" 즉시 삽입 완료');
+    } else {
+      // 아직 삽입 안 됨 → 분석 대기
+      await waitForAnalysisComplete(promptEl, beforeVoids, charName);
+    }
 
     return true;
   }
