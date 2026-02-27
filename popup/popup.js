@@ -2193,24 +2193,27 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       waited += 300;
     }
 
-    // 5. 분석 완료 대기 (새 업로드이므로 10~30초 소요)
-    console.log('[Flow Auto] 새 에셋 분석 대기: ' + searchName);
-    await waitForAnalysisComplete(promptEl, beforeVoids, searchName);
-
-    // 6. 패널 닫기
+    // 5. 패널 닫기 후 selectAssetByName으로 키보드 선택
+    //    업로드만으로는 레퍼런스 삽입 안 됨 → 에셋 카드를 선택해야 함
+    console.log('[Flow Auto] 에셋 업로드 완료, 패널 닫고 키보드 선택으로 전환: ' + searchName);
     document.dispatchEvent(new KeyboardEvent('keydown', {
       key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true
     }));
-    await sleep(500);
+    await sleep(1000);
 
-    // 7. 실제 레퍼런스 삽입 검증 (selectAssetByName과 동일)
-    var afterVoids = countRefImages(promptEl);
-    if (afterVoids <= beforeVoids) {
-      console.warn('[Flow Auto] 에셋 "' + searchName + '" 업로드 후 레퍼런스 증가 없음 (ref: ' + beforeVoids + ' → ' + afterVoids + ')');
-      return false;
+    // 업로드 속성 정리
+    document.documentElement.removeAttribute('data-flow-upload');
+    document.documentElement.removeAttribute('data-flow-upload-name');
+
+    // selectAssetByName으로 방금 업로드한 에셋 검색 → 키보드 선택
+    var selected = await selectAssetByName(searchName);
+    if (selected === true) {
+      console.log('[Flow Auto] 에셋 "' + searchName + '" 업로드 + 선택 성공');
+      return true;
     }
-    console.log('[Flow Auto] 에셋 "' + searchName + '" 업로드 성공 (ref: ' + beforeVoids + ' → ' + afterVoids + ')');
-    return true;
+
+    console.warn('[Flow Auto] 에셋 "' + searchName + '" 업로드 후 선택 실패');
+    return false;
   }
 
   // 11. 캐릭터별 레퍼런스 일괄 선택
