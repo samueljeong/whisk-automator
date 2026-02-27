@@ -33,32 +33,46 @@
 
 ### 수정 계획 — 클릭 우회 접근 (simulateRealClick + .click() 모두 실패 확정)
 
-#### 시도 9: 키보드 네비게이션 (가장 유력)
-- [ ] **9. 검색 후 키보드로 선택**: 에셋 검색 결과를 ArrowDown + Enter로 선택
-  - 검색바에 이름 입력 (기존 로직 유지)
-  - 검색 결과 로딩 대기 (1초)
-  - `ArrowDown` 키 이벤트로 첫 번째 결과 포커스
-  - `Enter` 키 이벤트로 선택 확정
-  - ref 카운트 증가 확인
-  - **장점**: isTrusted 체크 우회, 네비게이션 발생 안 할 가능성 높음
-  - **적용 범위**: selectAssetByName + uploadNewAsset 공통
+#### 시도 9: 키보드 네비게이션 (사용자 수동 테스트로 동작 확인!)
 
-#### 시도 10 (9번 실패 시): Drag & Drop 시뮬레이션
-- [ ] **10. 드래그 앤 드롭**: 에셋 카드 → 프롬프트 영역으로 드래그 이벤트
-  - dragstart → dragover → drop 이벤트 시퀀스
-  - dataTransfer에 에셋 정보 포함
+**selectAssetByName 수정** (라인 1949-2158):
 
-#### 시도 11 (최종 대안): Slate.js 직접 삽입
-- [ ] **11. Slate 에디터 void 노드 직접 삽입**: 에셋 패널 완전 우회
-  - `[contenteditable]` 요소에서 Slate 인스턴스 접근
-  - 기존 레퍼런스 void 노드의 구조 분석 (data 속성, 이미지 URL 등)
-  - 동일 구조의 void 노드를 프로그래매틱으로 삽입
-  - **리스크**: Slate 내부 상태와 DOM 불일치 가능
+변경 범위: **라인 2002~2129** (검색 결과 클릭 로직)을 키보드 네비게이션으로 교체
 
-#### uploadNewAsset 추가 수정
-- [ ] **12. 업로드 후 selectAssetByName 재호출**: 업로드 성공 → 라이브러리에 추가됨 → 검색으로 찾아서 키보드 선택
-  - 기존: 업로드 후 수동 대기 (실패)
-  - 수정: 업로드 후 패널 닫기 → selectAssetByName(키보드 방식) 재호출
+- [ ] **9a. 클릭 로직 제거**: 라인 2002-2129의 DOM 탐색/simulateRealClick/.click()/SPA차단 전부 삭제
+- [ ] **9b. 키보드 선택 로직 삽입**: 검색바(searchInput)에서 직접 키보드 이벤트 발행
+  ```
+  수정 흐름:
+  1. 검색바에 charName 입력 (기존 유지, 라인 1989-2000)
+  2. "일치하는 결과 없음" 텍스트 존재 확인 → 있으면 return false
+  3. ArrowDown 키 이벤트 → 첫 번째 검색 결과 포커스
+  4. Enter 키 이벤트 → 선택 확정
+  5. sleep(500) 대기
+  6. Esc로 패널 닫기 (기존 유지, 라인 2141-2146)
+  7. ref 카운트 증가 확인 (기존 유지, 라인 2148-2157)
+  ```
+- [ ] **9c. KeyboardEvent 발행 방식**: searchInput에 직접 dispatch
+  ```js
+  searchInput.dispatchEvent(new KeyboardEvent('keydown', {
+    key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, bubbles: true
+  }));
+  await sleep(200);
+  searchInput.dispatchEvent(new KeyboardEvent('keydown', {
+    key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true
+  }));
+  ```
+
+**uploadNewAsset 수정** (라인 2162-2311):
+
+- [ ] **9d. 업로드 후 selectAssetByName 재호출**:
+  - 파일 업로드 완료(라인 2277) 후 패널 닫기
+  - `selectAssetByName(searchName)` 호출 (키보드 방식으로 수정된 버전)
+  - 이미 라이브러리에 추가됐으므로 검색→키보드 선택 가능
+  - 기존 `waitForAnalysisComplete` (라인 2295) 제거 또는 selectAssetByName 성공 시 스킵
+
+#### 시도 10 이후 (9번 실패 시 대안)
+- [ ] **10. Drag & Drop 시뮬레이션**
+- [ ] **11. Slate.js 직접 void 노드 삽입**
 
 ## 수정하지 않는 것
 | 위치 | 이유 |
