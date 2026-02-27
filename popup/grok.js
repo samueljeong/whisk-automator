@@ -1,5 +1,5 @@
 // grok.js - Grok 이미지→영상 자동화 메인 로직
-// popup.js(Whisk)와 완전 분리, GROK_ 접두어 메시지 사용
+// popup.js(Flow)와 완전 분리, GROK_ 접두어 메시지 사용
 (function() {
   'use strict';
 
