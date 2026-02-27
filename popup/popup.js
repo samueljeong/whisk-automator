@@ -2701,7 +2701,15 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
             if (img.src) preGenSrcs.add(img.src);
           });
 
-          // Phase 2: 프롬프트 연속 제출 (레퍼런스는 이미 올라가 있으므로 텍스트만 입력)
+          // Phase 2: 프롬프트 연속 제출
+          // 레퍼런스 보존: 생성 후 프롬프트 영역이 초기화되면 레퍼런스 재업로드
+          var expectedVoids = 0;
+          if (thisGroup) {
+            var promptEl = findPromptInput();
+            expectedVoids = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]').length;
+            console.log('[Flow Auto] 레퍼런스 void 기준: ' + expectedVoids + '개');
+          }
+
           for (var j = batchStart; j < batchEnd; j++) {
             if (isStopRequested()) {
               try { chrome.runtime.sendMessage({ action: 'AUTOMATION_STOPPED' }); } catch(e) {}
@@ -2723,6 +2731,18 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
                 currentPrompt: logPrefix + ' (제출중)'
               });
             } catch(e) {}
+
+            // 레퍼런스 보존 확인: void 수가 줄었으면 재업로드
+            if (thisGroup && expectedVoids > 0 && j > batchStart) {
+              var promptEl = findPromptInput();
+              var currentVoids = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]').length;
+              if (currentVoids < expectedVoids) {
+                console.log('[Flow Auto] 레퍼런스 유실 감지! void: ' + currentVoids + '/' + expectedVoids + ' → 재업로드');
+                await uploadReferences(batchItem.character || item.character, characters);
+                await sleep(1000);
+                expectedVoids = findPromptInput().querySelectorAll('[contenteditable="false"], [data-slate-void]').length;
+              }
+            }
 
             await fillPrompt(batchItem.prompt);
             await sleep(500);
