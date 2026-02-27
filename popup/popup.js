@@ -1360,18 +1360,9 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
   console.log('[Flow Auto] Starting with', promptsWithCharacters.length, 'prompts');
   console.log('[Flow Auto] Model:', selectedModel || 'nano-banana-2');
   console.log('[Flow Auto] Output type:', selectedOutputType || 'image');
-  console.log('[Flow Auto] Characters:', Object.keys(characters || {}));
-  console.log('[Flow Auto] Scenes:', Object.keys(scenes || {}));
 
-  let currentCharacterGroup = ''; // 현재 피사체에 로드된 캐릭터 조합 (정렬된 키, ''=없음)
-  let currentScene = '';           // 현재 장면 슬롯에 로드된 장면 (''=없음)
-  let downloadedSrcs = new Set();  // 이미 다운로드한 이미지 src 추적
-  let consecutiveFailures = 0;     // 연속 실패 카운터 (2회 연속 시 페이지 리로드)
-  let characterUploadOrder = [];   // 캐릭터 업로드 순서 (setActiveCharacters에서 참조)
-
-  // 슬롯↔라벨 매핑 (한 번만 선언)
-  var SLOT_TO_LABEL = { 'subject': '피사체', 'scene': '장면', 'style': '스타일' };
-  var LABEL_TO_KEY = { '피사체': 'subject', '장면': 'scene', '스타일': 'style' };
+  var downloadedSrcs = new Set();   // 이미 다운로드한 이미지 src 추적
+  var consecutiveFailures = 0;      // 연속 실패 카운터 (2회 연속 시 페이지 리로드)
 
   function isStopRequested() {
     return document.documentElement.getAttribute('data-flow-stop') === 'true';
