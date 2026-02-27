@@ -146,13 +146,31 @@ await sleep(300);
 - 언어 코드: `/ko/`, `/en/` 등
 - checkConnection 매칭: `url.includes('flow') && url.includes('project')`
 
-## 미확인 항목 (실제 생성 테스트 시 확인)
+## 확인 완료 항목
 
-1. ~~**모델 하위 드롭다운**~~: ✅ 확인됨 — Nano Banana Pro, Nano Banana 2, Imagen 4
-2. **Ingredient 드로어 구조**: 열린 드로어 내부의 업로드/선택 UI (HTML +2908 but 눈에 보이는 패널 없음)
-3. **생성 완료 감지**: 이미지 생성 후 DOM 변화 (새 img/video 태그? 로딩 스피너?)
-4. **다운로드 메커니즘**: 생성된 이미지/영상 다운로드 방법
-5. **Slate.js 입력 검증**: 어떤 입력 방법이 실제 생성에 반영되는지 (InputEvent vs paste vs execCommand)
+1. ✅ **모델 하위 드롭다운**: Nano Banana Pro, Nano Banana 2, Imagen 4
+2. ⚠️ **Ingredient 드로어**: HTML +2908 but 눈에 보이는 패널 없음 — 추후 조사
+3. ✅ **생성 완료 감지**: 새 `img[src*="getMediaUrlRedirect"]` 출현 (MutationObserver or 폴링)
+4. ✅ **다운로드 메커니즘**: `fetch(img.src)` → blob → `chrome.downloads`
+5. ✅ **Slate.js 입력**: InputEvent(beforeinput) 방식 확정, 실제 생성에 반영됨
+
+## 6차 생성 테스트 결과 (2026-02-27)
+
+- **생성 시간**: ~28초
+- **이미지 URL 패턴**: `https://labs.google/fx/api/trpc/media.getMediaUrlRedirect?name={uuid}`
+- **이미지 부모 구조**:
+  ```
+  DIV.sc-8cc14b4-2 (결과 행, 1248x266)
+    └── DIV (래퍼, 444x250)
+        └── DIV.sc-11801678-0 (내부 래퍼)
+            └── A.sc-3ab8616e-0 (링크)
+                └── IMG.sc-f803b119-0.sc-5923b123-1 (이미지)
+  ```
+- **DOM 변화 시퀀스**:
+  1. `ELEMENT_ADDED` 결과 행 컨테이너 (1248x266)
+  2. `ELEMENT_ADDED` 이미지 래퍼 (444x250)
+  3. `IMG_NESTED` 이미지 출현 (getMediaUrlRedirect URL)
+  4. `IMG_SRC_CHANGED` src 속성 설정
 
 ## 자동화 구현 전략 (확정)
 
