@@ -2138,92 +2138,88 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       await sleep(1000);
     }
 
-    // 2~3. 패널 로딩 대기 + 업로드 버튼 찾기 (최대 3회 재시도)
+    // 2. 에셋 패널 내 요소 탐색 (디버그 로깅)
+    //    패널은 프롬프트 바 위쪽에 열림 (화면 하단 영역)
+    var panelElements = [];
+    var allEls = document.querySelectorAll('button, [role="button"], div[tabindex], a, label, span');
+    for (var pe = 0; pe < allEls.length; pe++) {
+      var peRect = allEls[pe].getBoundingClientRect();
+      var peTxt = (allEls[pe].textContent || '').trim();
+      // 하단 영역 (프롬프트 바 위) 에 있는 요소만
+      if (peRect.width > 0 && peRect.height > 0 && peRect.top > 300 && peRect.top < 700 && peTxt.length > 0 && peTxt.length < 50) {
+        panelElements.push({
+          el: allEls[pe],
+          tag: allEls[pe].tagName,
+          text: peTxt,
+          rect: peRect,
+          ariaLabel: allEls[pe].getAttribute('aria-label') || ''
+        });
+      }
+    }
+    console.log('[Flow Auto] 패널 영역 요소들 (' + panelElements.length + '개):');
+    panelElements.forEach(function(p) {
+      console.log('  ' + p.tag + ' "' + p.text.substring(0, 40) + '" aria="' + p.ariaLabel + '" at(' +
+        Math.round(p.rect.left) + ',' + Math.round(p.rect.top) + ') ' +
+        Math.round(p.rect.width) + 'x' + Math.round(p.rect.height));
+    });
+
+    // 3. 업로드 버튼 찾기 (우선순위별)
     var uploadTriggered = false;
-    var maxRetries = 3;
 
-    for (var retry = 0; retry < maxRetries && !uploadTriggered; retry++) {
-      if (retry > 0) {
-        console.log('[Flow Auto] 패널 로딩 재시도 ' + (retry + 1) + '/' + maxRetries);
-        await sleep(1500);
-      }
-
-      // 에셋 패널 내 요소 탐색
-      var panelElements = [];
-      var allEls = document.querySelectorAll('button, [role="button"], div[tabindex], a, label, span');
-      for (var pe = 0; pe < allEls.length; pe++) {
-        var peRect = allEls[pe].getBoundingClientRect();
-        var peTxt = (allEls[pe].textContent || '').trim();
-        // 하단 영역 (프롬프트 바 위) 에 있는 요소만
-        if (peRect.width > 0 && peRect.height > 0 && peRect.top > 300 && peRect.top < 700 && peTxt.length > 0 && peTxt.length < 50) {
-          panelElements.push({
-            el: allEls[pe],
-            tag: allEls[pe].tagName,
-            text: peTxt,
-            rect: peRect,
-            ariaLabel: allEls[pe].getAttribute('aria-label') || ''
-          });
-        }
-      }
-      console.log('[Flow Auto] 패널 영역 요소들 (' + panelElements.length + '개, 시도 ' + (retry + 1) + '):');
-      panelElements.forEach(function(p) {
-        console.log('  ' + p.tag + ' "' + p.text.substring(0, 40) + '" aria="' + p.ariaLabel + '" at(' +
-          Math.round(p.rect.left) + ',' + Math.round(p.rect.top) + ') ' +
-          Math.round(p.rect.width) + 'x' + Math.round(p.rect.height));
-      });
-
-      // 방법 A: "업로드", "upload", "add_photo", "내 컴퓨터" 텍스트가 포함된 버튼
-      var uploadKeywords = ['upload', '업로드', 'add_photo', '내 컴퓨터', 'computer', '파일에서', '이미지 추가'];
-      for (var pk = 0; pk < panelElements.length && !uploadTriggered; pk++) {
-        var elTxt = panelElements[pk].text.toLowerCase();
-        var elAria = panelElements[pk].ariaLabel.toLowerCase();
-        for (var uk = 0; uk < uploadKeywords.length; uk++) {
-          if (elTxt.includes(uploadKeywords[uk]) || elAria.includes(uploadKeywords[uk])) {
-            console.log('[Flow Auto] 업로드 버튼 발견 (텍스트): "' + panelElements[pk].text.substring(0, 40) + '" → 클릭');
-            simulateRealClick(panelElements[pk].el);
-            uploadTriggered = true;
-            await sleep(1000);
-            break;
-          }
-        }
-      }
-
-      // 방법 B: 패널 내 file input 찾기 (Flow 페이지의 것만, 확장 popup의 것 제외)
-      if (!uploadTriggered) {
-        var fileInputs = document.querySelectorAll('input[type="file"]');
-        for (var fi = 0; fi < fileInputs.length; fi++) {
-          if (fileInputs[fi].id === 'fileInput' || fileInputs[fi].id === 'grokFileInput' ||
-              fileInputs[fi].id === 'grokPromptFileInput') continue;
-          var fiParent = fileInputs[fi].closest('body');
-          console.log('[Flow Auto] Flow file input 발견: accept="' + (fileInputs[fi].accept || '') +
-            '" id="' + (fileInputs[fi].id || '') + '" → 클릭');
-          fileInputs[fi].click();
+    // 방법 A: "업로드", "upload", "add_photo", "내 컴퓨터" 텍스트가 포함된 버튼
+    var uploadKeywords = ['upload', '업로드', 'add_photo', '내 컴퓨터', 'computer', '파일에서', '이미지 추가'];
+    for (var pk = 0; pk < panelElements.length && !uploadTriggered; pk++) {
+      var elTxt = panelElements[pk].text.toLowerCase();
+      var elAria = panelElements[pk].ariaLabel.toLowerCase();
+      for (var uk = 0; uk < uploadKeywords.length; uk++) {
+        if (elTxt.includes(uploadKeywords[uk]) || elAria.includes(uploadKeywords[uk])) {
+          console.log('[Flow Auto] 업로드 버튼 발견 (텍스트): "' + panelElements[pk].text.substring(0, 40) + '" → 클릭');
+          simulateRealClick(panelElements[pk].el);
           uploadTriggered = true;
-          await sleep(500);
+          await sleep(1000);
           break;
         }
       }
+    }
 
-      // 방법 C: 패널 내 아이콘 버튼 (작은 크기, 이미지 관련 아이콘)
-      if (!uploadTriggered) {
-        for (var ib = 0; ib < panelElements.length && !uploadTriggered; ib++) {
-          var ibRect = panelElements[ib].rect;
-          var ibTxt = panelElements[ib].text;
-          if (ibRect.width >= 24 && ibRect.width <= 80 && ibRect.height >= 24 && ibRect.height <= 80 &&
-              (ibTxt.includes('add_photo') || ibTxt.includes('upload_file') || ibTxt.includes('cloud_upload') ||
-               ibTxt.includes('file_upload') || ibTxt.includes('image'))) {
-            console.log('[Flow Auto] 아이콘 버튼 발견: "' + ibTxt + '" → 클릭');
-            simulateRealClick(panelElements[ib].el);
-            uploadTriggered = true;
-            await sleep(1000);
-            break;
-          }
+    // 방법 B: 패널 내 file input 찾기 (Flow 페이지의 것만, 확장 popup의 것 제외)
+    if (!uploadTriggered) {
+      var fileInputs = document.querySelectorAll('input[type="file"]');
+      for (var fi = 0; fi < fileInputs.length; fi++) {
+        // 확장 popup의 file input 제외 (id로 구분)
+        if (fileInputs[fi].id === 'fileInput' || fileInputs[fi].id === 'grokFileInput' ||
+            fileInputs[fi].id === 'grokPromptFileInput') continue;
+        var fiParent = fileInputs[fi].closest('body');
+        // Flow 페이지의 file input만
+        console.log('[Flow Auto] Flow file input 발견: accept="' + (fileInputs[fi].accept || '') +
+          '" id="' + (fileInputs[fi].id || '') + '" → 클릭');
+        fileInputs[fi].click();
+        uploadTriggered = true;
+        await sleep(500);
+        break;
+      }
+    }
+
+    // 방법 C: 패널 내 아이콘 버튼 (작은 크기, 이미지 관련 아이콘)
+    if (!uploadTriggered) {
+      for (var ib = 0; ib < panelElements.length && !uploadTriggered; ib++) {
+        var ibRect = panelElements[ib].rect;
+        var ibTxt = panelElements[ib].text;
+        // 작은 아이콘 버튼 (32~64px), 머티리얼 아이콘 텍스트
+        if (ibRect.width >= 24 && ibRect.width <= 80 && ibRect.height >= 24 && ibRect.height <= 80 &&
+            (ibTxt.includes('add_photo') || ibTxt.includes('upload_file') || ibTxt.includes('cloud_upload') ||
+             ibTxt.includes('file_upload') || ibTxt.includes('image'))) {
+          console.log('[Flow Auto] 아이콘 버튼 발견: "' + ibTxt + '" → 클릭');
+          simulateRealClick(panelElements[ib].el);
+          uploadTriggered = true;
+          await sleep(1000);
+          break;
         }
       }
     }
 
     if (!uploadTriggered) {
-      console.warn('[Flow Auto] 업로드 메커니즘 미발견 (' + maxRetries + '회 시도). 패널 내 요소 확인 필요');
+      console.warn('[Flow Auto] 업로드 메커니즘 미발견. 패널 내 요소 확인 필요');
       // 패널 닫기
       document.dispatchEvent(new KeyboardEvent('keydown', {
         key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true
