@@ -1381,7 +1381,7 @@ async function startAutomation() {
       target: { tabId: tab.id },
       func: () => {
         window.__flowAutoRunning = false;
-        document.documentElement.removeAttribute('data-whisk-stop');
+        document.documentElement.removeAttribute('data-flow-stop');
       }
     });
   } catch (e) {
@@ -1434,7 +1434,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
   var LABEL_TO_KEY = { '피사체': 'subject', '장면': 'scene', '스타일': 'style' };
 
   function isStopRequested() {
-    return document.documentElement.getAttribute('data-whisk-stop') === 'true';
+    return document.documentElement.getAttribute('data-flow-stop') === 'true';
   }
 
   async function sleep(ms) {
@@ -2853,7 +2853,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     }
 
     // 시작 시 정지 플래그 초기화
-    document.documentElement.removeAttribute('data-whisk-stop');
+    document.documentElement.removeAttribute('data-flow-stop');
 
     // 시작 전 레이아웃 진단
     console.log('[Flow Auto] ====== 자동화 시작 전 레이아웃 진단 ======');
@@ -3152,7 +3152,7 @@ async function stopAutomation() {
   try {
     await chrome.scripting.executeScript({
       target: { tabId: tab.id },
-      func: () => document.documentElement.setAttribute('data-whisk-stop', 'true'),
+      func: () => document.documentElement.setAttribute('data-flow-stop', 'true'),
       world: 'MAIN'
     });
   } catch (e) {
