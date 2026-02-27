@@ -439,7 +439,25 @@ async function scanCharacterFolder(rootHandle) {
 // Load saved state from storage
 async function loadState() {
   try {
-    const result = await chrome.storage.local.get(['prompts', 'autoDownload', 'delay', 'projects', 'currentProject', 'saveLocation', 'useCustomDir']);
+    const result = await chrome.storage.local.get(['prompts', 'autoDownload', 'delay', 'projects', 'currentProject', 'saveLocation', 'useCustomDir', 'selectedModel', 'outputType', 'storageVersion']);
+
+    // v3 → v4 마이그레이션
+    if (!result.storageVersion || result.storageVersion < 4) {
+      console.log('[Flow] 스토리지 마이그레이션: v' + (result.storageVersion || 3) + ' → v4');
+      // styleImage 필드 제거 (Flow에는 스타일 이미지 슬롯 없음)
+      if (result.projects) {
+        for (const proj of Object.values(result.projects)) {
+          delete proj.styleImage;
+          delete proj.styleFromFolder;
+        }
+      }
+      // saveLocation 기본값 변경
+      if (result.saveLocation === 'whisk-images') {
+        result.saveLocation = 'flow-images';
+      }
+      await chrome.storage.local.set({ storageVersion: 4 });
+    }
+
     if (result.prompts) {
       prompts = result.prompts;
     }
@@ -448,6 +466,12 @@ async function loadState() {
     }
     if (result.delay) {
       delayInput.value = result.delay;
+    }
+    if (result.selectedModel && modelSelect) {
+      modelSelect.value = result.selectedModel;
+    }
+    if (result.outputType && outputType) {
+      document.getElementById('outputType').value = result.outputType;
     }
     if (result.projects) {
       // 저장소 데이터와 DEFAULT_PROJECTS를 깊은 병합
