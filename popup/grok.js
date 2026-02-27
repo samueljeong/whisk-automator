@@ -403,7 +403,7 @@
             name: file.name,
             dataUrl: e.target.result,
             motionPrompt: motion,
-            whiskPrompt: whiskText, // 원본 Whisk 프롬프트 보존
+            flowPrompt: whiskText, // 원본 Whisk 프롬프트 보존
             status: 'pending',
             videoUrl: null
           });
