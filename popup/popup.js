@@ -989,7 +989,7 @@ function saveCapuredCharacter() {
 }
 
 // 스타일 이미지 캡처
-async function captureStyleFromWhisk() {
+async function captureStyleFromFlow() {
   try {
     const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
     const tab = tabs[0];
@@ -3379,7 +3379,7 @@ stylePrefix.addEventListener('change', saveStyleSettings);
 styleSuffix.addEventListener('change', saveStyleSettings);
 
 // 스타일 이미지 캡처
-if (captureStyleBtn) captureStyleBtn.addEventListener('click', captureStyleFromWhisk);
+if (captureStyleBtn) captureStyleBtn.addEventListener('click', captureStyleFromFlow);
 
 // 템플릿 다운로드 헬퍼
 function downloadTextFile(filename, content) {
