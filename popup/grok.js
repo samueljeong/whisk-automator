@@ -303,7 +303,7 @@
   });
 
   // ============================================================
-  // Whisk 프롬프트 → 모션 프롬프트 자동 변환
+  // Flow 프롬프트 → 모션 프롬프트 자동 변환
   // ============================================================
   function generateMotionPrompt(imagePrompt) {
     if (!imagePrompt) return grokMotionPrompt.value || 'slow zoom in, cinematic';
