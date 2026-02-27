@@ -958,6 +958,7 @@ async function captureCharacterFromFlow() {
     // 모달 열기
     charNameInput.value = '';
     charAliasInput.value = '';
+    charFlowTagInput.value = '';
     captureModal.hidden = false;
 
   } catch (error) {
