@@ -70,7 +70,18 @@
   - 이미 라이브러리에 추가됐으므로 검색→키보드 선택 가능
   - 기존 `waitForAnalysisComplete` (라인 2295) 제거 또는 selectAssetByName 성공 시 스킵
 
-#### 시도 10 이후 (9번 실패 시 대안)
+#### 시도 9 결과 (부분 성공)
+- 키보드 ArrowDown+Enter로 에셋 선택은 **성공** (영상에서 프롬프트에 레퍼런스 이미지 확인)
+- Enter 키가 에셋 선택과 동시에 SPA 네비게이션을 트리거 → 페이지 이동
+- 네비게이션으로 DOM 파괴 → ref 카운트 0→0으로 나옴
+
+#### 시도 9-fix: Enter 키 네비게이션 차단
+- [x] **9e. history.pushState/replaceState 임시 오버라이드**: Enter 발행 전 차단, 완료 후 복원
+- [x] **9f. popstate/beforeunload 이벤트 차단**: 캡처 페이즈에서 차단
+- [x] **9g. 'navigated' 반환값 제거**: false로 교체, uploadReferences의 history.back() 로직 정리
+- [x] **9h. 패널 닫기 후 대기 시간 증가**: 1000ms → 1500ms (DOM 업데이트 시간 확보)
+
+#### 시도 10 이후 (9-fix 실패 시 대안)
 - [ ] **10. Drag & Drop 시뮬레이션**
 - [ ] **11. Slate.js 직접 void 노드 삽입**
 
