@@ -1,11 +1,8 @@
-# Flow 레퍼런스 업로드 — selectAssetByName 제거
+# uploadNewAsset 패널 로딩 재시도 추가
 
-## 수정 내용
+## 원인
+selectAssetByName 제거 후 uploadNewAsset 단독 실행 시, 패널이 아직 로딩 중인데 업로드 버튼을 바로 찾아서 전부 실패.
 
-### popup/popup.js `uploadReferences()` (~라인 2282-2300)
-
-`selectAssetByName` 호출을 제거하고 항상 `uploadNewAsset`으로 직접 업로드.
-
-이유: selectAssetByName이 에셋 클릭 → 상세 페이지 이동 → 이후 uploadNewAsset 고장.
-
-selectAssetByName 함수 자체는 유지 (호출만 제거).
+## 수정
+패널 요소 탐색 + 업로드 버튼 찾기(방법 A/B/C)를 최대 3회 재시도 루프로 감싸기.
+재시도 간격 1.5초. 실패 로그에 시도 횟수 표시.
