@@ -650,7 +650,6 @@ function renderStyleSettings() {
   const project = PROJECTS[currentProject];
   if (!project) return;
 
-  styleUrl.value = project.styleImage || '';
   stylePrefix.value = project.stylePrefix || '';
   styleSuffix.value = project.styleSuffix || '';
 }
