@@ -818,14 +818,12 @@
           const rect = element.getBoundingClientRect();
           const x = rect.left + rect.width / 2;
           const y = rect.top + rect.height / 2;
-          const opts = { bubbles: true, cancelable: true, clientX: x, clientY: y };
-          element.dispatchEvent(new MouseEvent('mouseover', opts));
-          element.dispatchEvent(new MouseEvent('mouseenter', opts));
-          element.dispatchEvent(new MouseEvent('mousedown', { ...opts, button: 0 }));
-          setTimeout(() => {
-            element.dispatchEvent(new MouseEvent('mouseup', { ...opts, button: 0 }));
-            element.dispatchEvent(new MouseEvent('click', { ...opts, button: 0 }));
-          }, 50 + Math.random() * 100);
+          const opts = { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0 };
+          element.dispatchEvent(new PointerEvent('pointerdown', { ...opts, pointerId: 1 }));
+          element.dispatchEvent(new MouseEvent('mousedown', opts));
+          element.dispatchEvent(new PointerEvent('pointerup', { ...opts, pointerId: 1 }));
+          element.dispatchEvent(new MouseEvent('mouseup', opts));
+          element.dispatchEvent(new MouseEvent('click', opts));
         }
 
         // ── 1단계: aria-label로 동영상 생성 버튼 직접 탐색 ──
