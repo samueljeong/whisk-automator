@@ -872,7 +872,7 @@ async function captureCharacterFromFlow() {
     const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
     const tab = tabs[0];
 
-    // Whisk 페이지에서 이미지 캡처
+    // Flow 페이지에서 이미지 캡처
     const results = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: () => {
