@@ -3245,7 +3245,7 @@ async function handleHardReset(completedCount) {
 
         const check = results[0]?.result;
         if (check && check.hasInput && check.hasButtons) {
-          console.log(`[Popup] Whisk UI 준비 완료 (${waited / 1000}초, 버튼 ${check.buttonCount}개)`);
+          console.log(`[Popup] Flow UI 준비 완료 (${waited / 1000}초, 버튼 ${check.buttonCount}개)`);
           uiReady = true;
           break;
         }
