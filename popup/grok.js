@@ -170,8 +170,8 @@
       const nameEl = document.createElement('div');
       nameEl.className = 'grok-queue-item-name';
       nameEl.textContent = item.name;
-      if (item.whiskPrompt) {
-        nameEl.title = `원본: ${item.whiskPrompt}`;
+      if (item.flowPrompt) {
+        nameEl.title = `원본: ${item.flowPrompt}`;
       }
 
       const promptDiv = document.createElement('div');
@@ -198,10 +198,10 @@
 
       info.appendChild(nameEl);
       // 원본 Whisk 프롬프트 표시 (있으면)
-      if (item.whiskPrompt) {
+      if (item.flowPrompt) {
         const origEl = document.createElement('div');
         origEl.className = 'grok-queue-item-origin';
-        origEl.textContent = item.whiskPrompt;
+        origEl.textContent = item.flowPrompt;
         info.appendChild(origEl);
       }
       info.appendChild(promptDiv);
