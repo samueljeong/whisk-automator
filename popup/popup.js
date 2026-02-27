@@ -42,7 +42,6 @@ const cancelCaptureBtn = document.getElementById('cancelCaptureBtn');
 const saveCaptureBtn = document.getElementById('saveCaptureBtn');
 const stylePrefix = document.getElementById('stylePrefix');
 const styleSuffix = document.getElementById('styleSuffix');
-const captureStyleBtn = document.getElementById('captureStyleBtn');
 const characterWarning = document.getElementById('characterWarning');
 const warningText = document.getElementById('warningText');
 
