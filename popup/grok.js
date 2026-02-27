@@ -23,7 +23,7 @@
   const grokConnectionStatus = $('#grokConnectionStatus');
   const grokOpenTabBtn = $('#grokOpenTabBtn');
   const grokFileInput = $('#grokFileInput');
-  const grokImportWhiskBtn = $('#grokImportWhiskBtn');
+  const grokImportFlowBtn = $('#grokImportFlowBtn');
   const grokQueueEl = $('#grokQueue');
   const grokQueueCount = $('#grokQueueCount');
   const grokClearQueueBtn = $('#grokClearQueueBtn');
@@ -361,7 +361,7 @@
   }
 
   // Whisk에서 가져오기 - 이미지 + Whisk 프롬프트 자동 매칭
-  grokImportWhiskBtn.addEventListener('click', async () => {
+  grokImportFlowBtn.addEventListener('click', async () => {
     try {
       const handles = await window.showOpenFilePicker({
         multiple: true,
