@@ -2114,7 +2114,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
     if (afterCloseVoids <= beforeVoids) {
       console.warn('[Flow Auto] 에셋 "' + charName + '" 삽입 실패 — 레퍼런스 이미지 증가 없음');
-      return false;
+      return 'navigated';
     }
 
     return true;
