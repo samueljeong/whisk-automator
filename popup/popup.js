@@ -1948,7 +1948,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
   // 10. "+" → 에셋 패널에서 캐릭터 검색 → 선택
   async function selectAssetByName(charName) {
     var promptEl = findPromptInput();
-    var beforeVoids = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]').length;
+    var beforeVoids = countRefImages(promptEl);
 
     // 1. "+" (ingredient) 버튼 클릭 → 에셋 패널 열기
     var ingredientBtn = findIngredientButton();
