@@ -154,21 +154,36 @@ await sleep(300);
 4. **다운로드 메커니즘**: 생성된 이미지/영상 다운로드 방법
 5. **Slate.js 입력 검증**: 어떤 입력 방법이 실제 생성에 반영되는지 (InputEvent vs paste vs execCommand)
 
-## 자동화 구현 전략
+## 자동화 구현 전략 (확정)
 
 ```
 1. 모델/출력 설정 (첫 실행 시):
-   → simulateRealClick(모델 버튼)
-   → 메뉴에서 Image/Video 선택
-   → 종횡비 선택
-   → 모델 하위 드롭다운에서 모델 선택
-   → Esc로 닫기
+   → simulateRealClick(모델 버튼) — 텍스트에 "Banana"/"Imagen" 포함
+   → [role="menu"] 내 "Image"/"Video" 버튼 React 클릭
+   → "가로 모드"/"세로 모드" React 클릭
+   → "x1"~"x4" React 클릭
+   → 모델명 버튼 React 클릭 → 하위 [role="menu"]에서 모델 선택
+   → Esc × 2로 닫기
 
 2. 각 프롬프트 루프:
-   → promptEl.focus() + execCommand('selectAll') + execCommand('delete')
-   → execCommand('insertText', false, prompt)
-   → simulateRealClick(생성 버튼)
-   → 생성 완료 대기 (DOM 변화 감시)
+   → promptEl.focus()
+   → Selection API로 전체 선택 + InputEvent(deleteContentBackward)
+   → InputEvent(insertText, data: prompt)
+   → simulateRealClick(생성 버튼) — "arrow_forward" + "만들기" 텍스트
+   → 생성 완료 대기 (DOM 감시 — 미확인, 실제 생성 시 관찰 필요)
    → 다운로드
    → delay
 ```
+
+### 핵심 함수 목록
+
+| 함수명 | 역할 |
+|--------|------|
+| `findPromptInput()` | `[role="textbox"][contenteditable]` 반환 |
+| `fillPrompt(text)` | InputEvent(beforeinput) 방식 텍스트 입력 |
+| `openModelMenu()` | 모델 버튼 simulateRealClick → [role="menu"] 반환 |
+| `selectOutputType(menu, type)` | "Image"/"Video" 메뉴 아이템 클릭 |
+| `selectModel(menu, modelName)` | 하위 드롭다운에서 모델 선택 |
+| `clickGenerate()` | 생성 버튼 simulateRealClick |
+| `waitForOutput()` | MutationObserver로 이미지/영상 출현 대기 |
+| `downloadOutput(el, name)` | 이미지 fetch→blob / 영상 blob→download |
