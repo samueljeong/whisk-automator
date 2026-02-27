@@ -1311,7 +1311,7 @@ async function startAutomation() {
   const sceneMap = buildSceneMap();
   // 리로드 후 재개용 캐시 저장
   sortedPromptsCache = promptsWithCharacters;
-  automationParams = { delayMs, shouldDownload, projectStyleImage, characterMap, savePath, sceneMap, useCustomDir: !!customDirHandle };
+  automationParams = { delayMs, shouldDownload, characterMap, savePath, sceneMap, useCustomDir: !!customDirHandle, selectedModel, selectedOutputType };
 
   completedOffset = 0;
 
