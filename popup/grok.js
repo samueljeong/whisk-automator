@@ -687,6 +687,18 @@
       target: { tabId: grokTabId },
       world: 'MAIN',
       func: (imgDataUrl) => {
+        function simulateClick(element) {
+          const rect = element.getBoundingClientRect();
+          const x = rect.left + rect.width / 2;
+          const y = rect.top + rect.height / 2;
+          const opts = { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0 };
+          element.dispatchEvent(new PointerEvent('pointerdown', { ...opts, pointerId: 1 }));
+          element.dispatchEvent(new MouseEvent('mousedown', opts));
+          element.dispatchEvent(new PointerEvent('pointerup', { ...opts, pointerId: 1 }));
+          element.dispatchEvent(new MouseEvent('mouseup', opts));
+          element.dispatchEvent(new MouseEvent('click', opts));
+        }
+
         // data-grok-upload에 dataUrl 설정
         document.documentElement.setAttribute('data-grok-upload', imgDataUrl);
         document.documentElement.removeAttribute('data-grok-upload-done');
@@ -695,7 +707,11 @@
         // grok.com의 이미지 첨부 버튼 클릭
         const attachBtn = document.querySelector('button[aria-label*="attach"], button[aria-label*="Attach"], button[aria-label*="image"], button[aria-label*="Image"], [data-testid="attach-button"], input[type="file"]');
         if (attachBtn) {
-          attachBtn.click();
+          if (attachBtn.tagName === 'INPUT') {
+            attachBtn.click(); // input[type="file"]은 네이티브 다이얼로그 → .click() 유지
+          } else {
+            simulateClick(attachBtn); // React 버튼은 simulateClick
+          }
         } else {
           // 대안: 모든 버튼에서 첨부 관련 버튼 찾기
           const buttons = document.querySelectorAll('button');
@@ -705,7 +721,7 @@
             if (text.includes('attach') || text.includes('upload') || text.includes('image') ||
                 label.includes('attach') || label.includes('upload') ||
                 btn.querySelector('svg path[d*="M21.44"]')) { // 일반적인 첨부 아이콘 패스
-              btn.click();
+              simulateClick(btn);
               break;
             }
           }
