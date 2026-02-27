@@ -3256,7 +3256,7 @@ async function handleHardReset(completedCount) {
     }
 
     if (!uiReady) {
-      console.warn('[Popup] 20초 내 Whisk UI 미감지, 그래도 재주입 시도');
+      console.warn('[Popup] 20초 내 Flow UI 미감지, 그래도 재주입 시도');
     }
 
     // 추가 안정화 대기 (UI 렌더링 완료)
