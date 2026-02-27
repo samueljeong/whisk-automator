@@ -1472,1174 +1472,331 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     el.dispatchEvent(new MouseEvent('click', opts));
   }
 
-  // === 사이드바 헬퍼 함수 ===
+  // === Flow 전용 헬퍼 함수 ===
 
-  // 사이드바 요소가 있는 DOM 루트 (document, shadowRoot, 또는 iframe contentDocument)
-  var sidebarRoot = document;
-
-  // Shadow DOM을 포함한 깊은 검색
-  function deepQueryAll(selector, root) {
-    root = root || document;
-    var results = [];
-
-    try {
-      var found = root.querySelectorAll(selector);
-      for (var i = 0; i < found.length; i++) results.push(found[i]);
-    } catch(e) {}
-
-    // Shadow root 내부도 검색
-    try {
-      var allEls = root.querySelectorAll('*');
-      for (var i = 0; i < allEls.length; i++) {
-        try {
-          if (allEls[i].shadowRoot) {
-            var shadowResults = deepQueryAll(selector, allEls[i].shadowRoot);
-            for (var j = 0; j < shadowResults.length; j++) results.push(shadowResults[j]);
-          }
-        } catch(e) {}
-      }
-    } catch(e) {}
-
-    return results;
+  // 1. Slate.js 프롬프트 입력창 찾기
+  function findPromptInput() {
+    var el = document.querySelector('[role="textbox"][contenteditable]');
+    if (!el) {
+      throw new Error('프롬프트 입력창을 찾을 수 없습니다 ([role="textbox"][contenteditable])');
+    }
+    var rect = el.getBoundingClientRect();
+    console.log('[Flow Auto] 프롬프트 입력창 발견: ' + Math.round(rect.width) + 'x' + Math.round(rect.height) +
+      ' at(' + Math.round(rect.left) + ',' + Math.round(rect.top) + ')');
+    return el;
   }
 
-  // "피사체" 라벨 검색 (H4뿐 아니라 span, div 등 모든 요소)
-  function findSubjectLabel() {
-    // 1. Light DOM - 다양한 태그에서 검색
-    var selectors = 'h1,h2,h3,h4,h5,h6,span,div,label,p';
-    var candidates = document.querySelectorAll(selectors);
-    for (var i = 0; i < candidates.length; i++) {
-      var text = candidates[i].textContent.trim();
-      if (text === '피사체') {
-        var rect = candidates[i].getBoundingClientRect();
-        if (rect.width > 0 && rect.left >= 0) {
-          return { el: candidates[i], root: document, source: 'light DOM ' + candidates[i].tagName };
-        }
-      }
-    }
+  // 2. InputEvent(beforeinput) 방식으로 Slate.js에 텍스트 입력
+  async function fillPrompt(text) {
+    var promptEl = findPromptInput();
+    promptEl.focus();
+    await sleep(200);
 
-    // 2. Shadow DOM
-    var shadowCandidates = deepQueryAll('h4,span,div,label');
-    for (var i = 0; i < shadowCandidates.length; i++) {
-      if (shadowCandidates[i].textContent.trim() === '피사체') {
-        var rootNode = shadowCandidates[i].getRootNode();
-        return { el: shadowCandidates[i], root: rootNode, source: 'shadow DOM' };
-      }
-    }
+    // 전체 선택 (Selection API)
+    var sel = window.getSelection();
+    var range = document.createRange();
+    range.selectNodeContents(promptEl);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    await sleep(100);
 
-    return null;
+    // 기존 텍스트 삭제
+    promptEl.dispatchEvent(new InputEvent('beforeinput', {
+      inputType: 'deleteContentBackward',
+      bubbles: true, cancelable: true, composed: true
+    }));
+    await sleep(200);
+
+    // 새 텍스트 삽입
+    promptEl.dispatchEvent(new InputEvent('beforeinput', {
+      inputType: 'insertText',
+      data: text,
+      bubbles: true, cancelable: true, composed: true
+    }));
+    await sleep(300);
+
+    // 입력 확인
+    var content = promptEl.textContent.trim();
+    if (content.length === 0) {
+      console.warn('[Flow Auto] 프롬프트 입력 후 textContent 비어있음, 재시도...');
+      promptEl.focus();
+      await sleep(100);
+      promptEl.dispatchEvent(new InputEvent('beforeinput', {
+        inputType: 'insertText',
+        data: text,
+        bubbles: true, cancelable: true, composed: true
+      }));
+      await sleep(300);
+    }
+    console.log('[Flow Auto] 프롬프트 입력 완료: "' + text.substring(0, 50) + (text.length > 50 ? '...' : '') + '"');
+    return true;
   }
 
-  // 사이드바 열기 (닫혀있으면 "이미지 추가" 또는 토글 버튼 클릭)
-  async function openSidebar() {
-    // 이미 열려있는지 확인
-    var label = findSubjectLabel();
-    if (label) {
-      console.log('[Flow Auto] 사이드바 이미 열림 (' + label.source + ')');
-      return true;
-    }
-
-    console.log('[Flow Auto] 사이드바 닫힌 상태, 열기 시도...');
-
-    var buttons = document.querySelectorAll('button');
-
-    // 전략 1: "이미지 추가" 버튼 찾기
+  // 3. 모델 메뉴 트리거 버튼 찾기 (하단 영역에서 "Banana"/"Imagen"/"Nano" 텍스트)
+  function findModelButton() {
+    var buttons = document.querySelectorAll('button, [role="button"]');
     for (var i = 0; i < buttons.length; i++) {
       var txt = (buttons[i].textContent || '').trim();
-      if (txt.includes('이미지') && txt.includes('추가')) {
-        console.log('[Flow Auto] "이미지 추가" 버튼 클릭: "' + txt + '"');
-        buttons[i].click();
-        await sleep(1500);
-        return true;
+      var rect = buttons[i].getBoundingClientRect();
+      if (rect.top > 500 && rect.width > 0 &&
+          (txt.includes('Banana') || txt.includes('Imagen') || txt.includes('Nano'))) {
+        console.log('[Flow Auto] 모델 버튼 발견: "' + txt.substring(0, 40) + '" at(' +
+          Math.round(rect.left) + ',' + Math.round(rect.top) + ')');
+        return buttons[i];
       }
     }
-
-    // 전략 2: 좌측 상단 검정 토글 버튼 (작은 원형, ">" 화살표)
-    for (var i = 0; i < buttons.length; i++) {
-      var r = buttons[i].getBoundingClientRect();
-      if (r.width >= 20 && r.width <= 60 && r.height >= 20 && r.height <= 60 && r.left < 120) {
-        try {
-          var bg = getComputedStyle(buttons[i]).backgroundColor;
-          var m = bg.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
-          if (m && Number(m[1]) < 80 && Number(m[2]) < 80 && Number(m[3]) < 80) {
-            console.log('[Flow Auto] 토글 버튼(검정) 클릭: ' + Math.round(r.width) + 'x' + Math.round(r.height) +
-              ' at(' + Math.round(r.left) + ',' + Math.round(r.top) + ')');
-            buttons[i].click();
-            await sleep(1500);
-            return true;
-          }
-        } catch(e) {}
-      }
-    }
-
-    // 전략 3: aria-label로 찾기
-    var ariaEls = document.querySelectorAll('[aria-label]');
-    for (var i = 0; i < ariaEls.length; i++) {
-      var ariaLabel = (ariaEls[i].getAttribute('aria-label') || '').toLowerCase();
-      if (ariaLabel.includes('이미지') || ariaLabel.includes('image') ||
-          ariaLabel.includes('expand') || ariaLabel.includes('open') ||
-          ariaLabel.includes('panel') || ariaLabel.includes('sidebar')) {
-        var r = ariaEls[i].getBoundingClientRect();
-        if (r.width > 10 && r.left < 200) {
-          console.log('[Flow Auto] aria-label 토글 클릭: "' + ariaLabel + '"');
-          ariaEls[i].click();
-          await sleep(1500);
-          return true;
-        }
-      }
-    }
-
-    console.log('[Flow Auto] 사이드바 열기 실패 - 열 수 있는 버튼 미발견');
-    return false;
-  }
-
-  // 페이지 구조 진단 덤프
-  function dumpPageDiagnostics() {
-    console.log('[Flow Auto] === 페이지 진단 ===');
-    console.log('[Flow Auto] URL:', window.location.href.substring(0, 100));
-
-    // headings
-    var allHeadings = document.querySelectorAll('h1,h2,h3,h4,h5,h6');
-    console.log('[Flow Auto] heading 수 (light DOM):', allHeadings.length);
-    for (var i = 0; i < Math.min(allHeadings.length, 10); i++) {
-      console.log('[Flow Auto]   ' + allHeadings[i].tagName + ': ' + allHeadings[i].textContent.trim().substring(0, 40));
-    }
-
-    // Shadow roots
-    var shadowCount = 0;
-    var shadowHostTags = [];
-    try {
-      document.querySelectorAll('*').forEach(function(el) {
-        if (el.shadowRoot) {
-          shadowCount++;
-          shadowHostTags.push(el.tagName.toLowerCase());
-        }
-      });
-    } catch(e) {}
-    console.log('[Flow Auto] Shadow root 수:', shadowCount, shadowHostTags.length > 0 ? '호스트: ' + shadowHostTags.join(', ') : '');
-
-    // Shadow DOM 내 heading 검색
-    if (shadowCount > 0) {
-      var deepH4s = deepQueryAll('h4');
-      console.log('[Flow Auto] Shadow DOM 포함 H4 수:', deepH4s.length);
-      for (var i = 0; i < Math.min(deepH4s.length, 10); i++) {
-        var rootType = deepH4s[i].getRootNode() === document ? 'light' : 'shadow';
-        console.log('[Flow Auto]   [' + rootType + '] ' + deepH4s[i].textContent.trim().substring(0, 40));
-      }
-    }
-
-    // iframes
-    var iframes = document.querySelectorAll('iframe');
-    console.log('[Flow Auto] iframe 수:', iframes.length);
-    for (var i = 0; i < iframes.length; i++) {
-      var src = (iframes[i].src || '').substring(0, 80);
-      try {
-        var iDoc = iframes[i].contentDocument;
-        if (iDoc) {
-          var iH4Count = iDoc.querySelectorAll('h4').length;
-          console.log('[Flow Auto]   iframe[' + i + '] h4:' + iH4Count + ' src:' + src);
-        } else {
-          console.log('[Flow Auto]   iframe[' + i + '] doc:null src:' + src);
-        }
-      } catch(e) {
-        console.log('[Flow Auto]   iframe[' + i + '] cross-origin src:' + src);
-      }
-    }
-
-    // file inputs
-    var fileInputs = document.querySelectorAll('input[type="file"]');
-    console.log('[Flow Auto] file input 수:', fileInputs.length);
-
-    // 큰 버튼
-    var bigBtns = [];
-    document.querySelectorAll('button, div[role="button"]').forEach(function(b) {
-      var r = b.getBoundingClientRect();
-      if (r.width > 80 && r.height > 80) {
-        bigBtns.push(Math.round(r.width) + 'x' + Math.round(r.height) + '@' + Math.round(r.left) + ',' + Math.round(r.top));
-      }
-    });
-    console.log('[Flow Auto] 큰 버튼(>80px):', bigBtns.length, bigBtns.slice(0, 5).join(' | '));
-
-    // "피사체" / "Subject" 텍스트 존재 여부
-    try {
-      var bodyText = document.body.innerText;
-      ['피사체', 'Subject', 'subject', '장면', 'Scene', '스타일', 'Style'].forEach(function(keyword) {
-        if (bodyText.indexOf(keyword) >= 0) {
-          console.log('[Flow Auto] "' + keyword + '" 텍스트 body.innerText에 존재');
-        }
-      });
-      if (bodyText.indexOf('피사체') < 0 && bodyText.indexOf('Subject') < 0) {
-        console.log('[Flow Auto] "피사체"/"Subject" 텍스트 body.innerText에 없음');
-      }
-    } catch(e) {}
-
-    // textarea
-    var ta = document.querySelector('textarea');
-    console.log('[Flow Auto] textarea:', ta ? 'found (' + ta.placeholder.substring(0, 50) + ')' : 'not found');
-
-    // 모든 버튼 (크기 무관)
-    var allBtns = document.querySelectorAll('button');
-    console.log('[Flow Auto] 전체 button 수:', allBtns.length);
-    allBtns.forEach(function(b, i) {
-      var r = b.getBoundingClientRect();
-      var txt = (b.textContent || '').trim().substring(0, 30);
-      var aria = b.getAttribute('aria-label') || '';
-      console.log('[Flow Auto]   btn[' + i + '] ' + Math.round(r.width) + 'x' + Math.round(r.height) +
-        ' at(' + Math.round(r.left) + ',' + Math.round(r.top) + ')' +
-        (txt ? ' text:"' + txt + '"' : '') +
-        (aria ? ' aria:"' + aria + '"' : ''));
-    });
-
-    // aria-label이 있는 요소들
-    var ariaEls = document.querySelectorAll('[aria-label]');
-    console.log('[Flow Auto] aria-label 요소 수:', ariaEls.length);
-    ariaEls.forEach(function(el, i) {
-      var r = el.getBoundingClientRect();
-      if (r.width > 5) {
-        console.log('[Flow Auto]   aria[' + i + '] ' + el.tagName + ' ' +
-          Math.round(r.width) + 'x' + Math.round(r.height) +
-          ' label:"' + el.getAttribute('aria-label').substring(0, 50) + '"');
-      }
-    });
-
-    // role이 있는 요소들
-    var roleEls = document.querySelectorAll('[role]');
-    var roleGroups = {};
-    roleEls.forEach(function(el) {
-      var role = el.getAttribute('role');
-      roleGroups[role] = (roleGroups[role] || 0) + 1;
-    });
-    console.log('[Flow Auto] role 요소:', JSON.stringify(roleGroups));
-
-    // 커서 pointer인 작은 요소들 (사이드바 토글 버튼 후보)
-    var pointerEls = [];
-    document.querySelectorAll('div, span, i, svg, a').forEach(function(el) {
-      try {
-        var r = el.getBoundingClientRect();
-        if (r.width > 10 && r.width < 80 && r.height > 10 && r.height < 80 && r.left >= 0) {
-          if (getComputedStyle(el).cursor === 'pointer') {
-            pointerEls.push(el.tagName + ' ' + Math.round(r.width) + 'x' + Math.round(r.height) +
-              ' at(' + Math.round(r.left) + ',' + Math.round(r.top) + ')' +
-              ' class:' + (typeof el.className === 'string' ? el.className.substring(0, 25) : ''));
-          }
-        }
-      } catch(e) {}
-    });
-    console.log('[Flow Auto] pointer 요소(' + pointerEls.length + '개):');
-    pointerEls.slice(0, 15).forEach(function(s, i) {
-      console.log('[Flow Auto]   ptr[' + i + '] ' + s);
-    });
-
-    console.log('[Flow Auto] === 진단 끝 ===');
-  }
-
-  // 사이드바 열기 + 라벨 대기
-  async function waitForSidebar(maxWaitMs) {
-    var start = Date.now();
-
-    // 먼저 사이드바 열기 시도
-    await openSidebar();
-
-    // 라벨 대기 (열린 후 렌더링 시간 필요할 수 있음)
-    while (Date.now() - start < maxWaitMs) {
-      var result = findSubjectLabel();
-      if (result) {
-        sidebarRoot = result.root;
-        console.log('[Flow Auto] 사이드바 라벨 발견 (' + result.source + ', ' + (Date.now() - start) + 'ms)');
-        return true;
-      }
-      await sleep(500);
-    }
-    console.log('[Flow Auto] 사이드바 라벨 ' + maxWaitMs + 'ms 내 미발견');
-    dumpPageDiagnostics();
-    return false;
-  }
-
-  // 사이드바의 off-screen 컨테이너 찾기
-  function findSidebarContainer() {
-    var result = findSubjectLabel();
-    if (!result) return null;
-
-    var el = result.el.parentElement;
-    for (var up = 0; up < 15; up++) {
-      if (!el) break;
-      var rect = el.getBoundingClientRect();
-      if (rect.left < -100 && rect.width > 200) {
-        console.log('[Flow Auto] 사이드바 컨테이너 발견: 레벨' + up +
-          ' left:' + Math.round(rect.left) + ' width:' + Math.round(rect.width) +
-          ' tag:' + el.tagName + ' class:' + (typeof el.className === 'string' ? el.className.substring(0, 40) : ''));
-        return el;
-      }
-      el = el.parentElement;
-    }
-    console.log('[Flow Auto] 사이드바 컨테이너 미발견 (on-screen이거나 구조 불일치)');
+    console.log('[Flow Auto] 모델 버튼 미발견');
     return null;
   }
 
-  // 사이드바를 CSS 오버라이드로 화면에 표시
-  function showSidebar(container) {
-    var original = container.getAttribute('style') || '';
-    var rect = container.getBoundingClientRect();
+  // 4. 모델 메뉴 열기 → [role="menu"] 반환
+  async function openModelMenu() {
+    var btn = findModelButton();
+    if (!btn) throw new Error('모델 메뉴 버튼을 찾을 수 없습니다');
 
-    if (rect.left >= 0) {
-      console.log('[Flow Auto] 사이드바 이미 화면에 있음');
-      return { style: original, wasOnScreen: true };
-    }
+    simulateRealClick(btn);
+    await sleep(500);
 
-    // off-screen 거리만큼 오른쪽으로 이동 (translateX 사용)
-    var shift = Math.abs(rect.left) + 10;
-    container.style.setProperty('transform', 'translateX(' + shift + 'px)', 'important');
-    container.style.setProperty('z-index', '99999', 'important');
-    container.style.setProperty('overflow', 'visible', 'important');
-
-    // 부모들의 overflow:hidden도 임시 해제
-    var parents = [];
-    var p = container.parentElement;
-    for (var pp = 0; pp < 5; pp++) {
-      if (!p) break;
-      var pStyle = getComputedStyle(p);
-      if (pStyle.overflow === 'hidden' || pStyle.overflowX === 'hidden') {
-        parents.push({ el: p, original: p.getAttribute('style') || '' });
-        p.style.setProperty('overflow', 'visible', 'important');
+    // [role="menu"] 대기 (최대 3초)
+    var waited = 0;
+    while (waited < 3000) {
+      var menus = document.querySelectorAll('[role="menu"]');
+      if (menus.length > 0) {
+        console.log('[Flow Auto] 모델 메뉴 열림 (' + menus.length + '개 [role="menu"])');
+        return menus[0];
       }
-      p = p.parentElement;
+      await sleep(300);
+      waited += 300;
     }
-
-    var newRect = container.getBoundingClientRect();
-    console.log('[Flow Auto] 사이드바 CSS 오버라이드: left ' + Math.round(rect.left) + ' → ' + Math.round(newRect.left));
-
-    return { style: original, wasOnScreen: false, parents: parents };
+    throw new Error('모델 메뉴([role="menu"])가 열리지 않습니다');
   }
 
-  // 사이드바 원래 상태 복원
-  function hideSidebar(container, saved) {
-    if (saved.wasOnScreen) return;
-    if (saved.style) {
-      container.setAttribute('style', saved.style);
-    } else {
-      container.removeAttribute('style');
-    }
-    // 부모 overflow도 복원
-    if (saved.parents) {
-      for (var i = 0; i < saved.parents.length; i++) {
-        var pi = saved.parents[i];
-        if (pi.original) {
-          pi.el.setAttribute('style', pi.original);
-        } else {
-          pi.el.removeAttribute('style');
-        }
-      }
-    }
-    console.log('[Flow Auto] 사이드바 CSS 복원');
-  }
-
-  // 핵심 함수: 3개 섹션 라벨의 위치+Y범위를 한 번에 반환
-  function getSectionRanges() {
-    var candidates = sidebarRoot.querySelectorAll('h1,h2,h3,h4,h5,h6,span,div,label,p');
-    var ranges = [];
-
-    for (var i = 0; i < candidates.length; i++) {
-      var text = candidates[i].textContent.trim();
-      var key = LABEL_TO_KEY[text];
-      if (!key) continue;
-      var rect = candidates[i].getBoundingClientRect();
-      if (rect.width === 0 || rect.left < 0) continue;
-      var dup = false;
-      for (var d = 0; d < ranges.length; d++) {
-        if (ranges[d].key === key) { dup = true; break; }
-      }
-      if (dup) continue;
-      ranges.push({ key: key, label: text, top: rect.top, labelLeft: rect.left, el: candidates[i] });
-    }
-
-    ranges.sort(function(a, b) { return a.top - b.top; });
-    for (var s = 0; s < ranges.length; s++) {
-      ranges[s].end = (s + 1 < ranges.length) ? ranges[s + 1].top : ranges[s].top + 500;
-    }
-    return ranges;
-  }
-
-  // 위치 기반으로 섹션별 슬롯 찾기 (부모 순회 대신 Y좌표로 매칭)
-  function findFlowSlots() {
-    var sections = { 'subject': [], 'scene': [], 'style': [] };
-    var sectionRanges = getSectionRanges();
-
-    if (sectionRanges.length === 0) {
-      console.log('[Flow Auto] 라벨 없음 → 슬롯 검색 불가');
-      return sections;
-    }
-
-    console.log('[Flow Auto] 라벨 ' + sectionRanges.length + '개 발견');
-    for (var lr = 0; lr < sectionRanges.length; lr++) {
-      console.log('[Flow Auto] 라벨 "' + sectionRanges[lr].label + '" pos:' + Math.round(sectionRanges[lr].labelLeft) + ',' + Math.round(sectionRanges[lr].top));
-    }
-
-    // 모든 큰 클릭 가능 요소를 찾아서 Y 위치로 섹션에 배정
-    // button, div[role=button], 그리고 cursor:pointer인 큰 div도 포함
-    var allClickables = sidebarRoot.querySelectorAll('button, div[role="button"]');
-    // cursor:pointer인 큰 div도 추가로 검색 (점선 테두리 업로드 영역)
-    var extraClickables = [];
-    sidebarRoot.querySelectorAll('div').forEach(function(el) {
-      var r = el.getBoundingClientRect();
-      if (r.width >= 80 && r.height >= 80 && r.left >= 0) {
-        try {
-          var cursor = getComputedStyle(el).cursor;
-          var border = getComputedStyle(el).borderStyle;
-          if (cursor === 'pointer' || border === 'dashed' || border.includes('dashed')) {
-            extraClickables.push(el);
-          }
-        } catch(e) {}
-      }
-    });
-    // 합치기
-    var combinedClickables = Array.from(allClickables).concat(extraClickables);
-    console.log('[Flow Auto] 전체 clickable 요소:', allClickables.length, '+ cursor:pointer/dashed div:', extraClickables.length);
-
-    // 사이드바 너비 추정: 라벨의 X 위치 기준으로 사이드바 영역 결정
-    var sidebarMaxX = 260; // 기본값
-    if (sectionRanges.length > 0) {
-      // 라벨이 있는 X 위치 + 여유를 사이드바 경계로 사용
-      var labelX = sectionRanges[0].labelLeft || 18;
-      sidebarMaxX = Math.max(260, labelX + 250);
-    }
-    console.log('[Flow Auto] 사이드바 X 경계: ' + sidebarMaxX + 'px');
-
-    var matched = 0;
-    for (var b = 0; b < combinedClickables.length; b++) {
-      var rect = combinedClickables[b].getBoundingClientRect();
-      if (rect.width < 55 || rect.height < 55 || rect.left < 0) continue;
-      // 사이드바 영역 밖의 요소는 제외 (메인 영역 생성 이미지 등)
-      if (rect.left > sidebarMaxX) continue;
-
-      var midY = rect.top + rect.height / 2;
-
-      for (var sr = sectionRanges.length - 1; sr >= 0; sr--) {
-        if (midY >= sectionRanges[sr].top && midY < sectionRanges[sr].end) {
-          sections[sectionRanges[sr].key].push(combinedClickables[b]);
-          matched++;
-          console.log('[Flow Auto] 슬롯 매칭: ' + combinedClickables[b].tagName +
-            ' ' + Math.round(rect.width) + 'x' + Math.round(rect.height) +
-            ' at(' + Math.round(rect.left) + ',' + Math.round(rect.top) + ')' +
-            ' border:' + (getComputedStyle(combinedClickables[b]).borderStyle || '-') +
-            ' → ' + sectionRanges[sr].key);
-          break;
-        }
-      }
-    }
-
-    console.log('[Flow Auto] 섹션별 슬롯: subject=' + sections.subject.length +
-      ', scene=' + sections.scene.length + ', style=' + sections.style.length +
-      ' (총 매칭: ' + matched + ')');
-    return sections;
-  }
-
-  // 래퍼: 특정 라벨의 Y범위만 반환
-  function getSectionYRange(labelText) {
-    var ranges = getSectionRanges();
-    for (var i = 0; i < ranges.length; i++) {
-      if (ranges[i].label === labelText) return { top: ranges[i].top, end: ranges[i].end };
-    }
-    return null;
-  }
-
-  // 디버그: 현재 섹션 레이아웃 전체 출력
-  function debugSectionLayout(tag) {
-    var prefix = '[Flow Auto] [LAYOUT' + (tag ? ':' + tag : '') + '] ';
-    var ranges = getSectionRanges();
-    console.log(prefix + '=== 섹션 Y좌표 ===');
-    for (var i = 0; i < ranges.length; i++) {
-      console.log(prefix + ranges[i].key + '("' + ranges[i].label + '"): Y=' +
-        Math.round(ranges[i].top) + '~' + Math.round(ranges[i].end) +
-        ' (X=' + Math.round(ranges[i].labelLeft) + ')');
-    }
-    // 각 슬롯의 이미지 삭제 버튼 위치
-    var delBtns = sidebarRoot.querySelectorAll('[aria-label="이미지 삭제"]');
-    for (var d = 0; d < delBtns.length; d++) {
-      var r = delBtns[d].getBoundingClientRect();
-      var sec = '범위밖';
-      for (var ri = 0; ri < ranges.length; ri++) {
-        if (r.top >= ranges[ri].top && r.top < ranges[ri].end) {
-          sec = ranges[ri].key;
-          break;
-        }
-      }
-      console.log(prefix + '삭제버튼[' + d + ']: Y=' + Math.round(r.top) + ' X=' + Math.round(r.left) + ' → ' + sec);
-    }
-    return ranges;
-  }
-
-  // 피사체 섹션 이미지를 Y위치 순으로 가져오기
-  function getSubjectImages() {
-    var range = getSectionYRange('피사체');
-    if (!range) return [];
-
-    var imgs = sidebarRoot.querySelectorAll('img');
-    var result = [];
-    for (var i = 0; i < imgs.length; i++) {
-      var ir = imgs[i].getBoundingClientRect();
-      if (ir.top >= range.top && ir.top < range.end && ir.width > 50 && ir.height > 50) {
-        result.push(imgs[i]);
-      }
-    }
-    result.sort(function(a, b) {
-      return a.getBoundingClientRect().top - b.getBoundingClientRect().top;
-    });
-    return result;
-  }
-
-  // 스타일 섹션 이미지를 Y위치 순으로 가져오기
-  function getStyleImages() {
-    var range = getSectionYRange('스타일');
-    if (!range) return [];
-    var imgs = sidebarRoot.querySelectorAll('img');
-    var result = [];
-    for (var i = 0; i < imgs.length; i++) {
-      var ir = imgs[i].getBoundingClientRect();
-      if (ir.top >= range.top && ir.top < range.end && ir.width > 50 && ir.height > 50) {
-        result.push(imgs[i]);
-      }
-    }
-    return result;
-  }
-
-  // 스타일 이미지 체크 상태 확인 + 해제 시 재활성화
-  async function ensureStyleChecked() {
-    var styleImgs = getStyleImages();
-    if (styleImgs.length === 0) return;
-    for (var i = 0; i < styleImgs.length; i++) {
-      var checkInfo = findCheckmarkFor(styleImgs[i]);
-      if (checkInfo.el && !checkInfo.checked) {
-        console.log('[Flow Auto] ⚠️ 스타일 체크 해제 감지, 재활성화...');
-        await toggleCheckmark(styleImgs[i]);
-      }
-    }
-  }
-
-  // 이미지의 체크/선택 여부 판단 + 클릭 대상 요소 찾기
-  function findCheckmarkFor(img) {
-    var imgRect = img.getBoundingClientRect();
-    // 이미지에 가장 가까운 "이미지 선택" 버튼을 찾아 배경색으로 선택 상태 판별
-    // 노란색(rgb(250, 212, 0)) = 선택됨, 투명 = 미선택
-    var selectBtns = sidebarRoot.querySelectorAll('[aria-label="이미지 선택"]');
-    var closest = null;
-    var closestDist = Infinity;
-    for (var i = 0; i < selectBtns.length; i++) {
-      var br = selectBtns[i].getBoundingClientRect();
-      var dist = Math.abs(br.top - imgRect.top);
-      if (dist < closestDist) {
-        closestDist = dist;
-        closest = selectBtns[i];
-      }
-    }
-    if (!closest || closestDist > 100) {
-      return { el: null, checked: false };
-    }
-    var bg = window.getComputedStyle(closest).backgroundColor;
-    var isSelected = bg === 'rgb(250, 212, 0)';
-    return { el: closest, checked: isSelected };
-  }
-
-  // 이미지의 선택 상태를 토글
-  // "이미지 선택" 버튼(aria-label)에 네이티브 .click() 호출
-  // 선택 상태는 버튼 배경색으로 판별: rgb(250, 212, 0) = 선택됨
-  async function toggleCheckmark(imgEl) {
-    var imgRect = imgEl.getBoundingClientRect();
-    var selectBtns = sidebarRoot.querySelectorAll('[aria-label="이미지 선택"]');
-    var closest = null;
-    var closestDist = Infinity;
-    for (var i = 0; i < selectBtns.length; i++) {
-      var br = selectBtns[i].getBoundingClientRect();
-      var dist = Math.abs(br.top - imgRect.top);
-      if (dist < closestDist) {
-        closestDist = dist;
-        closest = selectBtns[i];
-      }
-    }
-
-    if (!closest || closestDist > 100) {
-      console.log('[Flow Auto] 토글: 선택 버튼 미발견 (거리: ' + closestDist + ')');
-      return false;
-    }
-
-    var beforeBg = window.getComputedStyle(closest).backgroundColor;
-    var wasSelected = beforeBg === 'rgb(250, 212, 0)';
-
-    console.log('[Flow Auto] 토글: .click() (현재: ' + (wasSelected ? 'ON' : 'OFF') + ')');
-    closest.click();
-    await sleep(800);
-
-    var afterBg = window.getComputedStyle(closest).backgroundColor;
-    var isNowSelected = afterBg === 'rgb(250, 212, 0)';
-
-    if (wasSelected !== isNowSelected) {
-      console.log('[Flow Auto] 토글 성공: ' + (wasSelected ? 'ON→OFF' : 'OFF→ON'));
-      return true;
-    }
-
-    console.log('[Flow Auto] 토글 실패: 상태 변화 없음');
-    return false;
-  }
-
-  // 특정 캐릭터들만 활성화 (체크마크 토글)
-  // characterUploadOrder에 저장된 순서와 이미지 Y위치를 매칭
-  async function setActiveCharacters(targetNames) {
-    var subjectImgs = getSubjectImages();
-    if (subjectImgs.length === 0) {
-      console.log('[Flow Auto] setActive: 피사체 이미지 없음');
-      return false;
-    }
-
-    console.log('[Flow Auto] setActive: 이미지 ' + subjectImgs.length + '개, 활성화 대상: ' + targetNames.join(', '));
-
-    var changed = 0;
-    for (var i = 0; i < subjectImgs.length; i++) {
-      var charName = characterUploadOrder[i] || '?';
-      var shouldBeChecked = false;
-      for (var t = 0; t < targetNames.length; t++) {
-        if (targetNames[t].trim() === charName) { shouldBeChecked = true; break; }
-      }
-
-      var checkInfo = findCheckmarkFor(subjectImgs[i]);
-
-      if (shouldBeChecked && !checkInfo.checked) {
-        console.log('[Flow Auto]   ✓ ON: ' + charName + ' (index ' + i + ')');
-        var toggled = await toggleCheckmark(subjectImgs[i]);
-        if (toggled) changed++;
-      } else if (!shouldBeChecked && checkInfo.checked) {
-        console.log('[Flow Auto]   ✓ OFF: ' + charName + ' (index ' + i + ')');
-        var toggled = await toggleCheckmark(subjectImgs[i]);
-        if (toggled) changed++;
-      } else {
-        console.log('[Flow Auto]   유지: ' + charName + ' (' + (checkInfo.checked ? 'ON' : 'OFF') + ')');
-      }
-    }
-
-    console.log('[Flow Auto] setActive: ' + changed + '개 변경');
-    return true;
-  }
-
-  // 섹션 내 기존 이미지 모두 선택 해제 (체크마크 ✓ 클릭)
-  // 해제 후 검증 → 실패 시 재시도 (최대 5회)
-  // 모두 해제 실패 시 에러 throw
-  async function clearSlotImages(slotName) {
-    var labelText = SLOT_TO_LABEL[slotName];
-    var totalDeleted = 0;
-    var maxAttempts = 10;
-
-    // 대상 섹션이 보이도록 스크롤
-    var scrollRanges = getSectionRanges();
-    for (var si = 0; si < scrollRanges.length; si++) {
-      if (scrollRanges[si].label === labelText && scrollRanges[si].el) {
-        scrollRanges[si].el.scrollIntoView({ block: 'start', behavior: 'instant' });
+  // 5. Image/Video 전환
+  async function selectOutputType(menu, type) {
+    var targetText = type === 'video' ? 'Video' : 'Image';
+    var items = menu.querySelectorAll('*');
+    for (var i = 0; i < items.length; i++) {
+      var txt = items[i].textContent.trim();
+      if (txt === targetText && items[i].getBoundingClientRect().width > 0) {
+        // 가장 안쪽 클릭 가능 요소 찾기
+        var clickTarget = items[i].closest('button, [role="menuitem"], [role="menuitemradio"]') || items[i];
+        console.log('[Flow Auto] 출력 유형 선택: "' + targetText + '"');
+        simulateRealClick(clickTarget);
         await sleep(300);
+        return true;
+      }
+    }
+    console.log('[Flow Auto] 출력 유형 "' + targetText + '" 메뉴 아이템 미발견');
+    return false;
+  }
+
+  // 6. 모델 선택 (하위 메뉴 열어서 선택)
+  async function selectModel(menu, modelName) {
+    var MODEL_DISPLAY_NAMES = {
+      'nano-banana-pro': 'Nano Banana Pro',
+      'nano-banana-2': 'Nano Banana 2',
+      'imagen-4': 'Imagen 4'
+    };
+    var displayName = MODEL_DISPLAY_NAMES[modelName] || modelName;
+
+    // 메인 메뉴에서 현재 모델 버튼 찾기 (텍스트에 모델명 포함)
+    var modelItems = menu.querySelectorAll('*');
+    var modelBtn = null;
+    for (var i = 0; i < modelItems.length; i++) {
+      var txt = modelItems[i].textContent.trim();
+      if ((txt.includes('Banana') || txt.includes('Imagen') || txt.includes('Nano')) &&
+          modelItems[i].getBoundingClientRect().width > 0) {
+        var clickable = modelItems[i].closest('button, [role="menuitem"], [role="menuitemradio"]') || modelItems[i];
+        // 중복 방지: 이미 찾은 것과 같으면 건너뜀
+        if (modelBtn && modelBtn === clickable) continue;
+        modelBtn = clickable;
         break;
       }
     }
 
-    for (var attempt = 0; attempt < maxAttempts; attempt++) {
-      var range = getSectionYRange(labelText);
-      if (!range) {
-        console.log('[Flow Auto] clearSlot: 섹션 ' + labelText + ' 미발견');
-        return totalDeleted;
-      }
-
-      // 섹션 Y범위 내의 "이미지 삭제" 버튼 찾기
-      var delBtns = sidebarRoot.querySelectorAll('[aria-label="이미지 삭제"]');
-      var targetBtn = null;
-      for (var i = 0; i < delBtns.length; i++) {
-        var r = delBtns[i].getBoundingClientRect();
-        if (r.top >= range.top && r.top < range.end && r.left < 260) {
-          targetBtn = delBtns[i];
-          break;
-        }
-      }
-
-      if (!targetBtn) {
-        if (totalDeleted > 0) {
-          console.log('[Flow Auto] clearSlot(' + labelText + '): ' + totalDeleted + '개 삭제 완료');
-        } else {
-          console.log('[Flow Auto] clearSlot(' + labelText + '): 삭제할 이미지 없음');
-        }
-        return totalDeleted;
-      }
-
-      console.log('[Flow Auto] clearSlot(' + labelText + '): 이미지 삭제 (' + (totalDeleted + 1) + '번째)');
-      targetBtn.click();
-      totalDeleted++;
-      await sleep(800);
-    }
-
-    console.log('[Flow Auto] clearSlot(' + labelText + '): 총 ' + totalDeleted + '개 삭제 완료');
-    return totalDeleted;
-  }
-
-  // 섹션 내 "이미지 업로드" 버튼 찾기 (showOpenFilePicker를 직접 트리거하는 버튼)
-  function findSectionUploadButton(labelText) {
-    var ranges = getSectionRanges();
-    var targetRange = null;
-    for (var r = 0; r < ranges.length; r++) {
-      if (ranges[r].label === labelText) { targetRange = ranges[r]; break; }
-    }
-    if (!targetRange) {
-      console.log('[Flow Auto] 업로드 버튼 미발견 (' + labelText + '): 라벨 없음');
-      return null;
-    }
-
-    // 섹션 Y범위 내에서 "이미지 업로드" 버튼 찾기
-    var allBtns = sidebarRoot.querySelectorAll('button');
-    var uploadBtns = [];
-    for (var b = 0; b < allBtns.length; b++) {
-      var txt = allBtns[b].textContent.trim();
-      if (txt.indexOf('이미지 업로드') >= 0) {
-        var br = allBtns[b].getBoundingClientRect();
-        if (br.width > 0 && br.top >= targetRange.top && br.top < targetRange.end) {
-          uploadBtns.push({ el: allBtns[b], top: br.top, left: br.left });
-        }
-      }
-    }
-
-    if (uploadBtns.length > 0) {
-      // 가장 위에 있는 업로드 버튼 선택
-      uploadBtns.sort(function(a, b) { return a.top - b.top; });
-      console.log('[Flow Auto] "이미지 업로드" 버튼 발견 (' + labelText + '): ' +
-        uploadBtns.length + '개 중 첫번째 at(' + Math.round(uploadBtns[0].left) + ',' + Math.round(uploadBtns[0].top) + ')');
-      return uploadBtns[0].el;
-    }
-
-    console.log('[Flow Auto] "이미지 업로드" 버튼 없음 (' + labelText + '), Y범위=' +
-      Math.round(targetRange.top) + '~' + Math.round(targetRange.end));
-    return null;
-  }
-
-  // 섹션 헤더의 ⊕(추가) 버튼 찾기 (getSectionRanges 활용)
-  function findSectionAddButton(labelText) {
-    var ranges = getSectionRanges();
-    var targetRange = null;
-    for (var r = 0; r < ranges.length; r++) {
-      if (ranges[r].label === labelText) { targetRange = ranges[r]; break; }
-    }
-    if (!targetRange || !targetRange.el) {
-      console.log('[Flow Auto] ⊕ 버튼 미발견 (' + labelText + '): 라벨 없음');
-      return null;
-    }
-
-    var rect = targetRange.el.getBoundingClientRect();
-    // 라벨과 같은 줄에 있는 작은 버튼 찾기
-    var allBtns = sidebarRoot.querySelectorAll('button, [role="button"], svg');
-    var rowButtons = [];
-    for (var b = 0; b < allBtns.length; b++) {
-      var br = allBtns[b].getBoundingClientRect();
-      // 같은 줄 (Y 차이 < 25), 작은 크기, 라벨 오른쪽
-      if (Math.abs(br.top + br.height / 2 - rect.top - rect.height / 2) < 25 &&
-          br.width >= 15 && br.width <= 50 && br.height >= 15 && br.height <= 50 &&
-          br.left > rect.left) {
-        rowButtons.push({ el: allBtns[b], left: br.left, aria: allBtns[b].getAttribute('aria-label') || '' });
-      }
-    }
-
-    // 우선순위: aria-label="새 카테고리 추가" 버튼 (실제 ⊕ 추가 버튼)
-    var addBtn = null;
-    for (var ab = 0; ab < rowButtons.length; ab++) {
-      if (rowButtons[ab].aria === '새 카테고리 추가') {
-        addBtn = rowButtons[ab];
-        break;
-      }
-    }
-    // fallback: aria-label에 "추가" 또는 "add" 포함
-    if (!addBtn) {
-      for (var ab2 = 0; ab2 < rowButtons.length; ab2++) {
-        var ariaLower = rowButtons[ab2].aria.toLowerCase();
-        if (ariaLower.indexOf('추가') >= 0 || ariaLower.indexOf('add') >= 0) {
-          addBtn = rowButtons[ab2];
-          break;
-        }
-      }
-    }
-
-    if (addBtn) {
-      var abr = addBtn.el.getBoundingClientRect();
-      console.log('[Flow Auto] ⊕ 버튼 발견 (' + labelText + '): ' + addBtn.el.tagName +
-        ' at(' + Math.round(addBtn.left) + ',' + Math.round(abr.top) + ')' +
-        ' aria="' + addBtn.aria + '"');
-      return addBtn.el;
-    }
-    console.log('[Flow Auto] ⊕ 버튼 미발견 (' + labelText + '), 후보 ' + rowButtons.length + '개 중 "추가" 없음');
-    return null;
-  }
-
-  async function uploadImageToSlot(imageUrl, slotName, skipClear) {
-    if (!imageUrl) return false;
-
-    var labelText = SLOT_TO_LABEL[slotName];
-    var isBase64 = imageUrl.startsWith('data:');
-    console.log('[Flow Auto] ' + slotName + '(' + labelText + ') 업로드' + (skipClear ? ' (추가)' : '') + ':', isBase64 ? 'Base64' : imageUrl.substring(0, 80));
-
-    try {
-      // Step 1: 사이드바 열기/대기
-      var sidebarReady = await waitForSidebar(5000);
-      if (!sidebarReady) {
-        console.log('[Flow Auto] 사이드바 미발견, 업로드 건너뜀');
-        return false;
-      }
-
-      // Step 1.5: 대상 섹션이 보이도록 사이드바 스크롤
-      var scrollRanges = getSectionRanges();
-      for (var si = 0; si < scrollRanges.length; si++) {
-        if (scrollRanges[si].label === labelText && scrollRanges[si].el) {
-          scrollRanges[si].el.scrollIntoView({ block: 'start', behavior: 'instant' });
-          await sleep(300); // 스크롤 완료 대기
-          console.log('[Flow Auto] ' + labelText + ' 섹션으로 스크롤 완료');
-          break;
-        }
-      }
-
-      // Step 2: 기존 이미지 선택 해제 (skipClear=true면 건너뜀 - 다중 캐릭터 추가 시)
-      if (!skipClear) {
-        var clearedCount = await clearSlotImages(slotName);
-        if (clearedCount > 0) {
-          console.log('[Flow Auto] 기존 이미지 ' + clearedCount + '개 해제');
-          await sleep(1000);
-          // 해제 후 사이드바가 닫힐 수 있으므로 다시 열기
-          var reopened = await waitForSidebar(5000);
-          if (!reopened) {
-            console.log('[Flow Auto] 해제 후 사이드바 재열기 실패, 재시도...');
-            await sleep(2000);
-            await waitForSidebar(5000);
-          }
-        }
-      }
-
-      // Step 3: 이미지 → base64 Data URL (MAIN world 전달용)
-      var res = await fetch(imageUrl);
-      var blob = await res.blob();
-      var dataUrl = await new Promise(function(resolve, reject) {
-        var reader = new FileReader();
-        reader.onload = function() { resolve(reader.result); };
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-
-      // Step 4: 인터셉터 존재 확인 + 자동 주입
-      var interceptorReady = document.documentElement.getAttribute('data-flow-interceptor-ready') === 'true';
-      console.log('[Flow Auto] interceptor 상태:', interceptorReady ? '설치됨' : '미설치');
-
-      if (!interceptorReady) {
-        console.warn('[Flow Auto] interceptor 미설치! background에 주입 요청...');
-        try {
-          await new Promise(function(resolve) {
-            chrome.runtime.sendMessage({ action: 'INJECT_INTERCEPTOR' }, function(resp) {
-              console.log('[Flow Auto] interceptor 주입 응답:', resp);
-              resolve(resp);
-            });
-          });
-          await sleep(500);
-          interceptorReady = document.documentElement.getAttribute('data-flow-interceptor-ready') === 'true';
-          console.log('[Flow Auto] interceptor 재주입 결과:', interceptorReady ? '성공' : '실패');
-        } catch (e) {
-          console.error('[Flow Auto] interceptor 주입 요청 실패:', e.message);
-        }
-      }
-
-      // Step 4.5: 데이터 설정 + 섹션 스크롤
-      document.documentElement.setAttribute('data-flow-upload', dataUrl);
-      document.documentElement.removeAttribute('data-flow-upload-done');
-      console.log('[Flow Auto] data-flow-upload 설정 완료 (길이: ' + dataUrl.length + ')');
-
-      var preClickRanges = getSectionRanges();
-      for (var psi = 0; psi < preClickRanges.length; psi++) {
-        if (preClickRanges[psi].label === labelText && preClickRanges[psi].el) {
-          preClickRanges[psi].el.scrollIntoView({ block: 'start', behavior: 'instant' });
-          await sleep(300);
-          break;
-        }
-      }
-
-      // Step 5: "이미지 업로드" 버튼 찾기
-      debugSectionLayout('업로드전:' + slotName);
-      var uploadSuccess = false;
-      var uploadBtn = findSectionUploadButton(labelText);
-
-      if (!uploadBtn) {
-        console.log('[Flow Auto] "이미지 업로드" 버튼 없음, ⊕로 새 슬롯 생성...');
-        var addBtn = findSectionAddButton(labelText);
-        if (addBtn) {
-          addBtn.click();
-          await sleep(1500);
-          var postAddRanges = getSectionRanges();
-          for (var par = 0; par < postAddRanges.length; par++) {
-            if (postAddRanges[par].label === labelText && postAddRanges[par].el) {
-              postAddRanges[par].el.scrollIntoView({ block: 'start', behavior: 'instant' });
-              await sleep(300);
-              break;
-            }
-          }
-          uploadBtn = findSectionUploadButton(labelText);
-        }
-      }
-
-      // Step 6: 전략 A - 버튼 클릭 + interceptor 대기
-      if (uploadBtn) {
-        var uploadBtnR = uploadBtn.getBoundingClientRect();
-        console.log('[Flow Auto] 전략A: "이미지 업로드" 클릭 (' + slotName + ') pos=(' + Math.round(uploadBtnR.left) + ',' + Math.round(uploadBtnR.top) + ')');
-        uploadBtn.click();
-
-        for (var wait = 0; wait < 10; wait++) {
-          await sleep(500);
-          var doneAttr = document.documentElement.getAttribute('data-flow-upload-done');
-          if (doneAttr === 'true') {
-            uploadSuccess = true;
-            break;
-          }
-          if (doneAttr === 'error') {
-            console.error('[Flow Auto] 전략A: 변환 오류');
-            break;
-          }
-        }
-        if (uploadSuccess) {
-          document.documentElement.removeAttribute('data-flow-upload-done');
-          console.log('[Flow Auto] 전략A 성공!');
-          await sleep(500);
-          debugSectionLayout('업로드후:' + slotName);
-          return true;
-        }
-        console.log('[Flow Auto] 전략A 실패 (5초 대기 초과), 전략B로...');
-      }
-
-      // Step 7: 전략 B - 재스크롤 + 재주입 + 재시도
-      if (!uploadSuccess) {
-        console.log('[Flow Auto] 전략B: interceptor 재주입 후 재시도');
-
-        // 재주입 요청
-        try {
-          await new Promise(function(resolve) {
-            chrome.runtime.sendMessage({ action: 'INJECT_INTERCEPTOR' }, resolve);
-          });
-          await sleep(300);
-        } catch(e) {}
-
-        // 재스크롤
-        var retryRanges = getSectionRanges();
-        for (var rri = 0; rri < retryRanges.length; rri++) {
-          if (retryRanges[rri].label === labelText && retryRanges[rri].el) {
-            retryRanges[rri].el.scrollIntoView({ block: 'start', behavior: 'instant' });
-            await sleep(300);
-            break;
-          }
-        }
-
-        // 데이터 재설정 (이전 시도에서 소모됐을 수 있음)
-        document.documentElement.setAttribute('data-flow-upload', dataUrl);
-        document.documentElement.removeAttribute('data-flow-upload-done');
-
-        var retryUploadBtn = findSectionUploadButton(labelText);
-        if (retryUploadBtn) {
-          console.log('[Flow Auto] 전략B: 재시도 클릭');
-          retryUploadBtn.click();
-          for (var wait2 = 0; wait2 < 10; wait2++) {
-            await sleep(500);
-            if (document.documentElement.getAttribute('data-flow-upload-done') === 'true') {
-              uploadSuccess = true;
-              break;
-            }
-          }
-          if (uploadSuccess) {
-            document.documentElement.removeAttribute('data-flow-upload-done');
-            console.log('[Flow Auto] 전략B 성공!');
-            await sleep(500);
-            return true;
-          }
-        }
-      }
-
-      // Step 8: 전략 C - 숨겨진 file input 직접 조작 (interceptor 우회)
-      if (!uploadSuccess) {
-        console.log('[Flow Auto] 전략C: input[type=file] 직접 조작');
-        // 먼저 버튼 클릭으로 file input이 생성되게 한 후 찾기
-        var fileInputsBefore = document.querySelectorAll('input[type="file"]').length;
-        var btn3 = findSectionUploadButton(labelText);
-        if (btn3) {
-          // data-flow-upload 설정해둔 상태에서 클릭 → interceptor가 잡을 수도 있음
-          document.documentElement.setAttribute('data-flow-upload', dataUrl);
-          document.documentElement.removeAttribute('data-flow-upload-done');
-          btn3.click();
-          await sleep(1000);
-        }
-
-        var fileInputs = document.querySelectorAll('input[type="file"]');
-        if (fileInputs.length > 0) {
-          console.log('[Flow Auto] 전략C: file input ' + fileInputs.length + '개 발견');
-          var file = new File([blob], 'upload.png', { type: 'image/png' });
-          var dt = new DataTransfer();
-          dt.items.add(file);
-          var fi = fileInputs[fileInputs.length - 1];
-          fi.files = dt.files;
-          fi.dispatchEvent(new Event('change', { bubbles: true }));
-          fi.dispatchEvent(new Event('input', { bubbles: true }));
-          await sleep(2000);
-          uploadSuccess = verifySlotHasImage(slotName);
-          if (uploadSuccess) {
-            console.log('[Flow Auto] 전략C 성공!');
-            return true;
-          }
-        }
-      }
-
-      // 정리
-      document.documentElement.removeAttribute('data-flow-upload');
-      document.documentElement.removeAttribute('data-flow-upload-done');
-      console.log('[Flow Auto] 업로드 완료 (success=' + uploadSuccess + ')');
-      return uploadSuccess;
-    } catch (e) {
-      console.log('[Flow Auto] ' + slotName + ' 업로드 실패:', e.message);
+    if (!modelBtn) {
+      console.log('[Flow Auto] 모델 버튼 미발견 in menu');
       return false;
     }
-  }
 
-  // 슬롯에 에러 메시지가 표시되는지 확인 (업로드 실패 감지)
-  function checkSlotError(slotName) {
-    var labelText = SLOT_TO_LABEL[slotName];
-    if (!sidebarRoot) return false;
+    console.log('[Flow Auto] 모델 하위 메뉴 열기: "' + modelBtn.textContent.trim().substring(0, 40) + '"');
+    simulateRealClick(modelBtn);
+    await sleep(500);
 
-    var range = getSectionYRange(labelText);
-    if (!range) return false;
+    // 하위 [role="menu"] 대기
+    var subMenus = document.querySelectorAll('[role="menu"]');
+    var subMenu = subMenus.length > 1 ? subMenus[subMenus.length - 1] : null;
 
-    var allText = sidebarRoot.querySelectorAll('span, p, div');
-    for (var el of allText) {
-      var text = el.textContent.trim();
-      if (text.includes('문제가 발생') || text.includes('error') || text.includes('실패') || text.includes('problem')) {
-        var elRect = el.getBoundingClientRect();
-        if (elRect.top >= range.top && elRect.top < range.end) {
-          console.log('[Flow Auto] ' + slotName + ' 슬롯에 에러 감지: "' + text + '"');
-          return true;
-        }
-      }
+    if (!subMenu) {
+      // 잠시 더 대기
+      await sleep(500);
+      subMenus = document.querySelectorAll('[role="menu"]');
+      subMenu = subMenus.length > 1 ? subMenus[subMenus.length - 1] : null;
     }
-    return false;
-  }
 
-  // 슬롯에 실제 이미지가 로드되었는지 확인
-  function verifySlotHasImage(slotName) {
-    var labelText = SLOT_TO_LABEL[slotName];
-    var range = getSectionYRange(labelText);
-    if (!range) return false;
+    if (!subMenu) {
+      console.log('[Flow Auto] 모델 하위 메뉴 미출현');
+      return false;
+    }
 
-    var imgs = sidebarRoot.querySelectorAll('img');
-    for (var i = 0; i < imgs.length; i++) {
-      var ir = imgs[i].getBoundingClientRect();
-      if (ir.top >= range.top && ir.top < range.end && ir.width > 50 && imgs[i].src && imgs[i].naturalWidth > 0) {
+    // 하위 메뉴에서 대상 모델 찾기
+    var subItems = subMenu.querySelectorAll('*');
+    for (var j = 0; j < subItems.length; j++) {
+      var subTxt = subItems[j].textContent.trim();
+      if (subTxt === displayName && subItems[j].getBoundingClientRect().width > 0) {
+        var subClickable = subItems[j].closest('button, [role="menuitem"], [role="menuitemradio"]') || subItems[j];
+        console.log('[Flow Auto] 모델 선택: "' + displayName + '"');
+        simulateRealClick(subClickable);
+        await sleep(300);
         return true;
       }
     }
+
+    console.log('[Flow Auto] 모델 "' + displayName + '" 하위 메뉴에 미발견');
     return false;
   }
 
-  async function findAndFillPrompt(text) {
-    // textarea 찾기
-    const textarea = document.querySelector('textarea');
-    if (!textarea) {
-      // contenteditable 찾기
-      const editable = document.querySelector('[contenteditable="true"]');
-      if (editable) {
-        editable.innerHTML = '';
-        editable.textContent = text;
-        editable.dispatchEvent(new Event('input', { bubbles: true }));
-        return true;
-      }
-      throw new Error('입력란을 찾을 수 없습니다');
-    }
+  // 7. Esc로 메뉴 닫기 (하위 메뉴 + 메인 메뉴)
+  async function closeMenus() {
+    document.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true
+    }));
+    await sleep(200);
+    document.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true
+    }));
+    await sleep(200);
 
-    textarea.focus();
-    textarea.value = text;
-    textarea.dispatchEvent(new Event('input', { bubbles: true }));
-    textarea.dispatchEvent(new Event('change', { bubbles: true }));
+    // 메뉴가 닫혔는지 확인
+    var remaining = document.querySelectorAll('[role="menu"]');
+    if (remaining.length > 0) {
+      // 한번 더 시도
+      document.dispatchEvent(new KeyboardEvent('keydown', {
+        key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true
+      }));
+      await sleep(200);
+    }
+    console.log('[Flow Auto] 메뉴 닫기 완료');
+  }
+
+  // 8. 모델 + 출력 유형 한번에 설정 (첫 실행 시 1회)
+  async function setupModelAndOutput(model, outputType) {
+    model = model || 'nano-banana-2';
+    outputType = outputType || 'image';
+    console.log('[Flow Auto] 모델/출력 설정: model=' + model + ', output=' + outputType);
+
+    try {
+      var menu = await openModelMenu();
+
+      // 출력 유형 (Image/Video) 선택
+      await selectOutputType(menu, outputType);
+      await sleep(300);
+
+      // 메뉴가 닫혔을 수 있으므로 다시 확인
+      var menus = document.querySelectorAll('[role="menu"]');
+      if (menus.length === 0) {
+        menu = await openModelMenu();
+      } else {
+        menu = menus[0];
+      }
+
+      // 모델 선택
+      await selectModel(menu, model);
+      await sleep(300);
+
+      // 메뉴 닫기
+      await closeMenus();
+      console.log('[Flow Auto] 모델/출력 설정 완료');
+    } catch (e) {
+      console.error('[Flow Auto] 모델/출력 설정 실패:', e.message);
+      await closeMenus();
+    }
+  }
+
+  // 9. 생성 버튼 찾기 ("arrow_forward" + "만들기" 텍스트, 하단)
+  function findGenerateButton() {
+    var buttons = document.querySelectorAll('button, [role="button"]');
+    for (var i = 0; i < buttons.length; i++) {
+      var txt = (buttons[i].textContent || '').trim();
+      var rect = buttons[i].getBoundingClientRect();
+      if (rect.top > 500 && rect.width > 0 &&
+          txt.includes('만들기') && txt.includes('arrow_forward')) {
+        console.log('[Flow Auto] 생성 버튼 발견: ' + Math.round(rect.width) + 'x' + Math.round(rect.height) +
+          ' at(' + Math.round(rect.left) + ',' + Math.round(rect.top) + ')');
+        return buttons[i];
+      }
+    }
+    // Fallback: "만들기"만 포함 (arrow_forward 없는 경우)
+    for (var j = 0; j < buttons.length; j++) {
+      var txt2 = (buttons[j].textContent || '').trim();
+      var rect2 = buttons[j].getBoundingClientRect();
+      if (rect2.top > 500 && rect2.width > 0 && txt2.includes('만들기') &&
+          !txt2.includes('add_2')) {  // "add_2만들기"(ingredient 버튼) 제외
+        console.log('[Flow Auto] 생성 버튼(fallback) 발견: "' + txt2.substring(0, 30) + '"');
+        return buttons[j];
+      }
+    }
+    throw new Error('생성 버튼을 찾을 수 없습니다 ("만들기" + "arrow_forward")');
+  }
+
+  // 10. 생성 버튼 클릭
+  async function clickGenerate() {
+    var btn = findGenerateButton();
+    simulateRealClick(btn);
+    console.log('[Flow Auto] 생성 버튼 클릭');
     return true;
   }
 
-  async function findAndClickGenerate() {
-    const buttons = document.querySelectorAll('button');
-    let generateBtn = null;
-
-    // 검은색/어두운 색 원형 버튼 찾기 (우측 하단 화살표 버튼)
-    for (const btn of buttons) {
-      const style = getComputedStyle(btn);
-      const bg = style.backgroundColor;
-      const match = bg.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
-      if (match) {
-        const [, r, g, b] = match.map(Number);
-        // 어두운 색: r < 100, g < 100, b < 100
-        if (r < 100 && g < 100 && b < 100 && btn.offsetWidth > 30) {
-          generateBtn = btn;
-          console.log('[Flow Auto] 검은색 버튼 발견:', bg);
-          break;
-        }
-      }
-    }
-
-    if (!generateBtn) {
-      // 대안: 마지막 버튼 (보통 우측 하단)
-      const allBtns = Array.from(buttons).filter(b => b.offsetWidth > 30 && b.offsetHeight > 30);
-      if (allBtns.length > 0) {
-        generateBtn = allBtns[allBtns.length - 1];
-        console.log('[Flow Auto] 마지막 버튼 사용');
-      }
-    }
-
-    if (!generateBtn) {
-      throw new Error('생성 버튼을 찾을 수 없습니다');
-    }
-
-    console.log('[Flow Auto] Generate 버튼 클릭...');
-    generateBtn.click();
-
-    return true;
-  }
-
+  // 11. 생성 완료 대기 (새 이미지/비디오 출현 감시)
   async function waitForGeneration() {
-    console.log('[Flow Auto] 이미지 생성 대기 (최대 30초)...');
+    var maxWait = selectedOutputType === 'video' ? 120000 : 60000;
+    var pollInterval = 2000;
+    var waited = 0;
 
-    // 현재 이미지 src 목록 스냅샷
-    const knownSrcs = new Set();
-    for (const img of document.querySelectorAll('img')) {
+    console.log('[Flow Auto] 생성 완료 대기 (최대 ' + (maxWait / 1000) + '초)...');
+
+    // 현재 이미지 src 스냅샷
+    var knownSrcs = new Set();
+    document.querySelectorAll('img').forEach(function(img) {
       if (img.src) knownSrcs.add(img.src);
-    }
-
-    const maxWait = 30000;
-    const pollInterval = 2000;
-    let waited = 0;
-    let firstDetectedAt = 0;
+    });
 
     while (waited < maxWait) {
       await sleep(pollInterval);
       waited += pollInterval;
 
-      // 새 이미지 개수 확인 (Flow는 2개 생성)
-      let newCount = 0;
-      const images = document.querySelectorAll('img');
-      for (const img of images) {
-        if (img.width > 100 && img.height > 100 &&
-            img.src && !knownSrcs.has(img.src) && !downloadedSrcs.has(img.src)) {
-          newCount++;
+      // 비디오 모드: video 태그 감지
+      if (selectedOutputType === 'video') {
+        var videos = document.querySelectorAll('video');
+        for (var v = 0; v < videos.length; v++) {
+          if (videos[v].src && !knownSrcs.has(videos[v].src)) {
+            console.log('[Flow Auto] 비디오 생성 완료! (' + (waited / 1000) + '초)');
+            return true;
+          }
         }
       }
 
-      // 2개 모두 렌더링 완료
-      if (newCount >= 2) {
-        console.log(`[Flow Auto] 새 이미지 ${newCount}개 모두 감지 (${waited / 1000}초)`);
+      // 이미지: getMediaUrlRedirect 패턴 새 img 감지
+      var newCount = 0;
+      document.querySelectorAll('img').forEach(function(img) {
+        if (img.src && img.src.includes('getMediaUrlRedirect') &&
+            !knownSrcs.has(img.src) && !downloadedSrcs.has(img.src)) {
+          newCount++;
+        }
+      });
+
+      if (newCount >= 1) {
+        console.log('[Flow Auto] 생성 완료! 새 이미지 ' + newCount + '개 감지 (' + (waited / 1000) + '초)');
         return true;
       }
 
-      // 1개만 감지 → 두 번째 이미지 추가 대기 (최대 6초)
-      if (newCount >= 1 && !firstDetectedAt) {
-        firstDetectedAt = waited;
-        console.log(`[Flow Auto] 첫 이미지 감지, 두 번째 대기 중... (${waited / 1000}초)`);
-      }
-      if (firstDetectedAt && waited - firstDetectedAt >= 6000) {
-        console.log(`[Flow Auto] 두 번째 이미지 6초 내 미감지, ${newCount}개로 진행`);
-        return true;
+      // 10초마다 진행 로그
+      if (waited % 10000 === 0) {
+        console.log('[Flow Auto] 생성 대기 중... (' + (waited / 1000) + '초)');
       }
     }
 
-    console.log('[Flow Auto] 30초 내 새 이미지 미감지');
+    console.log('[Flow Auto] ' + (maxWait / 1000) + '초 타임아웃 — 새 이미지 미감지');
     return false;
   }
 
