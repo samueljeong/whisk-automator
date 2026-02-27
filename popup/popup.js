@@ -83,13 +83,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (typeof updateCharFolderHint === 'function') updateCharFolderHint();
 });
 
-// 탭 변경/업데이트 시 자동으로 연결 재체크
-chrome.runtime.onMessage.addListener((message) => {
-  if (message.action === 'TAB_CHANGED') {
-    checkConnection();
-  }
-});
-
 // License UI functions
 function showMainUI(licenseResult) {
   window.licenseValid = true;
