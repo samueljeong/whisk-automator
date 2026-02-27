@@ -225,18 +225,6 @@ chrome.downloads.onChanged.addListener((delta) => {
   }
 });
 
-// 탭 전환 시 사이드패널에 알림 (연결 상태 자동 갱신)
-chrome.tabs.onActivated.addListener(() => {
-  chrome.runtime.sendMessage({ action: 'TAB_CHANGED' }).catch(() => {});
-});
-
-// 탭 로딩 완료 시 사이드패널에 알림 (새로고침 대응)
-chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
-  if (changeInfo.status === 'complete') {
-    chrome.runtime.sendMessage({ action: 'TAB_CHANGED' }).catch(() => {});
-  }
-});
-
 // Discord 초대 탭 자동 닫기 (Whisk가 자동으로 열어버리는 Google Labs Discord)
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.url && changeInfo.url.includes('discord.com/invite')) {
