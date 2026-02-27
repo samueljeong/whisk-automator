@@ -1986,81 +1986,29 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
   }
 
   async function run() {
-    // TODO: Flow DOM 탐색 완료 후 구현
-    // - selectModel(selectedModel): 모델 드롭다운 선택 (Nano Banana 2 / Imagen4)
-    // - selectOutputType(selectedOutputType): 이미지/비디오 전환
-    console.log('[Flow Auto] 모델: ' + (selectedModel || 'nano-banana-2') + ', 출력: ' + (selectedOutputType || 'image'));
-    // Flow에서는 스타일 이미지 슬롯이 없으므로 스타일 업로드 스킵 (prefix/suffix 텍스트만 사용)
-
-    // 시작 시 정지 플래그 초기화
+    // 1. 정지 플래그 초기화
     document.documentElement.removeAttribute('data-flow-stop');
 
-    // 시작 전 레이아웃 진단
-    console.log('[Flow Auto] ====== 자동화 시작 전 레이아웃 진단 ======');
-    debugSectionLayout('시작전');
+    // 2. 모델/출력 유형 설정 (첫 실행 시 1회)
+    console.log('[Flow Auto] 모델: ' + (selectedModel || 'nano-banana-2') + ', 출력: ' + (selectedOutputType || 'image'));
+    await setupModelAndOutput(selectedModel, selectedOutputType);
+    await sleep(1000);
 
-    // 시작 시 장면/피사체 슬롯 강제 초기화 (수동 잔여 레퍼런스 제거)
-    try {
-      var preSceneCleared = await clearSlotImages('scene');
-      if (preSceneCleared > 0) {
-        console.log('[Flow Auto] 장면 슬롯 사전 초기화: ' + preSceneCleared + '개 삭제');
-        await sleep(2000); // DOM 안정화 대기
-      }
-      var preSubjectCleared = await clearSlotImages('subject');
-      if (preSubjectCleared > 0) {
-        console.log('[Flow Auto] 피사체 슬롯 사전 초기화: ' + preSubjectCleared + '개 삭제');
-        await sleep(2000); // DOM 안정화 대기
-      }
-      if (preSceneCleared > 0 || preSubjectCleared > 0) {
-        console.log('[Flow Auto] 초기화 후 레이아웃 재확인');
-        debugSectionLayout('초기화후');
-      }
-    } catch (clearErr) {
-      console.warn('[Flow Auto] 슬롯 사전 초기화 실패 (무시):', clearErr.message);
-    }
-
-    // 미등록 캐릭터 사전 검사
-    try {
-      var allCharNames = [];
-      for (var ci = 0; ci < promptsWithCharacters.length; ci++) {
-        var ch = (promptsWithCharacters[ci].character || '').split(',');
-        for (var cj = 0; cj < ch.length; cj++) {
-          var cn = ch[cj].trim();
-          if (cn && allCharNames.indexOf(cn) === -1) allCharNames.push(cn);
-        }
-      }
-      var missingChars = allCharNames.filter(function(name) { return characters && !characters[name] && !characters[name.normalize('NFC')]; });
-      if (missingChars.length > 0) {
-        console.warn('[Flow Auto] ⚠️ 미등록 캐릭터 ' + missingChars.length + '건: ' + missingChars.join(', '));
-        console.warn('[Flow Auto] → 해당 캐릭터는 레퍼런스 없이 생성됩니다');
-      }
-    } catch (preCheckErr) {
-      console.error('[Flow Auto] 미등록 캐릭터 검사 오류 (무시):', preCheckErr);
-    }
-
-    for (let i = 0; i < promptsWithCharacters.length; i++) {
-      // 정지 플래그 확인 (DOM 속성 기반 — 모든 월드에서 공유)
+    // 3. 메인 루프
+    for (var i = 0; i < promptsWithCharacters.length; i++) {
       if (isStopRequested()) {
         console.log('[Flow Auto] 사용자 정지 요청 — 자동화 중단');
-        try {
-          chrome.runtime.sendMessage({ action: 'AUTOMATION_STOPPED' });
-        } catch(e) {}
+        try { chrome.runtime.sendMessage({ action: 'AUTOMATION_STOPPED' }); } catch(e) {}
         return;
       }
 
-      const item = promptsWithCharacters[i];
-      const prompt = item.prompt;
-      const character = item.character;
-      const customFilename = item.filename;  // 지정된 파일명
+      var item = promptsWithCharacters[i];
+      var prompt = item.prompt;
+      var customFilename = item.filename;
+      var origIndex = item.index;
+      var logPrefix = '[' + (origIndex + 1) + ']' + (customFilename ? ' [' + customFilename + ']' : '');
 
-      const origIndex = item.index; // 원래 씬 번호 (캐릭터별 그룹핑 전 순서)
-      const logPrefix = [
-        `[씬${origIndex + 1}]`,
-        customFilename ? `[${customFilename}]` : '',
-        character ? `[${character}]` : '[배경]'
-      ].filter(Boolean).join(' ');
-
-      console.log(`[Flow Auto] ${i + 1}/${promptsWithCharacters.length}: ${logPrefix} ${prompt}`);
+      console.log('[Flow Auto] ' + (i + 1) + '/' + promptsWithCharacters.length + ': ' + logPrefix + ' ' + prompt.substring(0, 60));
 
       // 진행 상황을 팝업으로 전달
       try {
@@ -2074,141 +2022,41 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         });
       } catch(e) {}
 
-      const MAX_RETRIES = 3;
-      let retryCount = 0;
-      let success = false;
+      var MAX_RETRIES = 3;
+      var retryCount = 0;
+      var success = false;
 
       while (retryCount <= MAX_RETRIES && !success) {
         try {
-          // 스타일은 style.txt 기반 텍스트 prefix/suffix로 처리됨 (이미지 프리셋 미사용)
-
-          const charGroup = item.characterGroup || ''; // 정렬된 캐릭터 조합 키
-
-          // [진단] 캐릭터 업로드 판단 로그
-          console.log('[Flow Auto] [DIAG] charGroup="' + charGroup + '" current="' + currentCharacterGroup + '" character="' + (item.character || '') + '" hasChars=' + (characters ? Object.keys(characters).length : 'null'));
-
-          // 캐릭터 조합이 바뀌었는지 확인 (재시도 시 이미 같은 캐릭터이므로 자연스럽게 건너뜀)
-          if (charGroup !== currentCharacterGroup) {
-            // 1. 기존 피사체 모두 해제
-            if (currentCharacterGroup) {
-              console.log(`[Flow Auto] 피사체 전환: ${currentCharacterGroup} → ${charGroup || '배경'}`);
-              await clearSlotImages('subject');
-              await sleep(1500);
-              // 해제 후 사이드바가 닫힐 수 있으므로 다시 확인
-              await waitForSidebar(5000);
-            }
-
-            // 2. 새 캐릭터 조합 업로드 (배경이면 비우기만)
-            if (charGroup && characters) {
-              var charNames = charGroup.split(',');
-              // Flow precise mode 에셋 제한: 피사체 최대 2개 (장면 슬롯 포함 시 초과 방지)
-              var MAX_SUBJECTS = 2;
-              if (charNames.length > MAX_SUBJECTS) {
-                console.log(`[Flow Auto] ⚠️ 캐릭터 ${charNames.length}명 → 상위 ${MAX_SUBJECTS}명만 업로드 (precise mode 제한)`);
-                charNames = charNames.slice(0, MAX_SUBJECTS);
-              }
-              console.log(`[Flow Auto] 캐릭터 ${charNames.length}명 빠른 업로드: ${charNames.join(', ')}`);
-
-              // 모든 캐릭터 빠르게 업로드 (개별 분석 대기 없음)
-              for (var ci = 0; ci < charNames.length; ci++) {
-                var charName = charNames[ci].trim();
-                var charImageUrl = characters[charName] || characters[charName.normalize('NFC')];
-                if (!charImageUrl) {
-                  console.warn(`[Flow Auto] ⚠️ 캐릭터 "${charName}" 미등록 — 레퍼런스 없이 생성`);
-                  continue;
-                }
-
-                console.log(`[Flow Auto] [${ci + 1}/${charNames.length}] ${charName} 업로드...`);
-                // 첫 번째 캐릭터만 기존 이미지 해제, 나머지는 추가
-                var charUploadOk = await uploadImageToSlot(charImageUrl, 'subject', ci > 0);
-                await sleep(1500); // 업로드 UI 반응 대기만 (분석 대기 X)
-
-                // 업로드 후 에러 확인
-                if (!charUploadOk || checkSlotError('subject')) {
-                  console.log(`[Flow Auto] 피사체 업로드 실패 감지, 재시도...`);
-                  await sleep(2000);
-                  await uploadImageToSlot(charImageUrl, 'subject', ci > 0);
-                  await sleep(1500);
-                  if (checkSlotError('subject')) {
-                    throw new Error(`캐릭터 "${charName}" 업로드 실패 — 슬롯 에러`);
-                  }
-                }
-              }
-
-              // 업로드된 캐릭터 순서 기록 (setActiveCharacters에서 사용)
-              characterUploadOrder = charNames.map(function(n) { return n.trim(); });
-
-              // 모든 업로드 완료 후 한번만 분석 대기
-              var waitTime = styleUploaded ? 9000 : 7000;
-              console.log(`[Flow Auto] 전체 분석 대기 (${waitTime / 1000}초)...`);
-              await sleep(waitTime);
-              styleUploaded = false;
-              console.log('[Flow Auto] 분석 완료, 생성 시작');
-              await ensureStyleChecked();
-            }
-
-            currentCharacterGroup = charGroup;
-          }
-
-          // --- 장면(Scene) 슬롯 전환 ---
-          const sceneTag = item.scene || '';
-          if (sceneTag !== currentScene) {
-            const sceneImageUrl = scenes ? (scenes[sceneTag] || scenes[sceneTag.normalize('NFC')]) : null;
-
-            if (sceneTag && sceneImageUrl) {
-              console.log(`[Flow Auto] 장면 전환: ${currentScene || '없음'} → ${sceneTag}`);
-              var sceneUploadOk = await uploadImageToSlot(sceneImageUrl, 'scene');
-              await sleep(2000); // 장면 분석 대기
-
-              // 업로드 후 에러 확인
-              if (!sceneUploadOk || checkSlotError('scene')) {
-                console.log(`[Flow Auto] 장면 업로드 실패 감지, 재시도...`);
-                await sleep(2000);
-                await uploadImageToSlot(sceneImageUrl, 'scene');
-                await sleep(2000);
-                if (checkSlotError('scene')) {
-                  throw new Error(`장면 "${sceneTag}" 업로드 실패 — 슬롯 에러`);
-                }
-              }
-            } else if (!sceneTag && currentScene) {
-              // 장면 태그 없으면 장면 슬롯 비우기
-              console.log(`[Flow Auto] 장면 해제: ${currentScene} → 없음`);
-              await clearSlotImages('scene');
-              await sleep(500);
-            } else if (sceneTag && !sceneImageUrl) {
-              console.log(`[Flow Auto] 장면 "${sceneTag}" 이미지 미등록, 건너뜀`);
-            }
-
-            currentScene = sceneTag;
-            await ensureStyleChecked();
-          }
-
-          await findAndFillPrompt(prompt);
+          // a. 프롬프트 입력
+          await fillPrompt(prompt);
           await sleep(500);
 
-          // 생성 전 이미지 src 스냅샷 (레퍼런스 이미지 포함)
+          // b. 생성 전 이미지 스냅샷
           var preGenSrcs = new Set();
           document.querySelectorAll('img').forEach(function(img) {
             if (img.src) preGenSrcs.add(img.src);
           });
 
-          await findAndClickGenerate();
+          // c. 생성 버튼 클릭
+          await clickGenerate();
           await sleep(2000);
 
-          await waitForGeneration();
+          // d. 생성 완료 대기
+          var generated = await waitForGeneration();
 
-          // 자동 다운로드 (원래 씬 번호로 저장)
+          // e. 다운로드
           if (autoDownload) {
             await sleep(1000);
-            const downloaded = await downloadImage(prompt, origIndex, customFilename, preGenSrcs);
+            var downloaded = await downloadOutput(prompt, origIndex, customFilename, preGenSrcs);
             if (!downloaded && retryCount < MAX_RETRIES) {
-              throw new Error('이미지 다운로드 실패');
+              throw new Error('다운로드 실패');
             }
           }
 
           success = true;
-          consecutiveFailures = 0;  // 성공 시 연속 실패 카운터 리셋
-          console.log(`[Flow Auto] ${i + 1} 완료 (씬${origIndex + 1})`);
+          consecutiveFailures = 0;
+          console.log('[Flow Auto] ' + (i + 1) + ' 완료 (' + logPrefix + ')');
 
           // 완료 진행 상황 전달
           try {
@@ -2218,12 +2066,13 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
               totalCount: promptsWithCharacters.length,
               promptIndex: origIndex,
               status: 'completed',
-              currentPrompt: logPrefix + ' ✅'
+              currentPrompt: logPrefix + ' done'
             });
           } catch(e) {}
 
+          // f. 딜레이
           if (i < promptsWithCharacters.length - 1) {
-            console.log(`[Flow Auto] ${delayMs}ms 대기...`);
+            console.log('[Flow Auto] ' + delayMs + 'ms 대기...');
             await sleep(delayMs);
           }
         } catch (error) {
@@ -2235,21 +2084,15 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
           }
           retryCount++;
           if (retryCount <= MAX_RETRIES) {
-            console.log(`[Flow Auto] 재시도 ${retryCount}/${MAX_RETRIES} (씬${origIndex + 1})... ${error.message}`);
-            // 캐릭터 해제 실패 시 캐릭터 그룹 리셋 → 다음 시도에서 다시 전환
-            if (error.message.includes('캐릭터 해제 실패')) {
-              currentCharacterGroup = '__reset__';
-              console.log('[Flow Auto] 캐릭터 그룹 리셋, 다음 시도에서 재전환');
-            }
-            await sleep(3000 * retryCount); // 3초, 6초, 9초 대기
+            console.log('[Flow Auto] 재시도 ' + retryCount + '/' + MAX_RETRIES + ' ' + logPrefix + '... ' + error.message);
+            await sleep(3000 * retryCount);
           } else {
-            console.error(`[Flow Auto] ${MAX_RETRIES}회 재시도 실패 (씬${origIndex + 1}):`, error);
-            currentCharacterGroup = '__reset__';
+            console.error('[Flow Auto] ' + MAX_RETRIES + '회 재시도 실패 ' + logPrefix + ':', error);
             consecutiveFailures++;
 
             // 연속 2회 실패 시 페이지 리로드로 복구 시도
             if (consecutiveFailures >= 2 && i < promptsWithCharacters.length - 1) {
-              console.log(`[Flow Auto] === 연속 ${consecutiveFailures}회 실패, 페이지 리로드 요청 ===`);
+              console.log('[Flow Auto] === 연속 ' + consecutiveFailures + '회 실패, 페이지 리로드 요청 ===');
               window.__flowAutoRunning = false;
               clearInterval(popupWatcher);
               try {
