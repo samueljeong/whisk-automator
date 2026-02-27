@@ -1774,6 +1774,93 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     }
   }
 
+  // 8-1. 에셋 분석 완료 대기 (공통 헬퍼)
+  // 방법: 프롬프트 내 void 요소(썸네일) 수 증가 + DOM 안정화로 판단
+  // - 이미 분석된 에셋: 즉시 삽입됨 (1~2초)
+  // - 새 에셋: 분석에 10~30초 소요
+  // Flow styled-components는 랜덤 클래스명 → class*="loading" 같은 패턴 불가
+  // 대신: 썸네일 img의 src가 blob:// → https:// 로 변경되면 분석 완료
+  async function waitForAnalysisComplete(promptEl, beforeVoids, label) {
+    await sleep(2000); // 초기 대기
+
+    var maxWait = 60000;
+    var waited = 2000;
+    var lastVoidCount = beforeVoids;
+    var stableCount = 0; // DOM 변화 없이 연속 체크된 횟수
+
+    while (waited < maxWait) {
+      if (isStopRequested()) throw new Error('__STOPPED__');
+
+      var currentVoids = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]').length;
+
+      if (currentVoids > beforeVoids) {
+        // 썸네일이 추가됨 → 분석 상태 체크
+        var voidEls = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]');
+        var allReady = true;
+
+        for (var vi = 0; vi < voidEls.length; vi++) {
+          // 방법 1: img src 체크 (blob: = 로딩 중, https: = 완료)
+          var imgs = voidEls[vi].querySelectorAll('img');
+          for (var ii = 0; ii < imgs.length; ii++) {
+            var src = imgs[ii].src || '';
+            if (src.startsWith('blob:') || !src) {
+              allReady = false;
+              break;
+            }
+          }
+          if (!allReady) break;
+
+          // 방법 2: SVG 원형 프로그레스 (stroke-dasharray) 체크
+          var svgProgress = voidEls[vi].querySelectorAll('svg circle[stroke-dasharray], svg circle[stroke-dashoffset]');
+          if (svgProgress.length > 0) {
+            allReady = false;
+            break;
+          }
+
+          // 방법 3: aria-busy 체크
+          if (voidEls[vi].getAttribute('aria-busy') === 'true') {
+            allReady = false;
+            break;
+          }
+
+          // 방법 4: opacity 체크 (분석 중 반투명)
+          var opacity = parseFloat(getComputedStyle(voidEls[vi]).opacity);
+          if (opacity < 0.9) {
+            allReady = false;
+            break;
+          }
+        }
+
+        if (allReady) {
+          // DOM 안정화 확인 (2회 연속 동일하면 완료)
+          if (currentVoids === lastVoidCount) {
+            stableCount++;
+          } else {
+            stableCount = 0;
+          }
+          if (stableCount >= 2) {
+            console.log('[Flow Auto] 에셋 "' + label + '" 분석 완료 (' + (waited / 1000) + '초), 썸네일 ' + beforeVoids + ' → ' + currentVoids);
+            return true;
+          }
+        } else {
+          stableCount = 0;
+        }
+      }
+
+      lastVoidCount = currentVoids;
+
+      if (waited % 5000 === 0) {
+        console.log('[Flow Auto] 에셋 "' + label + '" 분석 대기 중... (' + (waited / 1000) + '초), void: ' + currentVoids + '/' + beforeVoids);
+      }
+
+      await sleep(1500);
+      waited += 1500;
+    }
+
+    console.warn('[Flow Auto] 에셋 "' + label + '" 분석 타임아웃 (60초), 계속 진행');
+    return false;
+  }
+
   // 9. Ingredient 버튼 찾기 ("add_2만들기" 텍스트, 하단 프롬프트 바 좌측)
   function findIngredientButton() {
     var buttons = document.querySelectorAll('button, [role="button"]');
