@@ -576,11 +576,14 @@ async function saveState() {
       prompts: prompts,
       autoDownload: autoDownload.checked,
       delay: parseInt(delayInput.value),
+      selectedModel: modelSelect ? modelSelect.value : 'nano-banana-2',
+      outputType: outputType ? document.getElementById('outputType').value : 'image',
       projects: PROJECTS,
       currentProject: currentProject,
       saveLocation: saveLocation.value.trim() || 'flow-images',
       useCustomDir: !!customDirHandle,
-      customDirName: customDirHandle ? customDirHandle.name : null
+      customDirName: customDirHandle ? customDirHandle.name : null,
+      storageVersion: 4
     });
   } catch (error) {
     console.error('Failed to save state:', error);
