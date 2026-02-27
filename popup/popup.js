@@ -2020,6 +2020,134 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     return true;
   }
 
+  // 10-1. 새 에셋 업로드 (에셋 패널이 열려있거나, "+" 클릭 → 패널 내 업로드)
+  // 방법: "+" 클릭 → 패널 내 input[type=file] 또는 업로드 버튼 탐색 → interceptor로 파일 주입
+  async function uploadNewAsset(searchName, dataUrl) {
+    var promptEl = findPromptInput();
+    var beforeVoids = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]').length;
+
+    // interceptor에 파일 데이터 + 이름 설정
+    document.documentElement.setAttribute('data-flow-upload-name', searchName);
+    document.documentElement.setAttribute('data-flow-upload', dataUrl);
+    document.documentElement.removeAttribute('data-flow-upload-done');
+
+    // 1. "+" 버튼 클릭 → 에셋 패널 열기 (이미 열려있을 수 있음)
+    var ingredientBtn = findIngredientButton();
+    if (ingredientBtn) {
+      simulateRealClick(ingredientBtn);
+      await sleep(800);
+    }
+
+    // 2. 패널 내 업로드 메커니즘 탐색
+    var uploadTriggered = false;
+
+    // 방법 A: 패널 내 input[type="file"] 찾기
+    var fileInputs = document.querySelectorAll('input[type="file"]');
+    for (var fi = 0; fi < fileInputs.length; fi++) {
+      var fiRect = fileInputs[fi].getBoundingClientRect();
+      // 숨겨진 file input도 있을 수 있음 (width=0도 OK)
+      if (fileInputs[fi].accept && (fileInputs[fi].accept.includes('image') || fileInputs[fi].accept === '*/*' || !fileInputs[fi].accept)) {
+        console.log('[Flow Auto] input[type=file] 발견, 클릭하여 업로드 트리거');
+        fileInputs[fi].click(); // interceptor가 가로챔
+        uploadTriggered = true;
+        break;
+      }
+    }
+
+    // 방법 B: file input을 못 찾으면, 업로드 버튼 텍스트 탐색
+    if (!uploadTriggered) {
+      var allBtns = document.querySelectorAll('button, [role="button"], div[tabindex], a');
+      for (var bi = 0; bi < allBtns.length; bi++) {
+        var btnTxt = (allBtns[bi].textContent || '').trim().toLowerCase();
+        var btnRect = allBtns[bi].getBoundingClientRect();
+        if (btnRect.width > 0 && btnRect.top > 0 && btnRect.top < window.innerHeight &&
+            (btnTxt.includes('upload') || btnTxt.includes('업로드') || btnTxt.includes('파일') ||
+             btnTxt.includes('computer') || btnTxt.includes('내 컴퓨터') || btnTxt.includes('add_photo'))) {
+          console.log('[Flow Auto] 업로드 버튼 발견: "' + btnTxt.substring(0, 30) + '" → 클릭');
+          simulateRealClick(allBtns[bi]);
+          uploadTriggered = true;
+          await sleep(500);
+          break;
+        }
+      }
+    }
+
+    // 방법 C: 아직 못 찾으면, 패널 내 모든 file input (accept 무관)
+    if (!uploadTriggered) {
+      for (var fi2 = 0; fi2 < fileInputs.length; fi2++) {
+        console.log('[Flow Auto] file input (accept=' + (fileInputs[fi2].accept || 'any') + ') 시도');
+        fileInputs[fi2].click();
+        uploadTriggered = true;
+        break;
+      }
+    }
+
+    // 방법 D: showOpenFilePicker가 interceptor에 의해 가로채지므로,
+    //          파일 관련 버튼 아무거나 클릭해보기
+    if (!uploadTriggered) {
+      console.warn('[Flow Auto] 업로드 메커니즘 미발견, DOM 탐색 결과 로깅');
+      // 디버그용: 패널 내 요소 덤프
+      var visibleBtns = [];
+      var btns = document.querySelectorAll('button, [role="button"]');
+      for (var db = 0; db < btns.length; db++) {
+        var dbRect = btns[db].getBoundingClientRect();
+        if (dbRect.width > 0 && dbRect.top > 100 && dbRect.top < window.innerHeight - 50) {
+          visibleBtns.push('"' + (btns[db].textContent || '').trim().substring(0, 40) + '" at(' +
+            Math.round(dbRect.left) + ',' + Math.round(dbRect.top) + ') ' +
+            Math.round(dbRect.width) + 'x' + Math.round(dbRect.height));
+        }
+      }
+      console.log('[Flow Auto] 화면 내 버튼들:\n' + visibleBtns.join('\n'));
+
+      // 패널 닫기
+      document.dispatchEvent(new KeyboardEvent('keydown', {
+        key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true
+      }));
+      await sleep(300);
+
+      // data-flow-upload 정리
+      document.documentElement.removeAttribute('data-flow-upload');
+      document.documentElement.removeAttribute('data-flow-upload-name');
+      return false;
+    }
+
+    // 3. 업로드 완료 대기 (interceptor의 data-flow-upload-done 감시)
+    console.log('[Flow Auto] 에셋 업로드 대기: ' + searchName);
+    var waited = 0;
+    while (waited < 15000) {
+      var done = document.documentElement.getAttribute('data-flow-upload-done');
+      if (done === 'true') {
+        document.documentElement.removeAttribute('data-flow-upload-done');
+        console.log('[Flow Auto] 에셋 파일 전달 완료: ' + searchName);
+        break;
+      }
+      if (done === 'error') {
+        document.documentElement.removeAttribute('data-flow-upload-done');
+        console.error('[Flow Auto] 에셋 파일 전달 실패: ' + searchName);
+        // 패널 닫기
+        document.dispatchEvent(new KeyboardEvent('keydown', {
+          key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true
+        }));
+        await sleep(300);
+        return false;
+      }
+      await sleep(300);
+      waited += 300;
+    }
+
+    // 4. 분석 완료 대기 (새 업로드이므로 10~30초 소요)
+    console.log('[Flow Auto] 새 에셋 분석 대기: ' + searchName);
+    await waitForAnalysisComplete(promptEl, beforeVoids, searchName);
+
+    // 5. 패널 닫기
+    document.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true
+    }));
+    await sleep(300);
+
+    return true;
+  }
+
   // 11. 캐릭터별 레퍼런스 일괄 선택
   // flowTagMap: 캐릭터 이름 → Flow 태그 (영문, 에셋 검색용)
   async function uploadReferences(charNames, characterMap) {
