@@ -1,52 +1,74 @@
 # Flow 셀렉터 매핑 (Whisk → Flow)
 
-## 상태: 조사 필요
+## 상태: 1차 조사 완료 (2026-02-27)
 
-Flow 페이지(`labs.google/fx/flow`)에서 `scripts/debug_flow.js`를 실행하여 아래 셀렉터를 채워야 합니다.
+URL: `labs.google/fx/ko/tools/flow/project/{uuid}`
 
 ## 핵심 셀렉터 매핑
 
 | 기능 | Whisk 셀렉터 | Flow 셀렉터 | 비고 |
 |------|-------------|------------|------|
-| 프롬프트 입력 | `textarea` (첫 번째) | ??? | textarea 또는 contenteditable |
-| 생성 버튼 | 어두운 원형 버튼 (bg < 100) | ??? | 색상/aria-label 기반 |
-| 모델 선택 | N/A | ??? | Nano Banana 2 / Imagen4 |
-| 이미지/비디오 전환 | N/A | ??? | tab/radio/select |
-| Ingredient 서랍 열기 | N/A | ??? | 버튼 또는 토글 |
-| Ingredient 업로드 | N/A | ??? | showOpenFilePicker? drag&drop? paste? |
-| Ingredient 선택/해제 | N/A | ??? | 클릭 토글? 체크박스? |
-| 생성된 이미지 출력 | `img[width>100]` | ??? | 새 img 태그 감지 |
-| 생성된 비디오 출력 | N/A | ??? | video 태그? |
-| 진행 상태 표시 | 없음 (폴링) | ??? | 로딩 스피너? 프로그레스? |
-| 다운로드 버튼 | N/A (fetch → blob) | ??? | 우클릭? 전용 버튼? |
+| 프롬프트 입력 | `textarea` (첫 번째) | `div[contenteditable]` (클래스: `sc-f60f777e-0`, `sc-c70e41ad-5`) | contentEditable DIV, 565x20 하단 영역 |
+| 생성 버튼 | 어두운 원형 버튼 | 텍스트 "arrow_forward만들기" 포함 버튼 (bg: `rgba(255,255,255,0.75)`) | 32x32, 하단 우측 |
+| 모델 선택 | N/A | 텍스트에 "Nano Banana" 포함 버튼 (164x34) | 클릭→드롭다운 예상 |
+| 이미지/비디오 전환 | N/A | ??? (tab role DIV 2개 존재, 30x30 / 60x60) | 2차 조사 필요 |
+| Ingredient 추가 | N/A | 텍스트 "add_2만들기" 포함 버튼 (32x32, 하단 좌측) | 프롬프트 입력 옆 |
+| Ingredient 업로드 | N/A | `input[type=file][accept="image/*"]` (부모: `sc-c7ee1759-1`) | 기존 interceptor 활용 가능 |
+| Ingredient 선택/해제 | N/A | ??? | 2차 조사 필요 |
+| 생성된 이미지 출력 | `img[width>100]` | ??? | 2차 조사 (생성 후 관찰) |
+| 생성된 비디오 출력 | N/A | ??? | 2차 조사 (생성 후 관찰) |
+| 진행 상태 표시 | 없음 (폴링) | ??? | 2차 조사 |
+| 다운로드 버튼 | N/A | ??? | 2차 조사 |
 
-## 업로드 방식 확인 사항
+## 1차 조사 결과 상세
 
-- [ ] `showOpenFilePicker` API 사용 여부
-- [ ] `<input type="file">` 사용 여부
-- [ ] Drag & Drop 사용 여부
-- [ ] Clipboard paste 사용 여부
+### 레이아웃 구조 (Y좌표 기준)
+```
+Y=14~40   : 상단 툴바
+            - arrow_back돌아가기 (뒤로가기)
+            - 프로젝트 이름 (input, "수정 가능한 텍스트")
+            - more_vert옵션 더보기
+            - search검색
+            - filter_list정렬 및 필터링
+            - add미디어 추가
+            - play_movies장면 빌더
+            - settings_2타일 그리드 설정 보기
+            - more_vert더 생성하기
+            - [48x48 아이콘 버튼]
 
-## Ingredient 재사용 확인
+Y=60~850  : 메인 콘텐츠 영역 (생성된 이미지/영상)
 
-- [ ] 한 번 업로드한 ingredient를 여러 프롬프트에서 재사용 가능한지
-- [ ] ingredient 선택/해제가 체크마크 토글 방식인지
+Y=851     : 프롬프트 입력 (contentEditable DIV)
 
-## URL 패턴
+Y=882~883 : 하단 컨트롤 바
+            - [131] add_2만들기 (ingredient 추가?)
+            - [511] 🍌 Nano Banana Pro + crop_16_9 + x1 (모델/비율/수량)
+            - [680] arrow_forward만들기 (생성 버튼, 흰색 배경)
+```
 
-- [ ] SPA 라우팅 여부
-- [ ] 해시 기반 vs 경로 기반
-- [ ] 쿼리 파라미터 사용 여부
+### 모델 선택 버튼 분석
+버튼 텍스트: `🍌 Nano Banana Procrop_16_9x1`
+→ 세 요소 결합으로 추정:
+- `🍌 Nano Banana Pro` (모델명)
+- `crop_16_9` (종횡비 아이콘 - 16:9)
+- `x1` (생성 수량)
 
-## DOM 변화 신호
+### 파일 업로드
+- `input[type=file][accept="image/*"]` 존재 → 기존 interceptor.js 파일 업로드 가로채기 활용 가능
+- Flow도 `showOpenFilePicker` 또는 `input.click()` 사용 예상
 
-- [ ] 생성 완료 시: 새 img/video 태그 추가?
-- [ ] 생성 완료 시: 속성 변경? (data-*, class 등)
-- [ ] 에러 시: 에러 메시지 DOM 요소?
+### URL 패턴
+- [x] 경로 기반 라우팅: `/fx/ko/tools/flow/project/{uuid}`
+- 언어 코드 포함: `/ko/`
 
-## 조사 방법
+## 2차 조사 필요 항목
 
-1. Flow 페이지 열기: `https://labs.google/fx/flow`
-2. DevTools 콘솔에서 `scripts/debug_flow.js` 실행
-3. 결과를 이 문서에 기록
-4. 수동으로 각 기능 테스트하며 DOM 변화 관찰
+1. **모델 드롭다운 내용**: 모델 버튼 클릭 시 나타나는 메뉴 구조
+2. **이미지/비디오 전환**: 두 tab 역할 DIV의 기능 확인
+3. **ingredient 추가 플로우**: "add_2만들기" 클릭 후 동작
+4. **생성 완료 감지**: 이미지 생성 후 DOM 변화
+5. **다운로드 방법**: 생성된 이미지/영상의 다운로드 메커니즘
+
+## 2차 디버그 스크립트
+
+`scripts/debug_flow_2.js` 실행하여 모델 메뉴, 탭, ingredient 추가 등 세부 조사
