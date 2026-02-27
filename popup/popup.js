@@ -2371,6 +2371,8 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
   // 11. 캐릭터별 레퍼런스 일괄 선택
   // flowTagMap: 캐릭터 이름 → Flow 태그 (영문, 에셋 검색용)
+  // failedAssets: 배치 내 실패 캐시 (같은 에셋 반복 시도 방지)
+  var _failedAssets = {}; // { searchName: true } — 배치 내 실패한 에셋
   async function uploadReferences(charNames, characterMap) {
     var names = charNames.split(',').map(function(n) { return n.trim(); });
     var flowTagMap = characterMap.__flowTagMap || {};
@@ -2381,6 +2383,12 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       var name = names[i];
       var flowTag = flowTagMap[name] || flowTagMap[name.normalize('NFC')] || null;
       var searchName = flowTag || name; // flowTag 있으면 영문명으로 검색
+
+      // 이전에 실패한 에셋은 재시도하지 않음
+      if (_failedAssets[searchName]) {
+        console.log('[Flow Auto] 레퍼런스 "' + searchName + '" 이전 실패로 스킵');
+        continue;
+      }
 
       console.log('[Flow Auto] 레퍼런스 선택 ' + (i + 1) + '/' + names.length + ': ' + name +
         (flowTag ? ' (Flow태그: ' + flowTag + ')' : ' (태그 미설정, 한글 검색)'));
@@ -2396,9 +2404,11 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
           var uploaded = await uploadNewAsset(searchName, dataUrl);
           if (!uploaded) {
             console.warn('[Flow Auto] 에셋 업로드 실패: ' + searchName + ', 스킵');
+            _failedAssets[searchName] = true;
           }
         } else {
           console.warn('[Flow Auto] 캐릭터 "' + name + '" 이미지 없음, 스킵');
+          _failedAssets[searchName] = true;
         }
       }
 
