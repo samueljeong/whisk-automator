@@ -25,7 +25,7 @@ Grok.com(React)과 Flow(Google)에서 네이티브 `.click()`이 이벤트 핸�
 
 ### popup.js (1곳)
 
-- [ ] **5. `dismissPopups()` (line 1410-1462)**: `.click()` 4곳 → `simulateRealClick()` 교체
+- [x] **5. `dismissPopups()` (line 1410-1462)**: `.click()` 4곳 → `simulateRealClick()` 교체
   - Line 1416: 오버레이 클릭 → `simulateRealClick(el)`
   - Line 1429: 닫기 버튼 → `simulateRealClick(btn)`
   - Line 1438: 거절 버튼 → `simulateRealClick(el)`
