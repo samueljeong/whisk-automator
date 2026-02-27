@@ -31,21 +31,34 @@
 
 **문제 2 — selectAssetByName**: 에셋이 라이브러리에 없으면 검색 결과 0 → 클릭 로직 미도달. 에셋이 있어도 simulateRealClick/click() 모두 ref 삽입 실패.
 
-### 수정 계획
+### 수정 계획 — 클릭 우회 접근 (simulateRealClick + .click() 모두 실패 확정)
 
-#### Phase 1: uploadNewAsset에 클릭 로직 추가 (핵심)
-- [ ] **9a. 업로드 후 에셋 카드 클릭**: 파일 전달 완료 후, 패널에 나타난 에셋 카드를 찾아서 클릭
-  - 업로드 완료 대기 (기존 15초 루프)
-  - 패널에서 에셋 이름(searchName)으로 텍스트 검색
-  - 찾은 카드에 simulateRealClick → 실패 시 .click() 폴백
-  - 클릭 후 waitForAnalysisComplete로 ref 삽입 확인
-  - **기존 waitForAnalysisComplete 호출 전에 삽입해야 함**
+#### 시도 9: 키보드 네비게이션 (가장 유력)
+- [ ] **9. 검색 후 키보드로 선택**: 에셋 검색 결과를 ArrowDown + Enter로 선택
+  - 검색바에 이름 입력 (기존 로직 유지)
+  - 검색 결과 로딩 대기 (1초)
+  - `ArrowDown` 키 이벤트로 첫 번째 결과 포커스
+  - `Enter` 키 이벤트로 선택 확정
+  - ref 카운트 증가 확인
+  - **장점**: isTrusted 체크 우회, 네비게이션 발생 안 할 가능성 높음
+  - **적용 범위**: selectAssetByName + uploadNewAsset 공통
 
-#### Phase 2: 에셋 카드 클릭 자체가 안 될 경우 대안
-- [ ] **9b. 업로드 후 검색 전환**: uploadNewAsset 완료 후 selectAssetByName 재호출
-  - 업로드로 라이브러리에 추가 → 이제 검색 가능 → selectAssetByName으로 클릭
-- [ ] **9c. 키보드 네비게이션**: Tab/Enter로 에셋 선택 (클릭 우회)
-- [ ] **9d. Slate.js 직접 삽입**: 에셋 패널 완전 우회, 에디터에 void 노드 직접 주입
+#### 시도 10 (9번 실패 시): Drag & Drop 시뮬레이션
+- [ ] **10. 드래그 앤 드롭**: 에셋 카드 → 프롬프트 영역으로 드래그 이벤트
+  - dragstart → dragover → drop 이벤트 시퀀스
+  - dataTransfer에 에셋 정보 포함
+
+#### 시도 11 (최종 대안): Slate.js 직접 삽입
+- [ ] **11. Slate 에디터 void 노드 직접 삽입**: 에셋 패널 완전 우회
+  - `[contenteditable]` 요소에서 Slate 인스턴스 접근
+  - 기존 레퍼런스 void 노드의 구조 분석 (data 속성, 이미지 URL 등)
+  - 동일 구조의 void 노드를 프로그래매틱으로 삽입
+  - **리스크**: Slate 내부 상태와 DOM 불일치 가능
+
+#### uploadNewAsset 추가 수정
+- [ ] **12. 업로드 후 selectAssetByName 재호출**: 업로드 성공 → 라이브러리에 추가됨 → 검색으로 찾아서 키보드 선택
+  - 기존: 업로드 후 수동 대기 (실패)
+  - 수정: 업로드 후 패널 닫기 → selectAssetByName(키보드 방식) 재호출
 
 ## 수정하지 않는 것
 | 위치 | 이유 |
