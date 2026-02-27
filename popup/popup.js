@@ -2819,7 +2819,6 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       if (thisGroup !== currentRefGroup) {
         console.log('[Flow Auto] 캐릭터 그룹 변경: "' + (currentRefGroup || '없음') + '" → "' + (thisGroup || '없음') + '"');
         currentRefGroup = thisGroup;
-        _failedAssets = {}; // 그룹 변경 시 실패 캐시 초기화
       }
 
       // === 같은 characterGroup 내 연속 프롬프트 수집 (배치 범위) ===
