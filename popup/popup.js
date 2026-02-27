@@ -2024,6 +2024,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     }
 
     // 5. 키보드로 첫 번째 검색 결과 선택 (ArrowDown → Enter)
+    // Enter 키가 SPA 네비게이션을 트리거하므로 history API를 임시 차단
     console.log('[Flow Auto] 에셋 "' + charName + '" 키보드 선택 시도');
     searchInput.dispatchEvent(new KeyboardEvent('keydown', {
       key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, bubbles: true, cancelable: true
@@ -2033,6 +2034,23 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     }));
     await sleep(300);
 
+    // SPA 네비게이션 차단: history.pushState/replaceState 오버라이드
+    var origPushState = history.pushState.bind(history);
+    var origReplaceState = history.replaceState.bind(history);
+    var navBlocked = false;
+    history.pushState = function() {
+      console.log('[Flow Auto] 네비게이션 차단됨 (pushState):', arguments[2]);
+      navBlocked = true;
+    };
+    history.replaceState = function() {
+      console.log('[Flow Auto] 네비게이션 차단됨 (replaceState):', arguments[2]);
+      navBlocked = true;
+    };
+    // popstate/beforeunload로 location 변경도 차단
+    var blockNav = function(e) { e.preventDefault(); e.stopImmediatePropagation(); };
+    window.addEventListener('popstate', blockNav, true);
+    window.addEventListener('beforeunload', blockNav, true);
+
     searchInput.dispatchEvent(new KeyboardEvent('keydown', {
       key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true
     }));
@@ -2040,6 +2058,15 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true
     }));
     await sleep(500);
+
+    // SPA 네비게이션 차단 해제
+    history.pushState = origPushState;
+    history.replaceState = origReplaceState;
+    window.removeEventListener('popstate', blockNav, true);
+    window.removeEventListener('beforeunload', blockNav, true);
+    if (navBlocked) {
+      console.log('[Flow Auto] 네비게이션이 차단되어 페이지 유지됨');
+    }
 
     // 6. 에셋 패널 닫기
     console.log('[Flow Auto] 에셋 키보드 선택 완료, 패널 닫기');
