@@ -2285,15 +2285,18 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       // 에셋 패널에서 검색 → 선택 (flowTag 우선)
       var selected = await selectAssetByName(searchName);
 
-      if (!selected) {
-        // 에셋 클릭이 상세 페이지로 이동했을 수 있으므로 원래 페이지로 복귀
+      if (selected === 'navigated') {
+        // 에셋 클릭이 상세 페이지로 이동함 → 원래 페이지로 복귀
+        console.log('[Flow Auto] 페이지 이동 감지, history.back() 복귀');
         window.history.back();
         await sleep(1500);
+      }
 
-        // 에셋 미발견 → 새 에셋 업로드 시도
+      if (!selected || selected === 'navigated') {
+        // 에셋 미발견 또는 삽입 실패 → 새 에셋 업로드 시도
         var dataUrl = characterMap[name] || characterMap[name.normalize('NFC')];
         if (dataUrl) {
-          console.log('[Flow Auto] 에셋 미발견, 새 에셋 업로드: ' + searchName);
+          console.log('[Flow Auto] 새 에셋 업로드: ' + searchName);
           var uploaded = await uploadNewAsset(searchName, dataUrl);
           if (!uploaded) {
             console.warn('[Flow Auto] 에셋 업로드 실패: ' + searchName + ', 스킵');
