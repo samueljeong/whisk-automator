@@ -3400,12 +3400,12 @@ function updateCustomDirUI() {
 updateCustomDirUI();
 
 // 스타일 설정 변경 시 저장
-styleUrl.addEventListener('change', saveStyleSettings);
 stylePrefix.addEventListener('change', saveStyleSettings);
 styleSuffix.addEventListener('change', saveStyleSettings);
 
-// 스타일 이미지 캡처
-if (captureStyleBtn) captureStyleBtn.addEventListener('click', captureStyleFromFlow);
+// 모델/출력유형 변경 시 저장
+if (modelSelect) modelSelect.addEventListener('change', saveState);
+if (outputType) document.getElementById('outputType').addEventListener('change', saveState);
 
 // 템플릿 다운로드 헬퍼
 function downloadTextFile(filename, content) {
