@@ -2099,18 +2099,11 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     }));
     await sleep(1000);
 
-    // 7. 에셋 삽입 검증: ref 카운트 증가를 최대 5초간 재시도 (DOM 업데이트 지연 대응)
-    var afterCloseVoids = 0;
-    var refCheckRetries = 0;
-    while (refCheckRetries < 5) {
-      var freshPromptEl = findPromptInput();
-      afterCloseVoids = countRefImages(freshPromptEl || promptEl);
-      if (afterCloseVoids > beforeVoids) break;
-      refCheckRetries++;
-      await sleep(1000);
-    }
-    console.log('[Flow Auto] 에셋 "' + charName + '" 삽입 결과, ref: ' + beforeVoids + ' → ' + afterCloseVoids +
-      ' (재시도: ' + refCheckRetries + '회)');
+    // 7. 에셋 삽입 검증: ref 카운트 확인 (1회만, 키보드 이벤트가 isTrusted:false라 반복해도 무의미)
+    await sleep(500);
+    var freshPromptEl = findPromptInput();
+    var afterCloseVoids = countRefImages(freshPromptEl || promptEl);
+    console.log('[Flow Auto] 에셋 "' + charName + '" 삽입 결과, ref: ' + beforeVoids + ' → ' + afterCloseVoids);
 
     if (afterCloseVoids <= beforeVoids) {
       console.warn('[Flow Auto] 에셋 "' + charName + '" 삽입 실패 — 레퍼런스 이미지 증가 없음');
