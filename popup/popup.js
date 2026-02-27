@@ -161,7 +161,7 @@ async function checkConnection() {
     const tab = tabs[0];
     const url = tab?.url || '';
 
-    console.log('[Whisk Automator] Current tab URL:', url);
+    console.log('[Flow Automator] Current tab URL:', url);
 
     // Whisk 페이지 패턴 확인 (다양한 URL 형식 지원)
     const isWhiskPage = url.includes('labs.google') && url.includes('whisk') ||
@@ -178,7 +178,7 @@ async function checkConnection() {
       startBtn.disabled = true;
     }
   } catch (error) {
-    console.error('[Whisk Automator] Connection check error:', error);
+    console.error('[Flow Automator] Connection check error:', error);
     connectionStatus.textContent = '연결 실패';
     connectionStatus.className = 'status disconnected';
     startBtn.disabled = true;
@@ -984,7 +984,7 @@ function saveCapuredCharacter() {
     saveState();
     updateUI();
     closeCaptureModal();
-    console.log(`[Whisk Automator] 캐릭터 저장 완료: ${name}`);
+    console.log(`[Flow Automator] 캐릭터 저장 완료: ${name}`);
   }
 }
 
