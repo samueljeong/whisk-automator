@@ -1358,10 +1358,10 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
   window.__flowAutoRunning = true;
 
   console.log('[Flow Auto] Starting with', promptsWithCharacters.length, 'prompts');
-  console.log('[Flow Auto] Style URL:', styleImageUrl || '없음');
+  console.log('[Flow Auto] Model:', selectedModel || 'nano-banana-2');
+  console.log('[Flow Auto] Output type:', selectedOutputType || 'image');
   console.log('[Flow Auto] Characters:', Object.keys(characters || {}));
   console.log('[Flow Auto] Scenes:', Object.keys(scenes || {}));
-  console.log('[Flow Auto] Style presets:', Object.keys(styles || {}));
 
   let currentCharacterGroup = ''; // 현재 피사체에 로드된 캐릭터 조합 (정렬된 키, ''=없음)
   let currentScene = '';           // 현재 장면 슬롯에 로드된 장면 (''=없음)
