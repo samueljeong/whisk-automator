@@ -1413,7 +1413,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     document.querySelectorAll('[class*="overlay"], [class*="backdrop"], [class*="modal"]').forEach(function(el) {
       var r = el.getBoundingClientRect();
       if (r.width > window.innerWidth * 0.5 && r.height > window.innerHeight * 0.5) {
-        el.click();
+        simulateRealClick(el);
         console.log('[Flow Auto] 팝업 오버레이 클릭 닫기');
       }
     });
@@ -1426,7 +1426,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       if ((text === '×' || text === 'x' || text === 'close' || text === '닫기' ||
            aria.includes('close') || aria.includes('dismiss')) &&
           r.width > 0 && r.width <= 60) {
-        btn.click();
+        simulateRealClick(btn);
         console.log('[Flow Auto] 팝업 닫기 버튼 클릭: "' + (text || aria) + '"');
       }
     });
@@ -1435,7 +1435,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       var text = (el.textContent || '').trim().toLowerCase();
       if (text.includes('no thanks') || text.includes('아니') || text.includes('skip') ||
           text.includes('later') || text.includes('나중에') || text.includes('dismiss')) {
-        el.click();
+        simulateRealClick(el);
         console.log('[Flow Auto] 팝업 거절 버튼 클릭: "' + text + '"');
       }
     });
@@ -1455,7 +1455,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
           });
         }
         if (closeBtn) {
-          closeBtn.click();
+          simulateRealClick(closeBtn);
           console.log('[Flow Auto] "예상했던 내용" 피드백 팝업 닫기');
         }
       }
