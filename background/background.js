@@ -183,10 +183,45 @@ async function injectFileInterceptor(tabId) {
   console.log('[Background] MAIN world interceptor 주입 완료');
 }
 
+// Flow 영상 다운로드 (Grok 패턴 재사용)
+async function flowDownloadVideo(url, dataUrl, filename) {
+  try {
+    if (dataUrl) {
+      const response = await fetch(dataUrl);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      chrome.downloads.download({
+        url: blobUrl,
+        filename: filename,
+        saveAs: false
+      }, (downloadId) => {
+        if (downloadId) {
+          const cleanup = (delta) => {
+            if (delta.id === downloadId && delta.state?.current === 'complete') {
+              URL.revokeObjectURL(blobUrl);
+              chrome.downloads.onChanged.removeListener(cleanup);
+            }
+          };
+          chrome.downloads.onChanged.addListener(cleanup);
+        }
+      });
+    } else if (url) {
+      chrome.downloads.download({
+        url: url,
+        filename: filename,
+        saveAs: false
+      });
+    }
+    console.log('[Flow Background] 영상 다운로드 시작:', filename);
+  } catch (error) {
+    console.error('[Flow Background] 영상 다운로드 오류:', error);
+  }
+}
+
 // Download image
 async function downloadImage(url, filename) {
   try {
-    console.log('[Whisk Automator Background] Downloading to:', filename);
+    console.log('[Flow Automator Background] Downloading to:', filename);
     chrome.downloads.download({
       url: url,
       filename: filename,
