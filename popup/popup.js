@@ -1493,7 +1493,9 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
   // 0. Slate.js 에디터 내부 구조 덤프 (디버그용)
   // MAIN world의 interceptor.js로 위임 (CSP 우회)
   function dumpSlateEditor() {
+    console.log('[Flow Auto] Slate 디버그 트리거 (data-slate-debug=dump)');
     document.documentElement.setAttribute('data-slate-debug', 'dump');
+    // 결과 대기 (MAIN world에서 비동기로 처리)
   }
 
   // 1. Slate.js 프롬프트 입력창 찾기
