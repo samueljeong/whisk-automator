@@ -1581,6 +1581,24 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     return false;
   }
 
+  // 5-1. 수량 선택 (x1~x4)
+  async function selectQuantity(menu, count) {
+    var targetText = 'x' + (count || 1);
+    var items = menu.querySelectorAll('*');
+    for (var i = 0; i < items.length; i++) {
+      var txt = items[i].textContent.trim();
+      if (txt === targetText && items[i].getBoundingClientRect().width > 0) {
+        var clickTarget = items[i].closest('button, [role="menuitem"], [role="menuitemradio"]') || items[i];
+        console.log('[Flow Auto] 수량 선택: "' + targetText + '"');
+        simulateRealClick(clickTarget);
+        await sleep(300);
+        return true;
+      }
+    }
+    console.log('[Flow Auto] 수량 "' + targetText + '" 메뉴 아이템 미발견');
+    return false;
+  }
+
   // 6. 모델 선택 (하위 메뉴 열어서 선택)
   async function selectModel(menu, modelName) {
     var MODEL_DISPLAY_NAMES = {
