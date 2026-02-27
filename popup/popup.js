@@ -1573,9 +1573,14 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     await sleep(300);
 
     // 레퍼런스 보존 확인
-    var voidsAfter = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]').length;
+    var refImgsAfter = promptEl.querySelectorAll('[contenteditable="false"] img, [data-slate-void] img');
+    var voidsAfter = 0;
+    for (var va = 0; va < refImgsAfter.length; va++) {
+      var vaRect = refImgsAfter[va].getBoundingClientRect();
+      if (vaRect.width > 10 && vaRect.height > 10) voidsAfter++;
+    }
     if (voidsBefore > 0 && voidsAfter < voidsBefore) {
-      console.warn('[Flow Auto] fillPrompt 후 레퍼런스 유실! void: ' + voidsBefore + ' → ' + voidsAfter);
+      console.warn('[Flow Auto] fillPrompt 후 레퍼런스 유실! ref: ' + voidsBefore + ' → ' + voidsAfter);
     }
 
     // 입력 확인
