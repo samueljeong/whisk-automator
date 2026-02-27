@@ -2672,7 +2672,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, styleIm
       await sleep(pollInterval);
       waited += pollInterval;
 
-      // 새 이미지 개수 확인 (Whisk은 2개 생성)
+      // 새 이미지 개수 확인 (Flow는 2개 생성)
       let newCount = 0;
       const images = document.querySelectorAll('img');
       for (const img of images) {
