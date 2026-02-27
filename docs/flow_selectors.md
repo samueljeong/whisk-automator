@@ -14,7 +14,7 @@ URL: `labs.google/fx/ko/tools/flow/project/{uuid}`
 | 이미지/영상 전환 | 모델 메뉴 내 `[role="menu"]` → "Image"/"Video" 항목 | ✅ 확정 |
 | 종횡비 선택 | 모델 메뉴 내 "가로 모드"/"세로 모드" 항목 | ✅ 확정 |
 | 생성 수량 | 모델 메뉴 내 "x1"~"x4" 항목 | ✅ 확정 |
-| 모델 변경 | 모델 메뉴 내 "Nano Banana Pro ▼" → 하위 드롭다운 | ⚠️ 하위 메뉴 미확인 |
+| 모델 변경 | 모델 메뉴 내 모델 버튼 → 하위 `[role="menu"]` (264x126) → 모델명 클릭 | ✅ 확정 |
 | Ingredient 추가 | "add_2만들기" 버튼 (하단 좌측) → 인라인 드로어 | ⚠️ 드로어 구조 미확인 |
 | 파일 업로드 | `input[type=file][accept="image/*"][multiple]` (display:none) | ✅ interceptor 호환 |
 | 생성 완료 감지 | ??? | ❌ 미확인 |
