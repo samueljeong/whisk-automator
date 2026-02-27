@@ -1789,127 +1789,92 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     return null;
   }
 
-  // 10. 단일 레퍼런스 이미지 업로드
+  // 10. 단일 레퍼런스 이미지 업로드 (Drag & Drop → 프롬프트 영역)
   async function uploadOneReference(dataUrl) {
-    // 1. data-flow-upload 속성에 base64 데이터 설정
+    var promptEl = findPromptInput();
+
+    // 업로드 전 썸네일 수 기록 (분석 완료 감지용)
+    var beforeVoids = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]').length;
+
+    // 1. Drag & Drop으로 프롬프트 영역에 직접 이미지 드롭
     document.documentElement.setAttribute('data-flow-upload', dataUrl);
     document.documentElement.removeAttribute('data-flow-upload-done');
+    document.documentElement.setAttribute('data-flow-upload-dragdrop', '[role="textbox"][contenteditable]');
+    console.log('[Flow Auto] 프롬프트 영역에 이미지 Drag&Drop 시작');
 
-    // 2. ingredient 버튼 클릭 → 드로어 열기 + 파일 입력 트리거
-    var ingredientBtn = findIngredientButton();
-    if (!ingredientBtn) throw new Error('Ingredient 버튼을 찾을 수 없습니다');
-    simulateRealClick(ingredientBtn);
-    await sleep(500);
-
-    // 3. 파일 입력 트리거 시도
-    //    대안 A: input[type=file] 직접 찾아 click() → interceptor가 가로챔
-    //    대안 B: 드로어 내 업로드 버튼 클릭 → showOpenFilePicker interceptor 가로챔
-    var fileInput = document.querySelector('input[type="file"][accept*="image"]');
-    if (!fileInput) {
-      // input[type=file] 없으면 accept 속성 없는 것도 탐색
-      fileInput = document.querySelector('input[type="file"]');
-    }
-
-    if (fileInput) {
-      console.log('[Flow Auto] input[type=file] 발견, click() 호출');
-      fileInput.click(); // interceptor가 가로챔
-    } else {
-      // 드로어 내 업로드 버튼 찾기 (아이콘 또는 텍스트 기반)
-      console.log('[Flow Auto] input[type=file] 미발견, 드로어 내 업로드 버튼 탐색...');
-      var uploadBtn = null;
-      var allBtns = document.querySelectorAll('button, [role="button"]');
-      for (var u = 0; u < allBtns.length; u++) {
-        var btnTxt = (allBtns[u].textContent || '').trim().toLowerCase();
-        var btnRect = allBtns[u].getBoundingClientRect();
-        if (btnRect.width > 0 && (btnTxt.includes('upload') || btnTxt.includes('업로드') ||
-            btnTxt.includes('파일') || btnTxt.includes('file'))) {
-          uploadBtn = allBtns[u];
-          break;
-        }
-      }
-      if (uploadBtn) {
-        console.log('[Flow Auto] 업로드 버튼 발견, 클릭');
-        simulateRealClick(uploadBtn);
-      } else {
-        // 최후 수단: Drag & Drop 시뮬레이션 (프롬프트 영역에 드래그)
-        console.log('[Flow Auto] 업로드 버튼 미발견, Drag&Drop 시도');
-        var promptEl = findPromptInput();
-        document.documentElement.setAttribute('data-flow-upload', dataUrl);
-        document.documentElement.setAttribute('data-flow-upload-dragdrop', '[role="textbox"][contenteditable]');
-      }
-    }
-    await sleep(500);
-
-    // 4. 업로드 완료 대기 (data-flow-upload-done 감시)
+    // 2. 파일 전달 완료 대기
     var maxWait = 10000;
     var waited = 0;
     while (waited < maxWait) {
       var done = document.documentElement.getAttribute('data-flow-upload-done');
       if (done === 'true') {
-        console.log('[Flow Auto] 레퍼런스 파일 전달 성공');
+        console.log('[Flow Auto] Drag&Drop 파일 전달 성공');
         document.documentElement.removeAttribute('data-flow-upload-done');
         break;
       }
       if (done === 'error') {
         document.documentElement.removeAttribute('data-flow-upload-done');
-        throw new Error('레퍼런스 업로드 실패');
+        throw new Error('Drag&Drop 파일 전달 실패');
       }
       await sleep(300);
       waited += 300;
     }
     if (waited >= maxWait) {
-      throw new Error('레퍼런스 업로드 타임아웃 (10초)');
+      throw new Error('Drag&Drop 파일 전달 타임아웃 (10초)');
     }
 
-    // 5. Flow 분석 완료 대기 — 생성 버튼이 활성화될 때까지
-    //    Flow는 이미지 업로드 후 분석(약 5~15초)하며, 분석 중에는 생성 버튼이 비활성화됨
+    // 3. Flow 분석 완료 대기
+    //    이미지를 드롭하면 Flow가 분석을 시작하고, 완료되면 프롬프트 안에 썸네일이 나타남
     //    분석 완료 전에 프롬프트를 제출하면 레퍼런스가 반영되지 않음
-    console.log('[Flow Auto] 레퍼런스 분석 대기 시작...');
+    console.log('[Flow Auto] 레퍼런스 분석 대기 시작 (기존 썸네일: ' + beforeVoids + '개)...');
     var analysisMaxWait = 60000; // 최대 60초
     var analysisWaited = 0;
-    var analysisCheckInterval = 1000;
 
-    // 초기 대기 (업로드 처리 + 분석 시작)
-    await sleep(3000);
-    analysisWaited += 3000;
+    // 초기 대기 (분석 시작까지)
+    await sleep(2000);
+    analysisWaited += 2000;
 
     while (analysisWaited < analysisMaxWait) {
       if (isStopRequested()) throw new Error('__STOPPED__');
 
-      // 방법 1: 생성 버튼("만들기") 활성화 상태 확인
-      var genBtn = null;
-      try { genBtn = findGenerateButton(); } catch(e) {}
+      // 감지 1: 프롬프트 내 썸네일(void 요소) 증가 확인
+      var currentVoids = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]').length;
 
-      if (genBtn) {
-        var isDisabled = genBtn.disabled ||
-          genBtn.getAttribute('aria-disabled') === 'true' ||
-          genBtn.classList.contains('disabled') ||
-          getComputedStyle(genBtn).pointerEvents === 'none' ||
-          getComputedStyle(genBtn).opacity < 0.5;
-
-        if (!isDisabled) {
-          console.log('[Flow Auto] 레퍼런스 분석 완료 — 생성 버튼 활성화 (' + (analysisWaited / 1000) + '초)');
-          return true;
+      // 감지 2: 썸네일 위 로딩 오버레이/스피너/프로그레스 확인
+      var hasLoadingOverlay = false;
+      var voidEls = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]');
+      for (var vi = 0; vi < voidEls.length; vi++) {
+        // 썸네일 내부에 로딩/스피너/프로그레스 요소가 있는지
+        var loadingInThumb = voidEls[vi].querySelectorAll(
+          '[class*="loading"], [class*="spinner"], [class*="progress"], ' +
+          '[class*="Loading"], [class*="Spinner"], [class*="Progress"], ' +
+          '[role="progressbar"], svg circle[stroke-dasharray], svg circle[stroke-dashoffset]'
+        );
+        if (loadingInThumb.length > 0) {
+          hasLoadingOverlay = true;
+          break;
         }
-        console.log('[Flow Auto] 분석 중... (' + (analysisWaited / 1000) + '초) 생성 버튼 비활성화');
-      }
-
-      // 방법 2: progressbar / busy 상태 확인 (보조)
-      var progressEls = document.querySelectorAll('[role="progressbar"], [aria-busy="true"]');
-      var hasProgress = false;
-      for (var pi = 0; pi < progressEls.length; pi++) {
-        if (progressEls[pi].getBoundingClientRect().width > 0) {
-          hasProgress = true;
-          var pctAttr = progressEls[pi].getAttribute('aria-valuenow') || '';
-          if (pctAttr) {
-            console.log('[Flow Auto] 분석 진행률: ' + pctAttr + '%');
-          }
+        // opacity가 낮으면 아직 분석 중 (반투명 상태)
+        var thumbOpacity = parseFloat(getComputedStyle(voidEls[vi]).opacity);
+        if (thumbOpacity < 0.9) {
+          hasLoadingOverlay = true;
           break;
         }
       }
 
-      await sleep(analysisCheckInterval);
-      analysisWaited += analysisCheckInterval;
+      // 새 썸네일이 추가됐고 로딩 오버레이가 없으면 → 분석 완료
+      if (currentVoids > beforeVoids && !hasLoadingOverlay) {
+        console.log('[Flow Auto] 레퍼런스 분석 완료 (' + (analysisWaited / 1000) + '초), 썸네일 ' + beforeVoids + ' → ' + currentVoids);
+        return true;
+      }
+
+      if (analysisWaited % 5000 === 0) {
+        console.log('[Flow Auto] 분석 대기 중... (' + (analysisWaited / 1000) + '초) 썸네일: ' +
+          currentVoids + '개, 로딩: ' + hasLoadingOverlay);
+      }
+
+      await sleep(1000);
+      analysisWaited += 1000;
     }
 
     console.warn('[Flow Auto] 레퍼런스 분석 대기 타임아웃 (60초), 계속 진행');
