@@ -371,7 +371,7 @@
         }]
       });
 
-      // Whisk 프롬프트 데이터 읽기
+      // Flow 프롬프트 데이터 읽기
       const storageData = await chrome.storage.local.get(['prompts']);
       const whiskPrompts = storageData.prompts || [];
 
