@@ -332,10 +332,10 @@ async function scanCharacterFolder(rootHandle) {
     const slotType = slotMap[slotName] || slotMap[slotName.toLowerCase()];
     foundFolders.push(`${slotEntry.name}→${slotType || '무시'}`);
     if (!slotType) {
-      console.log(`[Whisk] 알 수 없는 폴더 무시: ${slotEntry.name} (NFC: ${slotName})`);
+      console.log(`[Flow] 알 수 없는 폴더 무시: ${slotEntry.name} (NFC: ${slotName})`);
       continue;
     }
-    console.log(`[Whisk] 슬롯 발견: ${slotName} → ${slotType}`);
+    console.log(`[Flow] 슬롯 발견: ${slotName} → ${slotType}`);
 
     // 슬롯 폴더 안의 프로젝트 폴더 스캔
     for await (const projEntry of slotEntry.values()) {
@@ -376,9 +376,9 @@ async function scanCharacterFolder(rootHandle) {
               PROJECTS[projectKey].styleSuffix = parsed.suffix;
               PROJECTS[projectKey].styleSuffixFromFolder = true;
             }
-            console.log(`[Whisk] style.txt 로드: ${projName}`, parsed);
+            console.log(`[Flow] style.txt 로드: ${projName}`, parsed);
           } catch (e) {
-            console.error(`[Whisk] style.txt 읽기 실패: ${projName}`, e);
+            console.error(`[Flow] style.txt 읽기 실패: ${projName}`, e);
           }
           continue;
         }
@@ -417,14 +417,14 @@ async function scanCharacterFolder(rootHandle) {
             }
           }
         } catch (e) {
-          console.error(`[Whisk] 파일 읽기 실패: ${slotEntry.name}/${projName}/${fileEntry.name}`, e);
+          console.error(`[Flow] 파일 읽기 실패: ${slotEntry.name}/${projName}/${fileEntry.name}`, e);
         }
       }
     }
   }
 
-  console.log(`[Whisk] 폴더 스캔 결과: ${foundFolders.join(', ')}`);
-  console.log(`[Whisk] 폴더에서 ${totalCount}개 로드 완료`);
+  console.log(`[Flow] 폴더 스캔 결과: ${foundFolders.join(', ')}`);
+  console.log(`[Flow] 폴더에서 ${totalCount}개 로드 완료`);
 
   if (totalCount === 0 && foundFolders.length > 0) {
     const matched = foundFolders.filter(f => !f.endsWith('→무시'));
@@ -494,11 +494,11 @@ async function loadState() {
           };
           // 마이그레이션: 옛날 스타일 텍스트가 저장되어 있으면 기본값으로 강제 교체
           if (PROJECTS[key].stylePrefix && PROJECTS[key].stylePrefix.toLowerCase().includes('wuxia')) {
-            console.log('[Whisk] 마이그레이션: stylePrefix wuxia → murim (' + key + ')');
+            console.log('[Flow] 마이그레이션: stylePrefix wuxia → murim (' + key + ')');
             PROJECTS[key].stylePrefix = defaultProj.stylePrefix || '';
           }
           if (PROJECTS[key].styleSuffix && PROJECTS[key].styleSuffix.toLowerCase().includes('ink wash')) {
-            console.log('[Whisk] 마이그레이션: styleSuffix 옛날 스타일 교체 (' + key + ')');
+            console.log('[Flow] 마이그레이션: styleSuffix 옛날 스타일 교체 (' + key + ')');
             PROJECTS[key].styleSuffix = defaultProj.styleSuffix || '';
           }
         }
@@ -531,11 +531,11 @@ async function loadState() {
             var fallbackName = result.customDirName || 'whisk-images';
             saveLocation.value = fallbackName;
             saveLocation.readOnly = false;
-            console.log('[Whisk] 커스텀 폴더 권한 만료 → 다운로드/' + fallbackName + ' 으로 폴백');
+            console.log('[Flow] 커스텀 폴더 권한 만료 → 다운로드/' + fallbackName + ' 으로 폴백');
           }
         }
       } catch (e) {
-        console.log('[Whisk] Failed to restore directory handle:', e);
+        console.log('[Flow] Failed to restore directory handle:', e);
       }
     }
 
@@ -3318,7 +3318,7 @@ resetLocationBtn.addEventListener('click', async () => {
     saveState();
   } catch (e) {
     if (e.name !== 'AbortError') {
-      console.error('[Whisk] Folder selection error:', e);
+      console.error('[Flow] Folder selection error:', e);
     }
   }
 });
@@ -3340,7 +3340,7 @@ openFolderBtn.addEventListener('click', async () => {
         saveState();
       }
     } catch (e) {
-      console.error('[Whisk] Permission check error:', e);
+      console.error('[Flow] Permission check error:', e);
     }
     return;
   }
@@ -3557,7 +3557,7 @@ loadCharFolderBtn.addEventListener('click', async () => {
     loadCharFolderBtn.textContent = '\uD83D\uDCC1 \uD3F4\uB354\uC5D0\uC11C \uBD88\uB7EC\uC624\uAE30';
     loadCharFolderBtn.disabled = false;
     if (e.name !== 'AbortError') {
-      console.error('[Whisk] Character folder error:', e);
+      console.error('[Flow] Character folder error:', e);
     }
   }
 });
@@ -3676,10 +3676,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             const writable = await fileHandle.createWritable();
             await writable.write(bytes);
             await writable.close();
-            console.log('[Whisk] 파일 저장 완료:', message.filename);
+            console.log('[Flow] 파일 저장 완료:', message.filename);
             return;
           } catch (e) {
-            console.error('[Whisk] 커스텀 폴더 저장 실패, 다운로드 폴백:', e);
+            console.error('[Flow] 커스텀 폴더 저장 실패, 다운로드 폴백:', e);
           }
         }
         // 폴백: customDirHandle 없거나 저장 실패 시 chrome.downloads로 저장
@@ -3691,9 +3691,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             url: message.dataUrl,
             filename: fullPath
           });
-          console.log('[Whisk] 다운로드 폴백 사용:', fullPath);
+          console.log('[Flow] 다운로드 폴백 사용:', fullPath);
         } catch (e2) {
-          console.error('[Whisk] 다운로드 폴백도 실패:', e2);
+          console.error('[Flow] 다운로드 폴백도 실패:', e2);
         }
       })();
       break;
