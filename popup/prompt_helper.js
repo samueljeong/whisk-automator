@@ -181,7 +181,7 @@ camera slowly pulls back revealing vast landscape, clouds drifting, cinematic at
     showPrompt(currentAI);
   }
 
-  // Whisk 버튼
+  // Flow 버튼
   document.getElementById('aiPromptHelperBtn').addEventListener('click', () => openModal('flow'));
 
   // Grok 버튼
