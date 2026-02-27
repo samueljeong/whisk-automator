@@ -405,12 +405,8 @@ async function scanCharacterFolder(rootHandle) {
             };
             totalCount++;
           } else if (slotType === 'style') {
-            // style.* 파일만 인식 (style.png, style.jpg 등)
-            if (name.toLowerCase() === 'style') {
-              PROJECTS[projectKey].styleImage = dataUrl;
-              PROJECTS[projectKey].styleFromFolder = true;
-              totalCount++;
-            }
+            // Flow에서는 스타일 이미지 슬롯 없음, style.txt만 유효
+            // 이미지 파일은 무시
           }
         } catch (e) {
           console.error(`[Flow] 파일 읽기 실패: ${slotEntry.name}/${projName}/${fileEntry.name}`, e);
