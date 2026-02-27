@@ -2766,6 +2766,68 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     return false;
   }
 
+  // TODO: Flow DOM 탐색 완료 후 비디오 다운로드 로직 구현
+  async function downloadVideo(promptText, index, customFilename) {
+    console.log('[Flow Auto] 비디오 다운로드 시도...');
+    var videos = document.querySelectorAll('video');
+    var targetVideo = null;
+
+    for (var v = videos.length - 1; v >= 0; v--) {
+      var video = videos[v];
+      if (video.src && video.src.startsWith('blob:')) {
+        targetVideo = video;
+        break;
+      }
+    }
+
+    if (!targetVideo || !targetVideo.src) {
+      console.log('[Flow Auto] 다운로드할 비디오를 찾지 못함');
+      return false;
+    }
+
+    var fullFilename;
+    if (customFilename) {
+      var safeName = customFilename.replace(/[<>:"|?*]/g, '_').replace(/_+/g, '_');
+      fullFilename = safeName.includes('.') ? safeName : safeName + '.mp4';
+    } else {
+      var autoName = promptText
+        .substring(0, 30)
+        .replace(/[^a-zA-Z0-9가-힣]/g, '_')
+        .replace(/_+/g, '_');
+      fullFilename = 'flow_' + (index + 1) + '_' + autoName + '.mp4';
+    }
+
+    try {
+      var response = await fetch(targetVideo.src);
+      var blob = await response.blob();
+      var reader = new FileReader();
+      var dataUrl = await new Promise(function(resolve, reject) {
+        reader.onload = function() { resolve(reader.result); };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+
+      chrome.runtime.sendMessage({
+        action: 'DOWNLOAD_VIDEO',
+        dataUrl: dataUrl,
+        filename: savePath + '/' + fullFilename
+      });
+      console.log('[Flow Auto] 비디오 다운로드 요청:', fullFilename);
+      return true;
+    } catch (e) {
+      console.error('[Flow Auto] 비디오 다운로드 실패:', e.message);
+      return false;
+    }
+  }
+
+  // 출력 유형에 따라 적절한 다운로드 함수 호출
+  async function downloadOutput(promptText, index, customFilename, preGenSrcs) {
+    if (selectedOutputType === 'video') {
+      return await downloadVideo(promptText, index, customFilename);
+    }
+    return await downloadImage(promptText, index, customFilename, preGenSrcs);
+  }
+
   async function run() {
     // TODO: Flow DOM 탐색 완료 후 구현
     // - selectModel(selectedModel): 모델 드롭다운 선택 (Nano Banana 2 / Imagen4)
