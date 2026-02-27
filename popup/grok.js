@@ -939,6 +939,18 @@
       target: { tabId: grokTabId },
       world: 'MAIN',
       func: () => {
+        function simulateClick(element) {
+          const rect = element.getBoundingClientRect();
+          const x = rect.left + rect.width / 2;
+          const y = rect.top + rect.height / 2;
+          const opts = { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0 };
+          element.dispatchEvent(new PointerEvent('pointerdown', { ...opts, pointerId: 1 }));
+          element.dispatchEvent(new MouseEvent('mousedown', opts));
+          element.dispatchEvent(new PointerEvent('pointerup', { ...opts, pointerId: 1 }));
+          element.dispatchEvent(new MouseEvent('mouseup', opts));
+          element.dispatchEvent(new MouseEvent('click', opts));
+        }
+
         // 프로젝트 다이얼로그는 닫지 않음 (취소/Cancel 클릭 제거)
         // A/B 테스트, 쿠키, 알림 등 방해 팝업만 닫기
         const closeButtons = document.querySelectorAll(
@@ -952,7 +964,7 @@
           if (text === 'no thanks' || text === 'skip' || text === 'maybe later' ||
               label.includes('dismiss')) {
             console.log('[Grok] 방해 팝업 닫기:', text || label);
-            btn.click();
+            simulateClick(btn);
             return;
           }
         }
