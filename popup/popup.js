@@ -991,11 +991,16 @@ function saveCapuredCharacter() {
   const aliases = aliasInput ? aliasInput.split(',').map(a => a.trim()).filter(a => a) : [];
   aliases.unshift(name); // 기본 이름 추가
 
+  // Flow 태그 (영문, # 접두어 자동 추가)
+  let flowTag = (charFlowTagInput.value || '').trim();
+  if (flowTag && !flowTag.startsWith('#')) flowTag = '#' + flowTag;
+
   const project = PROJECTS[currentProject];
   if (project) {
     project.characters[name] = {
       image: capturedImageData,  // Base64 데이터
       aliases: aliases,
+      flowTag: flowTag || null,
       isLocal: true  // 로컬 저장 표시
     };
     saveState();
