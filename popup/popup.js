@@ -2122,7 +2122,6 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         savedLinks[sl].el.setAttribute('href', savedLinks[sl].href);
       }
       document.removeEventListener('click', preventNav, true);
-      window.removeEventListener('beforeunload', preventUnload);
 
       // URL 변경 감지
       if (window.location.href !== urlBefore) {
