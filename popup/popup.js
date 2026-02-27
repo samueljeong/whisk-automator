@@ -659,7 +659,6 @@ function saveStyleSettings() {
   const project = PROJECTS[currentProject];
   if (!project) return;
 
-  project.styleImage = styleUrl.value.trim();
   project.stylePrefix = stylePrefix.value;
   project.styleSuffix = styleSuffix.value;
   saveState();
