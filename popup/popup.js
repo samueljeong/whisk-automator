@@ -381,7 +381,15 @@ async function scanCharacterFolder(rootHandle) {
 
         if (!imageExts.includes(ext)) continue;
 
-        const name = fileEntry.name.substring(0, fileEntry.name.lastIndexOf('.')).normalize('NFC');
+        const rawName = fileEntry.name.substring(0, fileEntry.name.lastIndexOf('.')).normalize('NFC');
+        // 파일명에 #태그 포함 시 분리: "용아#yonga.png" → name="용아", flowTag="#yonga"
+        var name = rawName;
+        var fileFlowTag = null;
+        var hashIdx = rawName.indexOf('#');
+        if (hashIdx > 0) {
+          name = rawName.substring(0, hashIdx).trim();
+          fileFlowTag = '#' + rawName.substring(hashIdx + 1).trim();
+        }
 
         try {
           const file = await fileEntry.getFile();
@@ -391,6 +399,7 @@ async function scanCharacterFolder(rootHandle) {
             PROJECTS[projectKey].characters[name] = {
               image: dataUrl,
               aliases: [name],
+              flowTag: fileFlowTag,
               isLocal: true,
               fromFolder: true
             };
