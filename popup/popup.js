@@ -1338,7 +1338,7 @@ async function startAutomation() {
     await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: runFlowAutomation,
-      args: [promptsWithCharacters, delayMs, shouldDownload, projectStyleImage, characterMap, savePath, sceneMap, null, !!customDirHandle]
+      args: [promptsWithCharacters, delayMs, shouldDownload, null, characterMap, savePath, sceneMap, null, !!customDirHandle, selectedModel, selectedOutputType]
     });
   } catch (error) {
     console.error('[Popup] Script injection failed:', error);
