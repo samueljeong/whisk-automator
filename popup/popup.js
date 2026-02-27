@@ -1896,44 +1896,8 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       return false;
     }
 
-    // 5. 프롬프트에 썸네일 삽입 확인 (이미 분석된 에셋은 즉시 삽입됨)
-    await sleep(1000);
-    var afterVoids = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]').length;
-    if (afterVoids > beforeVoids) {
-      console.log('[Flow Auto] 에셋 "' + charName + '" 삽입 완료 (즉시), 썸네일 ' + beforeVoids + ' → ' + afterVoids);
-    } else {
-      // 분석 대기 (새 에셋인 경우)
-      console.log('[Flow Auto] 에셋 "' + charName + '" 분석 대기...');
-      var analysisMaxWait = 60000;
-      var analysisWaited = 0;
-      while (analysisWaited < analysisMaxWait) {
-        if (isStopRequested()) throw new Error('__STOPPED__');
-        var currentVoids = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]').length;
-        if (currentVoids > beforeVoids) {
-          // 썸네일 추가됨 → 로딩 오버레이 확인
-          var hasLoading = false;
-          var voidEls = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]');
-          for (var vi = 0; vi < voidEls.length; vi++) {
-            var loadingInThumb = voidEls[vi].querySelectorAll(
-              '[class*="loading"], [class*="spinner"], [class*="progress"], ' +
-              '[role="progressbar"], svg circle[stroke-dasharray]'
-            );
-            if (loadingInThumb.length > 0) { hasLoading = true; break; }
-            var thumbOpacity = parseFloat(getComputedStyle(voidEls[vi]).opacity);
-            if (thumbOpacity < 0.9) { hasLoading = true; break; }
-          }
-          if (!hasLoading) {
-            console.log('[Flow Auto] 에셋 "' + charName + '" 분석 완료 (' + (analysisWaited / 1000) + '초)');
-            break;
-          }
-        }
-        if (analysisWaited % 5000 === 0 && analysisWaited > 0) {
-          console.log('[Flow Auto] 분석 대기 중... (' + (analysisWaited / 1000) + '초)');
-        }
-        await sleep(1000);
-        analysisWaited += 1000;
-      }
-    }
+    // 5. 분석 완료 대기 (이미 분석된 에셋은 빠르게, 새 에셋은 오래 걸림)
+    await waitForAnalysisComplete(promptEl, beforeVoids, charName);
 
     // 6. 에셋 패널 닫기 (ESC 또는 바깥 클릭)
     document.dispatchEvent(new KeyboardEvent('keydown', {
