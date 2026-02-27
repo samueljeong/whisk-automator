@@ -2769,7 +2769,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, styleIm
           .substring(0, 30)
           .replace(/[^a-zA-Z0-9가-힣]/g, '_')
           .replace(/_+/g, '_');
-        fullFilename = `whisk_${index + 1}_${autoFilename}.png`;
+        fullFilename = `flow_${index + 1}_${autoFilename}.png`;
       }
 
       const fullPath = `${savePath}/${fullFilename}`;
