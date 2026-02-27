@@ -2124,7 +2124,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
   // Flow는 showOpenFilePicker (File System Access API)를 사용하며, interceptor가 가로챔
   async function uploadNewAsset(searchName, dataUrl) {
     var promptEl = findPromptInput();
-    var beforeVoids = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]').length;
+    var beforeVoids = countRefImages(promptEl);
 
     // interceptor에 파일 데이터 + 이름 설정
     document.documentElement.setAttribute('data-flow-upload-name', searchName);
