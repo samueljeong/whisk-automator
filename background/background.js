@@ -268,14 +268,14 @@ chrome.downloads.onChanged.addListener((delta) => {
 // Discord 초대 탭 자동 닫기 (Whisk가 자동으로 열어버리는 Google Labs Discord)
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.url && changeInfo.url.includes('discord.com/invite')) {
-    console.log('[Whisk Automator] Discord 초대 탭 자동 닫기:', changeInfo.url);
+    console.log('[Flow Automator] Discord 초대 탭 자동 닫기:', changeInfo.url);
     chrome.tabs.remove(tabId);
   }
 });
 
 chrome.tabs.onCreated.addListener((tab) => {
   if (tab.pendingUrl && tab.pendingUrl.includes('discord.com/invite')) {
-    console.log('[Whisk Automator] Discord 초대 탭 생성 차단:', tab.pendingUrl);
+    console.log('[Flow Automator] Discord 초대 탭 생성 차단:', tab.pendingUrl);
     chrome.tabs.remove(tab.id);
   }
 });
