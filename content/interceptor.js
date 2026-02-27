@@ -179,8 +179,125 @@
   });
   ddObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-flow-upload-dragdrop'] });
 
+  // === Slate.js 에디터 디버그 + 직접 삽입 ===
+  // MAIN world에서만 React fiber 접근 가능 (CSP 문제 없음)
+
+  // Slate 에디터 인스턴스 찾기
+  function findSlateEditor() {
+    var el = document.querySelector('[role="textbox"][contenteditable]');
+    if (!el) return null;
+
+    var fiberKey = Object.keys(el).find(function(k) {
+      return k.startsWith('__reactFiber$') || k.startsWith('__reactInternalInstance$');
+    });
+    if (!fiberKey) return null;
+
+    var current = el[fiberKey];
+    var depth = 0;
+    while (current && depth < 50) {
+      // props.editor 체크
+      if (current.memoizedProps && current.memoizedProps.editor &&
+          typeof current.memoizedProps.editor.apply === 'function' &&
+          Array.isArray(current.memoizedProps.editor.children)) {
+        return current.memoizedProps.editor;
+      }
+      // hooks 체인 체크
+      var hook = current.memoizedState;
+      var hi = 0;
+      while (hook && hi < 20) {
+        var val = hook.memoizedState;
+        if (val && typeof val === 'object' && !Array.isArray(val) &&
+            typeof val.apply === 'function' && Array.isArray(val.children)) {
+          return val;
+        }
+        hook = hook.next;
+        hi++;
+      }
+      current = current.return;
+      depth++;
+    }
+    return null;
+  }
+
+  // Slate 에디터 덤프 (data-slate-debug 속성으로 트리거)
+  function handleSlateDebug() {
+    try {
+      var editor = findSlateEditor();
+      if (!editor) {
+        console.error('[Slate Debug] editor 인스턴스 미발견');
+        // fiber 경로 덤프
+        var el = document.querySelector('[role="textbox"][contenteditable]');
+        if (el) {
+          var fk = Object.keys(el).find(function(k) { return k.startsWith('__reactFiber$'); });
+          if (fk) {
+            var cur = el[fk];
+            var d = 0;
+            while (cur && d < 30) {
+              var n = cur.type ? (cur.type.displayName || cur.type.name || String(cur.type).substring(0, 40)) : null;
+              var pk = cur.memoizedProps ? Object.keys(cur.memoizedProps).join(',') : '';
+              console.log('[Slate Debug] fiber[' + d + '] ' + n + ' props=[' + pk + ']');
+              cur = cur.return;
+              d++;
+            }
+          }
+        }
+        document.documentElement.setAttribute('data-slate-debug-result', 'not-found');
+        return;
+      }
+
+      console.log('[Slate Debug] ===== EDITOR 발견! =====');
+      console.log('[Slate Debug] 키:', Object.keys(editor).join(', '));
+      console.log('[Slate Debug] children 수:', editor.children.length);
+      console.log('[Slate Debug] selection:', JSON.stringify(editor.selection));
+      console.log('[Slate Debug] children 전체:');
+      console.log(JSON.stringify(editor.children, null, 2));
+
+      // void/특수 노드 추출
+      var voids = [];
+      function findVoids(nodes, path) {
+        for (var i = 0; i < nodes.length; i++) {
+          var node = nodes[i];
+          if (node.type && node.type !== 'paragraph') {
+            voids.push({ path: path.concat([i]), type: node.type, node: node });
+          }
+          if (node.children) findVoids(node.children, path.concat([i]));
+        }
+      }
+      findVoids(editor.children, []);
+      if (voids.length > 0) {
+        console.log('[Slate Debug] ===== VOID 노드 (' + voids.length + '개) =====');
+        voids.forEach(function(v) {
+          console.log('[Slate Debug] path=' + JSON.stringify(v.path) + ' type="' + v.type + '"');
+          console.log(JSON.stringify(v.node, null, 2));
+        });
+      } else {
+        console.log('[Slate Debug] void 노드 없음 (에셋 삽입 후 다시 실행해주세요)');
+      }
+
+      window.__slateEditor = editor;
+      document.documentElement.setAttribute('data-slate-debug-result', JSON.stringify(editor.children));
+    } catch(e) {
+      console.error('[Slate Debug] 오류:', e);
+      document.documentElement.setAttribute('data-slate-debug-result', 'error:' + e.message);
+    }
+  }
+
+  // data-slate-debug 속성 변경 감지 → 덤프 실행
+  var slateObserver = new MutationObserver(function(mutations) {
+    for (var m = 0; m < mutations.length; m++) {
+      if (mutations[m].attributeName === 'data-slate-debug') {
+        var val = document.documentElement.getAttribute('data-slate-debug');
+        if (val === 'dump') {
+          document.documentElement.removeAttribute('data-slate-debug');
+          handleSlateDebug();
+        }
+      }
+    }
+  });
+  slateObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-slate-debug'] });
+
   window.__flowAutoInterceptorInstalled = true;
   // DOM 속성으로도 표시 (ISOLATED world에서 확인 가능)
   document.documentElement.setAttribute('data-flow-interceptor-ready', 'true');
-  console.log('[Flow Interceptor] document_start 설치 완료: showOpenFilePicker + input[type=file] + click 캡처 + drag&drop');
+  console.log('[Flow Interceptor] document_start 설치 완료: showOpenFilePicker + input[type=file] + click 캡처 + drag&drop + slate-debug');
 })();
