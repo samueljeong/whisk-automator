@@ -348,7 +348,6 @@ async function scanCharacterFolder(rootHandle) {
           characters: {},
           scenes: {},
           inheritCommon: true,
-          styleImage: '',
           stylePrefix: '',
           styleSuffix: ''
         };
