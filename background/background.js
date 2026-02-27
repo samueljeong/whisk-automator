@@ -228,7 +228,7 @@ async function downloadImage(url, filename) {
       saveAs: false
     });
   } catch (error) {
-    console.error('[Whisk Automator Background] Download error:', error);
+    console.error('[Flow Automator Background] Download error:', error);
   }
 }
 
@@ -244,14 +244,14 @@ async function openSaveFolder(savePath) {
     });
 
     if (results.length > 0) {
-      console.log('[Whisk Automator Background] Opening folder for:', results[0].filename);
+      console.log('[Flow Automator Background] Opening folder for:', results[0].filename);
       chrome.downloads.show(results[0].id);
     } else {
-      console.log('[Whisk Automator Background] No files found, opening default folder');
+      console.log('[Flow Automator Background] No files found, opening default folder');
       chrome.downloads.showDefaultFolder();
     }
   } catch (error) {
-    console.error('[Whisk Automator Background] Open folder error:', error);
+    console.error('[Flow Automator Background] Open folder error:', error);
     chrome.downloads.showDefaultFolder();
   }
 }
@@ -259,9 +259,9 @@ async function openSaveFolder(savePath) {
 // Track download progress
 chrome.downloads.onChanged.addListener((delta) => {
   if (delta.state?.current === 'complete') {
-    console.log('[Whisk Automator Background] Download completed');
+    console.log('[Flow Automator Background] Download completed');
   } else if (delta.error) {
-    console.error('[Whisk Automator Background] Download error:', delta.error.current);
+    console.error('[Flow Automator Background] Download error:', delta.error.current);
   }
 });
 
@@ -398,7 +398,7 @@ async function grokInjectInterceptor(tabId) {
 
 // Handle extension install/update
 chrome.runtime.onInstalled.addListener((details) => {
-  console.log('[Whisk Automator Background] Extension installed/updated:', details.reason);
+  console.log('[Flow Automator Background] Extension installed/updated:', details.reason);
 
   if (details.reason === 'install') {
     // Initialize default settings
