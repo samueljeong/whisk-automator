@@ -153,7 +153,7 @@ document.getElementById('licenseChangeBtn')?.addEventListener('click', async () 
   showLicenseScreen();
 });
 
-// Check connection to Whisk page
+// Check connection to Flow page
 async function checkConnection() {
   try {
     // 사이드 패널에서는 lastFocusedWindow 사용
@@ -163,17 +163,17 @@ async function checkConnection() {
 
     console.log('[Flow Automator] Current tab URL:', url);
 
-    // Whisk 페이지 패턴 확인 (다양한 URL 형식 지원)
-    const isWhiskPage = url.includes('labs.google') && url.includes('whisk') ||
-                        url.includes('whisk.google') ||
-                        url.includes('/fx/tools/whisk');
+    // Flow 페이지 패턴 확인 (다양한 URL 형식 지원)
+    const isFlowPage = url.includes('labs.google') && url.includes('flow') ||
+                       url.includes('/fx/flow') ||
+                       url.includes('/fx/tools/flow');
 
-    if (isWhiskPage) {
+    if (isFlowPage) {
       connectionStatus.textContent = '연결됨';
       connectionStatus.className = 'status connected';
       startBtn.disabled = prompts.length === 0;
     } else {
-      connectionStatus.textContent = 'Whisk 페이지 아님';
+      connectionStatus.textContent = 'Flow 페이지 아님';
       connectionStatus.className = 'status disconnected';
       startBtn.disabled = true;
     }
