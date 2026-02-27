@@ -2229,21 +2229,121 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       waited += 300;
     }
 
-    // 5. 패널 닫기 후 selectAssetByName으로 키보드 선택
-    //    업로드만으로는 레퍼런스 삽입 안 됨 → 에셋 카드를 선택해야 함
-    console.log('[Flow Auto] 에셋 업로드 완료, 패널 닫고 키보드 선택으로 전환: ' + searchName);
-    document.dispatchEvent(new KeyboardEvent('keydown', {
-      key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true
-    }));
-    await sleep(1000);
+    // 5. 패널 열린 상태에서 바로 키보드 선택 (패널 닫으면 인덱싱 안 돼서 검색 실패)
+    //    업로드 직후 에셋 카드가 패널에 보이므로, 바로 검색+선택
+    console.log('[Flow Auto] 에셋 업로드 완료, 패널 내에서 키보드 선택: ' + searchName);
 
     // 업로드 속성 정리
     document.documentElement.removeAttribute('data-flow-upload');
     document.documentElement.removeAttribute('data-flow-upload-name');
 
-    // selectAssetByName으로 방금 업로드한 에셋 검색 → 키보드 선택
-    var selected = await selectAssetByName(searchName);
-    if (selected === true) {
+    // 업로드 후 에셋이 패널에 나타날 때까지 대기
+    await sleep(2000);
+
+    // 패널 내 검색바 찾기
+    var searchInputAfter = null;
+    var searchCandidates = document.querySelectorAll('input[type="text"], input[type="search"], input:not([type])');
+    for (var si = 0; si < searchCandidates.length; si++) {
+      var siRect = searchCandidates[si].getBoundingClientRect();
+      var siPh = (searchCandidates[si].placeholder || '').toLowerCase();
+      if (siRect.width > 100 && siRect.height > 20 && siRect.top > 200 &&
+          (siPh.includes('검색') || siPh.includes('search') || siPh.includes('에셋') || siPh.includes('asset'))) {
+        searchInputAfter = searchCandidates[si];
+        break;
+      }
+    }
+
+    if (!searchInputAfter) {
+      console.warn('[Flow Auto] 업로드 후 검색바 미발견, 패널 닫고 selectAssetByName 시도');
+      document.dispatchEvent(new KeyboardEvent('keydown', {
+        key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true
+      }));
+      await sleep(1000);
+      var selected = await selectAssetByName(searchName);
+      return selected === true;
+    }
+
+    // 검색바에 에셋 이름 입력
+    console.log('[Flow Auto] 업로드 후 패널 내 검색: "' + searchName + '"');
+    searchInputAfter.focus();
+    await sleep(200);
+    searchInputAfter.value = '';
+    searchInputAfter.dispatchEvent(new Event('input', { bubbles: true }));
+    await sleep(200);
+    searchInputAfter.value = searchName;
+    searchInputAfter.dispatchEvent(new Event('input', { bubbles: true }));
+    searchInputAfter.dispatchEvent(new Event('change', { bubbles: true }));
+    await sleep(1500);
+
+    // "일치하는 결과 없음" 체크
+    var srRect = searchInputAfter.getBoundingClientRect();
+    var noRes = false;
+    var chkEls = document.querySelectorAll('div, span, p');
+    for (var cr = 0; cr < chkEls.length; cr++) {
+      var crRect = chkEls[cr].getBoundingClientRect();
+      if (crRect.top > srRect.bottom && crRect.top < srRect.bottom + 400 && crRect.width > 50) {
+        var crText = (chkEls[cr].textContent || '').trim();
+        if (crText === '일치하는 결과 없음' || crText === 'No matching results' || crText === 'No results found') {
+          noRes = true;
+          break;
+        }
+      }
+    }
+
+    if (noRes) {
+      console.warn('[Flow Auto] 업로드 후 검색 결과 없음: ' + searchName);
+      document.dispatchEvent(new KeyboardEvent('keydown', {
+        key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true
+      }));
+      await sleep(300);
+      return false;
+    }
+
+    // SPA 네비게이션 차단
+    var origPush = history.pushState.bind(history);
+    var origReplace = history.replaceState.bind(history);
+    history.pushState = function() { console.log('[Flow Auto] 네비게이션 차단됨 (pushState)'); };
+    history.replaceState = function() { console.log('[Flow Auto] 네비게이션 차단됨 (replaceState)'); };
+    var blockNavUpload = function(e) { e.preventDefault(); e.stopImmediatePropagation(); };
+    window.addEventListener('popstate', blockNavUpload, true);
+    window.addEventListener('beforeunload', blockNavUpload, true);
+
+    // ArrowDown → Enter 키보드 선택
+    searchInputAfter.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, bubbles: true, cancelable: true
+    }));
+    searchInputAfter.dispatchEvent(new KeyboardEvent('keyup', {
+      key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, bubbles: true
+    }));
+    await sleep(300);
+
+    var focusedAfter = document.activeElement;
+    var enterTgt = (focusedAfter && focusedAfter !== searchInputAfter && focusedAfter !== document.body) ? focusedAfter : searchInputAfter;
+    enterTgt.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true
+    }));
+    enterTgt.dispatchEvent(new KeyboardEvent('keyup', {
+      key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true
+    }));
+    await sleep(800);
+
+    // 네비게이션 차단 해제
+    history.pushState = origPush;
+    history.replaceState = origReplace;
+    window.removeEventListener('popstate', blockNavUpload, true);
+    window.removeEventListener('beforeunload', blockNavUpload, true);
+
+    // 패널 닫기
+    document.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true
+    }));
+    await sleep(1500);
+
+    // ref 카운트 확인
+    var afterUploadVoids = countRefImages(promptEl);
+    console.log('[Flow Auto] 업로드 후 에셋 선택 결과, ref: ' + beforeVoids + ' → ' + afterUploadVoids);
+
+    if (afterUploadVoids > beforeVoids) {
       console.log('[Flow Auto] 에셋 "' + searchName + '" 업로드 + 선택 성공');
       return true;
     }
