@@ -388,22 +388,22 @@
       for (const { file } of sortedHandles) {
         const reader = new FileReader();
         reader.onload = (e) => {
-          // 씬 번호로 Whisk 프롬프트 매칭
+          // 씬 번호로 Flow 프롬프트 매칭
           const sceneIdx = extractSceneIndex(file.name);
-          let whiskText = '';
-          if (sceneIdx >= 0 && sceneIdx < whiskPrompts.length) {
-            whiskText = whiskPrompts[sceneIdx].text || '';
+          let flowText = '';
+          if (sceneIdx >= 0 && sceneIdx < flowPrompts.length) {
+            flowText = flowPrompts[sceneIdx].text || '';
             matchCount++;
           }
 
-          const motion = generateMotionPrompt(whiskText);
+          const motion = generateMotionPrompt(flowText);
 
           grokQueue.push({
             id: generateId(),
             name: file.name,
             dataUrl: e.target.result,
             motionPrompt: motion,
-            flowPrompt: whiskText, // 원본 Whisk 프롬프트 보존
+            flowPrompt: flowText, // 원본 Flow 프롬프트 보존
             status: 'pending',
             videoUrl: null
           });
