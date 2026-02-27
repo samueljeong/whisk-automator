@@ -2767,30 +2767,11 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
   }
 
   async function run() {
-    // 스타일 이미지 설정 (한 번만, 분석 대기는 첫 캐릭터와 함께)
-    var styleUploaded = false;
-    if (styleImageUrl) {
-      var styleResult = await uploadImageToSlot(styleImageUrl, 'style');
-      if (!styleResult) {
-        console.log('[Flow Auto] 스타일 업로드 실패, 3초 후 재시도...');
-        await sleep(3000);
-        styleResult = await uploadImageToSlot(styleImageUrl, 'style');
-      }
-      if (!styleResult) {
-        console.error('[Flow Auto] 스타일 업로드 2회 실패, 자동화 중단');
-        window.__flowAutoRunning = false;
-        clearInterval(popupWatcher);
-        try {
-          chrome.runtime.sendMessage({ action: 'AUTOMATION_ERROR', error: '스타일 이미지 업로드 실패 — 페이지 상태를 확인해주세요' });
-        } catch(e) {}
-        alert('스타일 이미지 업로드에 실패했습니다. 페이지를 확인 후 다시 시작해주세요.');
-        return;
-      }
-      styleUploaded = true;
-      console.log('[Flow Auto] 스타일 이미지 업로드 완료 (분석은 캐릭터와 함께 대기)');
-      await sleep(2000);
-      await ensureStyleChecked();
-    }
+    // TODO: Flow DOM 탐색 완료 후 구현
+    // - selectModel(selectedModel): 모델 드롭다운 선택 (Nano Banana 2 / Imagen4)
+    // - selectOutputType(selectedOutputType): 이미지/비디오 전환
+    console.log('[Flow Auto] 모델: ' + (selectedModel || 'nano-banana-2') + ', 출력: ' + (selectedOutputType || 'image'));
+    // Flow에서는 스타일 이미지 슬롯이 없으므로 스타일 업로드 스킵 (prefix/suffix 텍스트만 사용)
 
     // 시작 시 정지 플래그 초기화
     document.documentElement.removeAttribute('data-flow-stop');
