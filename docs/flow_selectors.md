@@ -36,38 +36,44 @@ innerHTML 구조:
 </p>
 ```
 
-**입력 방법** (Slate.js 호환 — 4차 테스트 결과):
+**입력 방법** (5차 테스트 결과 — 확정):
 
-`execCommand('insertText')`는 DOM에 텍스트를 삽입하지만,
-Slate 내부 상태가 동기화 안 될 수 있음 (placeholder가 남아있음).
+✅ **InputEvent (beforeinput)** — Slate 내부 상태 + DOM 구조 모두 정상 유지
+❌ paste, execCommand, 키보드 시뮬레이션 — 모두 실패 또는 불완전
 
-시도할 입력 방법 (우선순위):
 ```javascript
-// 방법 1: InputEvent (beforeinput) — Slate가 감시하는 이벤트
+// ✅ 확정된 입력 방법
+const promptEl = document.querySelector('[role="textbox"][contenteditable]');
 promptEl.focus();
+await sleep(200);
+
+// 1. 전체 선택 (Selection API 사용)
 const sel = window.getSelection();
 const range = document.createRange();
 range.selectNodeContents(promptEl);
 sel.removeAllRanges();
 sel.addRange(range);
+await sleep(100);
+
+// 2. 기존 텍스트 삭제 (beforeinput)
 promptEl.dispatchEvent(new InputEvent('beforeinput', {
-  inputType: 'insertText', data: '텍스트', bubbles: true, cancelable: true
+  inputType: 'deleteContentBackward',
+  bubbles: true, cancelable: true, composed: true
 }));
+await sleep(200);
 
-// 방법 2: 클립보드 붙여넣기 — Slate가 paste 이벤트 처리
-const dt = new DataTransfer();
-dt.setData('text/plain', '텍스트');
-promptEl.dispatchEvent(new ClipboardEvent('paste', {
-  clipboardData: dt, bubbles: true, cancelable: true
+// 3. 새 텍스트 삽입 (beforeinput)
+promptEl.dispatchEvent(new InputEvent('beforeinput', {
+  inputType: 'insertText',
+  data: '프롬프트 텍스트',
+  bubbles: true, cancelable: true, composed: true
 }));
-
-// 방법 3: execCommand — DOM은 변경되지만 Slate 동기화 미보장
-document.execCommand('selectAll');
-document.execCommand('delete');
-document.execCommand('insertText', false, '텍스트');
+await sleep(300);
+// → placeholder 사라짐, data-slate-string="true" 정상 생성
 ```
 
-⚠️ 단순 `textContent = '...'`는 Slate 내부 상태에 반영 안 됨
+⚠️ `execCommand`는 DOM에 텍스트를 넣지만 Slate 노드 구조를 파괴함
+⚠️ `textContent = '...'`는 Slate 내부 상태에 반영 안 됨
 
 ## 2. 모델 메뉴 (통합 컨트롤)
 
