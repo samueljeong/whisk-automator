@@ -1502,6 +1502,20 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     return el;
   }
 
+  // 1-1. 프롬프트 내 실제 레퍼런스 이미지 수 카운트
+  // Slate.js는 기본적으로 [contenteditable="false"] 요소가 1개 존재하므로
+  // void 노드 수만으로는 레퍼런스 유무를 판별할 수 없음.
+  // 반드시 void 내부의 img 태그 존재 + 크기 > 10px로 실제 레퍼런스만 카운트.
+  function countRefImages(promptEl) {
+    var imgs = promptEl.querySelectorAll('[contenteditable="false"] img, [data-slate-void] img');
+    var count = 0;
+    for (var i = 0; i < imgs.length; i++) {
+      var rect = imgs[i].getBoundingClientRect();
+      if (rect.width > 10 && rect.height > 10) count++;
+    }
+    return count;
+  }
+
   // 2. InputEvent(beforeinput) 방식으로 Slate.js에 텍스트 입력
   async function fillPrompt(text) {
     var promptEl = findPromptInput();
