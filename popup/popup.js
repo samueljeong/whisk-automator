@@ -1508,36 +1508,56 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     promptEl.focus();
     await sleep(200);
 
-    // 레퍼런스 썸네일이 있을 수 있으므로 텍스트 노드만 선택해서 교체
-    // Slate.js에서 텍스트는 <span data-slate-string="true"> 안에 있음
+    // 레퍼런스 썸네일 보존: void 노드(레퍼런스)는 건드리지 않고 텍스트만 교체
+    var voidsBefore = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]').length;
+
+    // 방법 1: Ctrl+A 대신 텍스트 끝으로 이동 후 Shift+Home으로 텍스트만 선택
+    // 방법 2: Slate 텍스트 노드만 직접 선택
     var slateTexts = promptEl.querySelectorAll('[data-slate-string="true"]');
 
     var sel = window.getSelection();
     var range = document.createRange();
 
-    if (slateTexts.length > 0) {
-      // 텍스트 영역만 선택 (레퍼런스 썸네일 보존)
+    if (slateTexts.length > 0 && voidsBefore > 0) {
+      // 레퍼런스가 있는 경우: 텍스트 노드 내용만 선택 (void 노드 제외)
+      // 마지막 텍스트 노드의 내용만 선택 (보통 프롬프트 텍스트는 void 뒤에 위치)
+      var lastText = slateTexts[slateTexts.length - 1];
+      var textNode = lastText.firstChild || lastText;
+      if (textNode.nodeType === 3) {
+        range.selectNodeContents(textNode);
+      } else {
+        range.selectNodeContents(lastText);
+      }
+      sel.removeAllRanges();
+      sel.addRange(range);
+      console.log('[Flow Auto] 텍스트만 선택 (void ' + voidsBefore + '개 보존)');
+    } else if (slateTexts.length > 0) {
+      // 레퍼런스 없으면 전체 텍스트 선택
       var firstText = slateTexts[0];
       var lastText = slateTexts[slateTexts.length - 1];
       range.setStartBefore(firstText);
       range.setEndAfter(lastText);
       sel.removeAllRanges();
       sel.addRange(range);
-      console.log('[Flow Auto] Slate 텍스트 노드 ' + slateTexts.length + '개 선택 (레퍼런스 보존)');
+      console.log('[Flow Auto] 전체 텍스트 선택 (레퍼런스 없음)');
     } else {
-      // 텍스트 없으면 전체 선택 (레퍼런스도 없는 상태이므로 안전)
+      // 텍스트 없으면 끝으로 커서 이동
       range.selectNodeContents(promptEl);
+      range.collapse(false);
       sel.removeAllRanges();
       sel.addRange(range);
+      console.log('[Flow Auto] 텍스트 없음, 커서를 끝으로');
     }
     await sleep(100);
 
-    // 선택된 텍스트 삭제
-    promptEl.dispatchEvent(new InputEvent('beforeinput', {
-      inputType: 'deleteContentBackward',
-      bubbles: true, cancelable: true, composed: true
-    }));
-    await sleep(200);
+    // 선택된 텍스트 삭제 (슬레이트 텍스트가 있을 때만)
+    if (slateTexts.length > 0) {
+      promptEl.dispatchEvent(new InputEvent('beforeinput', {
+        inputType: 'deleteContentBackward',
+        bubbles: true, cancelable: true, composed: true
+      }));
+      await sleep(200);
+    }
 
     // 새 텍스트 삽입
     promptEl.dispatchEvent(new InputEvent('beforeinput', {
@@ -1546,6 +1566,12 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       bubbles: true, cancelable: true, composed: true
     }));
     await sleep(300);
+
+    // 레퍼런스 보존 확인
+    var voidsAfter = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]').length;
+    if (voidsBefore > 0 && voidsAfter < voidsBefore) {
+      console.warn('[Flow Auto] fillPrompt 후 레퍼런스 유실! void: ' + voidsBefore + ' → ' + voidsAfter);
+    }
 
     // 입력 확인
     var content = promptEl.textContent.trim();
