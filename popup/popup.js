@@ -2081,17 +2081,46 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         Math.round(targetRect.width) + 'x' + Math.round(targetRect.height) +
         ' at(' + Math.round(targetRect.left) + ',' + Math.round(targetRect.top) + ')');
 
-      // preventDefault 없이 클릭 (Flow 핸들러가 defaultPrevented 체크할 수 있음)
+      // SPA 네비게이션 차단: history.pushState/replaceState를 일시 오버라이드
       var urlBefore = window.location.href;
-      console.log('[Flow Auto] 에셋 카드 클릭 시작 (preventDefault 없음)');
+      var origPushState = history.pushState;
+      var origReplaceState = history.replaceState;
+      var navBlocked = false;
+      history.pushState = function() {
+        navBlocked = true;
+        console.log('[Flow Auto] pushState 차단됨: ' + (arguments[2] || '').toString().substring(0, 60));
+      };
+      history.replaceState = function() {
+        navBlocked = true;
+        console.log('[Flow Auto] replaceState 차단됨: ' + (arguments[2] || '').toString().substring(0, 60));
+      };
 
+      console.log('[Flow Auto] 에셋 카드 클릭 시작 (SPA 네비게이션 차단)');
+
+      // 전략 A: simulateRealClick
       simulateRealClick(clickTarget);
-      await sleep(500);
+      await sleep(300);
 
-      // URL 변경 시 복구
+      // 전략 B: simulateRealClick 실패 시 네이티브 .click() 시도
+      var promptCheck = findPromptInput();
+      var midRef = countRefImages(promptCheck);
+      if (midRef <= beforeVoids) {
+        console.log('[Flow Auto] simulateRealClick 실패 (ref: ' + midRef + '), 네이티브 .click() 시도');
+        clickTarget.click();
+        await sleep(300);
+      }
+
+      // history 복원
+      history.pushState = origPushState;
+      history.replaceState = origReplaceState;
+
+      if (navBlocked) {
+        console.log('[Flow Auto] SPA 네비게이션 차단 성공');
+      }
+
+      // URL 변경 복구 (pushState 외의 방법으로 이동한 경우)
       if (window.location.href !== urlBefore) {
-        console.warn('[Flow Auto] 클릭 후 URL 변경! ' + window.location.href.substring(0, 60));
-        console.log('[Flow Auto] history.back() 복귀');
+        console.warn('[Flow Auto] 클릭 후 URL 변경! → history.back()');
         window.history.back();
         await sleep(1500);
       }
