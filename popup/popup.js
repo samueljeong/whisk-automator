@@ -658,7 +658,8 @@ function renderCharacterList() {
       const char = characters[name];
       const localClass = char.isLocal ? ' local' : '';
       const activeClass = (allTags.has(name) || allTags.has(name.normalize('NFC'))) ? ' active' : '';
-      return `<span class="character-tag${localClass}${activeClass}" data-char="${name}">${name}</span>`;
+      const tagSuffix = char.flowTag ? ` <small style="opacity:0.6">${char.flowTag}</small>` : '';
+      return `<span class="character-tag${localClass}${activeClass}" data-char="${name}">${name}${tagSuffix}</span>`;
     }).join('');
   }
 }
