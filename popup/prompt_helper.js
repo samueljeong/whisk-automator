@@ -153,7 +153,7 @@ camera slowly pulls back revealing vast landscape, clouds drifting, cinematic at
   const tabs = modal.querySelectorAll('.ai-tab');
 
   let currentAI = 'claude';
-  let currentContext = 'whisk'; // 'whisk' or 'grok'
+  let currentContext = 'flow'; // 'flow' or 'grok'
 
   function getTemplates() {
     return currentContext === 'grok' ? GROK_MOTION_TEMPLATES : FLOW_PROMPT_TEMPLATES;
@@ -182,7 +182,7 @@ camera slowly pulls back revealing vast landscape, clouds drifting, cinematic at
   }
 
   // Whisk 버튼
-  document.getElementById('aiPromptHelperBtn').addEventListener('click', () => openModal('whisk'));
+  document.getElementById('aiPromptHelperBtn').addEventListener('click', () => openModal('flow'));
 
   // Grok 버튼
   document.getElementById('grokAiPromptBtn').addEventListener('click', () => openModal('grok'));
