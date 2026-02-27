@@ -2081,22 +2081,19 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         Math.round(targetRect.width) + 'x' + Math.round(targetRect.height) +
         ' at(' + Math.round(targetRect.left) + ',' + Math.round(targetRect.top) + ')');
 
-      // 네비게이션 차단 (전파는 유지 — Flow 핸들러가 동작해야 함)
-      var preventNav = function(e) { e.preventDefault(); };
-      document.addEventListener('click', preventNav, true);
+      // preventDefault 없이 클릭 (Flow 핸들러가 defaultPrevented 체크할 수 있음)
       var urlBefore = window.location.href;
+      console.log('[Flow Auto] 에셋 카드 클릭 시작 (preventDefault 없음)');
 
-      // 에셋 카드 클릭
       simulateRealClick(clickTarget);
       await sleep(500);
 
-      document.removeEventListener('click', preventNav, true);
-
-      // URL 변경 복구
+      // URL 변경 시 복구
       if (window.location.href !== urlBefore) {
-        console.warn('[Flow Auto] 클릭 후 URL 변경! → history.back()');
+        console.warn('[Flow Auto] 클릭 후 URL 변경! ' + window.location.href.substring(0, 60));
+        console.log('[Flow Auto] history.back() 복귀');
         window.history.back();
-        await sleep(1000);
+        await sleep(1500);
       }
 
       assetFound = true;
