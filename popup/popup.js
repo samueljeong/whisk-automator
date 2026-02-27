@@ -38,6 +38,7 @@ const captureModal = document.getElementById('captureModal');
 const capturedImage = document.getElementById('capturedImage');
 const charNameInput = document.getElementById('charNameInput');
 const charAliasInput = document.getElementById('charAliasInput');
+const charFlowTagInput = document.getElementById('charFlowTagInput');
 const cancelCaptureBtn = document.getElementById('cancelCaptureBtn');
 const saveCaptureBtn = document.getElementById('saveCaptureBtn');
 const stylePrefix = document.getElementById('stylePrefix');
