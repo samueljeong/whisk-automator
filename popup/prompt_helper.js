@@ -141,7 +141,7 @@ camera slowly pulls back revealing vast landscape, clouds drifting, cinematic at
 };
 
 // ============================================================
-// 모달 로직 (Whisk + Grok 공유)
+// 모달 로직 (Flow + Grok 공유)
 // ============================================================
 (function initPromptHelper() {
   const modal = document.getElementById('aiPromptModal');
