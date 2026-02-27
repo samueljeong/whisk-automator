@@ -3213,7 +3213,7 @@ async function handleHardReset(completedCount) {
     await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: runFlowAutomation,
-      args: [remaining, p.delayMs, p.shouldDownload, p.projectStyleImage, p.characterMap, p.savePath, p.sceneMap, null, p.useCustomDir]
+      args: [remaining, p.delayMs, p.shouldDownload, null, p.characterMap, p.savePath, p.sceneMap, null, p.useCustomDir, p.selectedModel, p.selectedOutputType]
     });
   } catch (error) {
     console.error('[Popup] 하드 리셋 실패:', error);
