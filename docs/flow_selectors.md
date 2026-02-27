@@ -17,8 +17,8 @@ URL: `labs.google/fx/ko/tools/flow/project/{uuid}`
 | 모델 변경 | 모델 메뉴 내 모델 버튼 → 하위 `[role="menu"]` (264x126) → 모델명 클릭 | ✅ 확정 |
 | Ingredient 추가 | "add_2만들기" 버튼 (하단 좌측) → 인라인 드로어 | ⚠️ 드로어 구조 미확인 |
 | 파일 업로드 | `input[type=file][accept="image/*"][multiple]` (display:none) | ✅ interceptor 호환 |
-| 생성 완료 감지 | ??? | ❌ 미확인 |
-| 다운로드 | ??? | ❌ 미확인 |
+| 생성 완료 감지 | 새 `img[src*="getMediaUrlRedirect"]` 출현 감시 (~28초) | ✅ 확정 |
+| 다운로드 | `fetch(img.src)` → blob → `chrome.downloads.download()` | ✅ 확정 |
 
 ## 1. 프롬프트 입력 (Slate.js)
 
