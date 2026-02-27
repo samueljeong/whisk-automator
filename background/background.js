@@ -9,11 +9,16 @@ chrome.action.onClicked.addListener((tab) => {
 
 // Handle messages from content script and popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log('[Whisk Automator Background] Received message:', message.action);
+  console.log('[Flow Automator Background] Received message:', message.action);
 
   switch (message.action) {
     case 'DOWNLOAD_IMAGE':
       downloadImage(message.url, message.filename);
+      sendResponse({ success: true });
+      break;
+
+    case 'DOWNLOAD_VIDEO':
+      flowDownloadVideo(message.url, message.dataUrl, message.filename);
       sendResponse({ success: true });
       break;
 
