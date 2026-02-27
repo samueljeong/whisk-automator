@@ -2099,6 +2099,9 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
   // 10. "+" → 에셋 패널에서 캐릭터 검색 → 선택
   async function selectAssetByName(charName) {
+    // 디버그: Slate 에디터 구조 덤프 (현재 상태)
+    dumpSlateEditor();
+
     var promptEl = findPromptInput();
     var beforeVoids = countRefImages(promptEl);
 
