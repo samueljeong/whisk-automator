@@ -1734,7 +1734,136 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     }
   }
 
-  // 9. 생성 버튼 찾기 ("arrow_forward" + "만들기" 텍스트, 하단)
+  // 9. Ingredient 버튼 찾기 ("add_2만들기" 텍스트, 하단 프롬프트 바 좌측)
+  function findIngredientButton() {
+    var buttons = document.querySelectorAll('button, [role="button"]');
+    for (var i = 0; i < buttons.length; i++) {
+      var txt = (buttons[i].textContent || '').trim();
+      var rect = buttons[i].getBoundingClientRect();
+      if (rect.top > 500 && rect.width > 0 && txt.includes('add_2') && txt.includes('만들기')) {
+        console.log('[Flow Auto] Ingredient 버튼 발견: ' + Math.round(rect.width) + 'x' + Math.round(rect.height) +
+          ' at(' + Math.round(rect.left) + ',' + Math.round(rect.top) + ')');
+        return buttons[i];
+      }
+    }
+    return null;
+  }
+
+  // 10. 단일 레퍼런스 이미지 업로드
+  async function uploadOneReference(dataUrl) {
+    // 1. data-flow-upload 속성에 base64 데이터 설정
+    document.documentElement.setAttribute('data-flow-upload', dataUrl);
+    document.documentElement.removeAttribute('data-flow-upload-done');
+
+    // 2. ingredient 버튼 클릭 → 드로어 열기 + 파일 입력 트리거
+    var ingredientBtn = findIngredientButton();
+    if (!ingredientBtn) throw new Error('Ingredient 버튼을 찾을 수 없습니다');
+    simulateRealClick(ingredientBtn);
+    await sleep(500);
+
+    // 3. 파일 입력 트리거 시도
+    //    대안 A: input[type=file] 직접 찾아 click() → interceptor가 가로챔
+    //    대안 B: 드로어 내 업로드 버튼 클릭 → showOpenFilePicker interceptor 가로챔
+    var fileInput = document.querySelector('input[type="file"][accept*="image"]');
+    if (!fileInput) {
+      // input[type=file] 없으면 accept 속성 없는 것도 탐색
+      fileInput = document.querySelector('input[type="file"]');
+    }
+
+    if (fileInput) {
+      console.log('[Flow Auto] input[type=file] 발견, click() 호출');
+      fileInput.click(); // interceptor가 가로챔
+    } else {
+      // 드로어 내 업로드 버튼 찾기 (아이콘 또는 텍스트 기반)
+      console.log('[Flow Auto] input[type=file] 미발견, 드로어 내 업로드 버튼 탐색...');
+      var uploadBtn = null;
+      var allBtns = document.querySelectorAll('button, [role="button"]');
+      for (var u = 0; u < allBtns.length; u++) {
+        var btnTxt = (allBtns[u].textContent || '').trim().toLowerCase();
+        var btnRect = allBtns[u].getBoundingClientRect();
+        if (btnRect.width > 0 && (btnTxt.includes('upload') || btnTxt.includes('업로드') ||
+            btnTxt.includes('파일') || btnTxt.includes('file'))) {
+          uploadBtn = allBtns[u];
+          break;
+        }
+      }
+      if (uploadBtn) {
+        console.log('[Flow Auto] 업로드 버튼 발견, 클릭');
+        simulateRealClick(uploadBtn);
+      } else {
+        // 최후 수단: Drag & Drop 시뮬레이션 (프롬프트 영역에 드래그)
+        console.log('[Flow Auto] 업로드 버튼 미발견, Drag&Drop 시도');
+        var promptEl = findPromptInput();
+        document.documentElement.setAttribute('data-flow-upload', dataUrl);
+        document.documentElement.setAttribute('data-flow-upload-dragdrop', '[role="textbox"][contenteditable]');
+      }
+    }
+    await sleep(500);
+
+    // 4. 업로드 완료 대기 (data-flow-upload-done 감시)
+    var maxWait = 10000;
+    var waited = 0;
+    while (waited < maxWait) {
+      var done = document.documentElement.getAttribute('data-flow-upload-done');
+      if (done === 'true') {
+        console.log('[Flow Auto] 레퍼런스 업로드 성공');
+        document.documentElement.removeAttribute('data-flow-upload-done');
+        return true;
+      }
+      if (done === 'error') {
+        document.documentElement.removeAttribute('data-flow-upload-done');
+        throw new Error('레퍼런스 업로드 실패');
+      }
+      await sleep(300);
+      waited += 300;
+    }
+    throw new Error('레퍼런스 업로드 타임아웃 (10초)');
+  }
+
+  // 11. 캐릭터별 레퍼런스 일괄 업로드
+  async function uploadReferences(charNames, characterMap) {
+    var names = charNames.split(',').map(function(n) { return n.trim(); });
+
+    for (var i = 0; i < names.length; i++) {
+      if (isStopRequested()) throw new Error('__STOPPED__');
+
+      var name = names[i];
+      var dataUrl = characterMap[name] || characterMap[name.normalize('NFC')];
+      if (!dataUrl) {
+        console.warn('[Flow Auto] 캐릭터 "' + name + '" 이미지 없음, 스킵');
+        continue;
+      }
+
+      console.log('[Flow Auto] 레퍼런스 업로드 ' + (i + 1) + '/' + names.length + ': ' + name);
+      await uploadOneReference(dataUrl);
+      await sleep(1000); // 썸네일 렌더링 대기
+    }
+
+    console.log('[Flow Auto] 레퍼런스 업로드 완료: ' + names.length + '명');
+  }
+
+  // 12. 기존 레퍼런스 제거 (프롬프트 영역 초기화)
+  async function clearReferences() {
+    // 프롬프트 입력 영역의 레퍼런스 썸네일 + 텍스트 모두 제거
+    // 전체 선택 + 삭제 방식
+    var promptEl = findPromptInput();
+    promptEl.focus();
+    await sleep(100);
+    var sel = window.getSelection();
+    var range = document.createRange();
+    range.selectNodeContents(promptEl);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    await sleep(100);
+    promptEl.dispatchEvent(new InputEvent('beforeinput', {
+      inputType: 'deleteContentBackward',
+      bubbles: true, cancelable: true, composed: true
+    }));
+    await sleep(300);
+    console.log('[Flow Auto] 레퍼런스 및 프롬프트 초기화');
+  }
+
+  // 13. 생성 버튼 찾기 ("arrow_forward" + "만들기" 텍스트, 하단)
   function findGenerateButton() {
     var buttons = document.querySelectorAll('button, [role="button"]');
     for (var i = 0; i < buttons.length; i++) {
