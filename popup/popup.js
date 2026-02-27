@@ -866,7 +866,7 @@ function addNewCharacter() {
 // 임시 저장용 캡처 데이터
 let capturedImageData = null;
 
-// Whisk에서 생성된 이미지 캡처
+// Flow에서 생성된 이미지 캡처
 async function captureCharacterFromFlow() {
   try {
     const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
