@@ -8,7 +8,7 @@ Grok.com(React)과 Flow(Google)에서 네이티브 `.click()`이 이벤트 핸�
 
 ### grok.js (4곳)
 
-- [ ] **1. `clickGenerateButton()` (line 817-829)**: 불안정한 simulateClick을 PointerEvent 동기식으로 교체
+- [x] **1. `clickGenerateButton()` (line 817-829)**: 불안정한 simulateClick을 PointerEvent 동기식으로 교체
   - setTimeout + mouseover 방식 → pointerdown/mousedown/pointerup/mouseup/click 동기식
   - 이미 같은 파일의 clickUpscaleInMenu (line 1022)에서 올바른 버전 사용 중
 
