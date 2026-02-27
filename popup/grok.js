@@ -373,7 +373,7 @@
 
       // Flow 프롬프트 데이터 읽기
       const storageData = await chrome.storage.local.get(['prompts']);
-      const whiskPrompts = storageData.prompts || [];
+      const flowPrompts = storageData.prompts || [];
 
       // 파일을 이름순으로 정렬
       const sortedHandles = [];
