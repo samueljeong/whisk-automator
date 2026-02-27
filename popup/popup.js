@@ -153,24 +153,17 @@ document.getElementById('licenseChangeBtn')?.addEventListener('click', async () 
   showLicenseScreen();
 });
 
-// Check connection to Whisk page (2단계: URL 패턴 → content script 폴백)
+// Check connection to Whisk page
 async function checkConnection() {
   try {
     // 사이드 패널에서는 lastFocusedWindow 사용
     const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
     const tab = tabs[0];
-    if (!tab) {
-      connectionStatus.textContent = '연결 실패';
-      connectionStatus.className = 'status disconnected';
-      startBtn.disabled = true;
-      return;
-    }
-
-    const url = tab.url || '';
+    const url = tab?.url || '';
 
     console.log('[Whisk Automator] Current tab URL:', url);
 
-    // 1단계: URL 패턴 매칭 (빠름)
+    // Whisk 페이지 패턴 확인 (다양한 URL 형식 지원)
     const isWhiskPage = url.includes('labs.google') && url.includes('whisk') ||
                         url.includes('whisk.google') ||
                         url.includes('/fx/tools/whisk');
@@ -179,28 +172,11 @@ async function checkConnection() {
       connectionStatus.textContent = '연결됨';
       connectionStatus.className = 'status connected';
       startBtn.disabled = prompts.length === 0;
-      return;
+    } else {
+      connectionStatus.textContent = 'Whisk 페이지 아님';
+      connectionStatus.className = 'status disconnected';
+      startBtn.disabled = true;
     }
-
-    // 2단계: URL이 비어있거나 매칭 실패 시, content script에 직접 확인 (폴백)
-    if (!url || url === '' || url === 'about:blank') {
-      try {
-        const response = await chrome.tabs.sendMessage(tab.id, { action: 'CHECK_CONNECTION' });
-        if (response?.connected) {
-          connectionStatus.textContent = '연결됨';
-          connectionStatus.className = 'status connected';
-          startBtn.disabled = prompts.length === 0;
-          return;
-        }
-      } catch (e) {
-        // content script 없음 = Whisk 페이지 아님
-        console.log('[Whisk Automator] Content script fallback failed:', e.message);
-      }
-    }
-
-    connectionStatus.textContent = 'Whisk 페이지 아님';
-    connectionStatus.className = 'status disconnected';
-    startBtn.disabled = true;
   } catch (error) {
     console.error('[Whisk Automator] Connection check error:', error);
     connectionStatus.textContent = '연결 실패';
