@@ -420,11 +420,40 @@ textarea::placeholder {
 /* Settings */
 .settings-section {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
   padding: 12px;
   background: #16162a;
   border-radius: 8px;
+}
+
+.model-setting,
+.output-type-setting {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  width: 100%;
+}
+
+.model-setting select,
+.output-type-setting select {
+  flex: 1;
+  padding: 6px 8px;
+  background: #2d2d44;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #eaeaea;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.model-setting select:focus,
+.output-type-setting select:focus {
+  outline: none;
+  border-color: #6366f1;
 }
 
 .toggle-label {
