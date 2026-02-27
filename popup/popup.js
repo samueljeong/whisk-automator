@@ -1507,11 +1507,26 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
   // void 노드 수만으로는 레퍼런스 유무를 판별할 수 없음.
   // 반드시 void 내부의 img 태그 존재 + 크기 > 10px로 실제 레퍼런스만 카운트.
   function countRefImages(promptEl) {
+    if (!promptEl) return 0;
     var imgs = promptEl.querySelectorAll('[contenteditable="false"] img, [data-slate-void] img');
     var count = 0;
     for (var i = 0; i < imgs.length; i++) {
       var rect = imgs[i].getBoundingClientRect();
       if (rect.width > 10 && rect.height > 10) count++;
+    }
+    // 넓은 범위 검색: promptEl 근처(부모 포함)의 모든 이미지도 체크
+    var parent = promptEl.closest('[data-testid], form, [role="form"]') || promptEl.parentElement;
+    if (parent && parent !== promptEl) {
+      var parentImgs = parent.querySelectorAll('img');
+      var parentCount = 0;
+      for (var j = 0; j < parentImgs.length; j++) {
+        var pRect = parentImgs[j].getBoundingClientRect();
+        if (pRect.width > 20 && pRect.height > 20) parentCount++;
+      }
+      if (parentCount > count) {
+        console.log('[Flow Auto] ref 카운트 보정: promptEl 내 ' + count + '개, 부모 영역 ' + parentCount + '개');
+        count = parentCount;
+      }
     }
     return count;
   }
