@@ -405,7 +405,10 @@ chrome.runtime.onInstalled.addListener((details) => {
     chrome.storage.local.set({
       prompts: [],
       autoDownload: true,
-      delay: 3
+      delay: 3,
+      selectedModel: 'nano-banana-2',
+      outputType: 'image',
+      storageVersion: 4
     });
   }
 });
