@@ -17,7 +17,7 @@
   const $ = (sel) => document.querySelector(sel);
   const modeTabFlow = $('#modeTabFlow');
   const modeTabGrok = $('#modeTabGrok');
-  const whiskContainer = $('#whiskContainer');
+  const flowContainer = $('#flowContainer');
   const grokContainer = $('#grokContainer');
 
   const grokConnectionStatus = $('#grokConnectionStatus');
@@ -49,7 +49,7 @@
     if (mode === 'whisk') {
       modeTabFlow.classList.add('active');
       modeTabGrok.classList.remove('active');
-      whiskContainer.hidden = false;
+      flowContainer.hidden = false;
       grokContainer.hidden = true;
     } else {
       // 라이선스 인증 확인
@@ -59,7 +59,7 @@
       }
       modeTabFlow.classList.remove('active');
       modeTabGrok.classList.add('active');
-      whiskContainer.hidden = true;
+      flowContainer.hidden = true;
       grokContainer.hidden = false;
       checkGrokConnection();
     }
