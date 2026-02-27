@@ -140,13 +140,13 @@ document.execCommand('insertText', false, '텍스트');
 - 언어 코드: `/ko/`, `/en/` 등
 - checkConnection 매칭: `url.includes('flow') && url.includes('project')`
 
-## 미확인 항목 (추가 조사 필요)
+## 미확인 항목 (실제 생성 테스트 시 확인)
 
-1. **모델 하위 드롭다운**: "Nano Banana Pro ▼" 클릭 시 나타나는 모델 목록 (Imagen4 등)
-2. **Ingredient 드로어 구조**: 열린 드로어 내부의 업로드/선택 UI
+1. ~~**모델 하위 드롭다운**~~: ✅ 확인됨 — Nano Banana Pro, Nano Banana 2, Imagen 4
+2. **Ingredient 드로어 구조**: 열린 드로어 내부의 업로드/선택 UI (HTML +2908 but 눈에 보이는 패널 없음)
 3. **생성 완료 감지**: 이미지 생성 후 DOM 변화 (새 img/video 태그? 로딩 스피너?)
 4. **다운로드 메커니즘**: 생성된 이미지/영상 다운로드 방법
-5. **Slate.js 입력 검증**: execCommand 방식이 실제로 생성에 반영되는지
+5. **Slate.js 입력 검증**: 어떤 입력 방법이 실제 생성에 반영되는지 (InputEvent vs paste vs execCommand)
 
 ## 자동화 구현 전략
 
