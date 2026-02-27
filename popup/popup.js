@@ -2044,27 +2044,34 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     }
 
     if (matchedEl) {
-      // 부모 컨테이너까지 올라가기 (에셋 카드 = 썸네일+이름을 감싸는 div)
-      // <a> 태그는 href로 페이지 이동을 유발하므로 클릭 대상에서 제외
+      // 에셋 카드는 <a> 태그로 감싸져 있음.
+      // <a>에 선택 핸들러가 붙어있으므로 <a> 자체를 클릭해야 에셋 선택이 됨.
+      // 단, href가 있으면 네비게이션이 발생하므로 href를 일시 제거 후 클릭.
       var clickTarget = matchedEl;
+
+      // 1) matchedEl → 부모 탐색하며 에셋 카드(<a> 또는 적절한 크기의 컨테이너) 찾기
       var current = matchedEl;
-      for (var up = 0; up < 5; up++) {
+      var anchorTarget = null; // <a> 태그가 있으면 여기에 저장
+      for (var up = 0; up < 8; up++) {
         var parent = current.parentElement;
         if (!parent || parent === document.body) break;
         var pRect = parent.getBoundingClientRect();
         // 부모가 리스트 컨테이너처럼 너무 크면 멈춤
-        if (pRect.height > 200 || pRect.width > 400) break;
-        // <a> 태그(링크)는 클릭 시 페이지 이동 → 클릭 대상에서 제외
+        if (pRect.height > 300 || pRect.width > 500) break;
+        // <a> 태그 발견 → 에셋 카드 자체일 가능성 높음
         if (parent.tagName === 'A' && parent.href) {
-          console.log('[Flow Auto] <a> 태그 건너뜀: href=' + parent.href.substring(0, 60));
-          current = parent;
-          continue;
+          anchorTarget = parent;
         }
-        // 적절한 크기의 카드 (40~150px 높이)면 이 부모를 클릭 대상으로
-        if (pRect.height >= 30 && pRect.height <= 150 && pRect.width >= 50) {
+        // 적절한 크기의 카드면 클릭 대상 후보
+        if (pRect.height >= 30 && pRect.height <= 200 && pRect.width >= 50) {
           clickTarget = parent;
         }
         current = parent;
+      }
+
+      // <a> 태그가 발견되면 그것을 클릭 대상으로 사용 (선택 핸들러가 여기 붙어있음)
+      if (anchorTarget) {
+        clickTarget = anchorTarget;
       }
 
       var targetRect = clickTarget.getBoundingClientRect();
@@ -2073,7 +2080,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         Math.round(targetRect.width) + 'x' + Math.round(targetRect.height) +
         ' at(' + Math.round(targetRect.left) + ',' + Math.round(targetRect.top) + ')');
 
-      // 조상 <a> 태그의 href를 일시 제거하여 네비게이션 차단
+      // 2) clickTarget 및 모든 조상 <a>의 href를 일시 제거 → 네비게이션 차단
       var savedLinks = [];
       var ancestor = clickTarget;
       while (ancestor && ancestor !== document.body) {
@@ -2085,14 +2092,14 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         ancestor = ancestor.parentElement;
       }
 
-      // 캡처링 단계에서 click의 기본 동작 차단 (이중 안전장치)
+      // 3) 캡처링 단계에서 click 기본 동작 차단 (이중 안전장치)
       var preventNav = function(e) { e.preventDefault(); };
       document.addEventListener('click', preventNav, true);
 
-      // simulateRealClick 1회 실행
+      // 4) simulateRealClick 실행 — <a> 태그의 선택 핸들러 발동
       simulateRealClick(clickTarget);
 
-      // href 복원 + 리스너 제거
+      // 5) href 복원 + 리스너 제거
       for (var sl = 0; sl < savedLinks.length; sl++) {
         savedLinks[sl].el.setAttribute('href', savedLinks[sl].href);
       }
