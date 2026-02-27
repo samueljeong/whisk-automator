@@ -1380,7 +1380,7 @@ async function startAutomation() {
     await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: () => {
-        window.__whiskAutoRunning = false;
+        window.__flowAutoRunning = false;
         document.documentElement.removeAttribute('data-whisk-stop');
       }
     });
@@ -1411,11 +1411,11 @@ async function startAutomation() {
 // 주입될 자동화 함수
 function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleImageUrl, characters, savePath, scenes, styles, useCustomDir) {
   // 중복 실행 방지
-  if (window.__whiskAutoRunning) {
+  if (window.__flowAutoRunning) {
     console.log('[Flow Auto] 이미 실행 중, 중복 실행 방지');
     return;
   }
-  window.__whiskAutoRunning = true;
+  window.__flowAutoRunning = true;
 
   console.log('[Flow Auto] Starting with', promptsWithCharacters.length, 'prompts');
   console.log('[Flow Auto] Style URL:', styleImageUrl || '없음');
@@ -1508,7 +1508,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
 
   // 주기적으로 팝업 감시 (5초마다)
   var popupWatcher = setInterval(function() {
-    if (!window.__whiskAutoRunning) {
+    if (!window.__flowAutoRunning) {
       clearInterval(popupWatcher);
       return;
     }
@@ -2838,7 +2838,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
       }
       if (!styleResult) {
         console.error('[Flow Auto] 스타일 업로드 2회 실패, 자동화 중단');
-        window.__whiskAutoRunning = false;
+        window.__flowAutoRunning = false;
         clearInterval(popupWatcher);
         try {
           chrome.runtime.sendMessage({ action: 'AUTOMATION_ERROR', error: '스타일 이미지 업로드 실패 — 페이지 상태를 확인해주세요' });
@@ -3110,7 +3110,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
             // 연속 2회 실패 시 페이지 리로드로 복구 시도
             if (consecutiveFailures >= 2 && i < promptsWithCharacters.length - 1) {
               console.log(`[Flow Auto] === 연속 ${consecutiveFailures}회 실패, 페이지 리로드 요청 ===`);
-              window.__whiskAutoRunning = false;
+              window.__flowAutoRunning = false;
               clearInterval(popupWatcher);
               try {
                 chrome.runtime.sendMessage({
@@ -3126,7 +3126,7 @@ function runWhiskAutomation(promptsWithCharacters, delayMs, autoDownload, styleI
     }
 
     console.log('[Flow Auto] 모든 프롬프트 완료!');
-    window.__whiskAutoRunning = false;
+    window.__flowAutoRunning = false;
     clearInterval(popupWatcher);
     try {
       chrome.runtime.sendMessage({ action: 'AUTOMATION_COMPLETE' });
