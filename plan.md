@@ -70,20 +70,24 @@
   - 이미 라이브러리에 추가됐으므로 검색→키보드 선택 가능
   - 기존 `waitForAnalysisComplete` (라인 2295) 제거 또는 selectAssetByName 성공 시 스킵
 
-#### 시도 9 결과 (부분 성공)
-- 키보드 ArrowDown+Enter로 에셋 선택은 **성공** (영상에서 프롬프트에 레퍼런스 이미지 확인)
-- Enter 키가 에셋 선택과 동시에 SPA 네비게이션을 트리거 → 페이지 이동
-- 네비게이션으로 DOM 파괴 → ref 카운트 0→0으로 나옴
+#### 시도 9 결과 (부분 성공 → 실패 확정)
+- 키보드 ArrowDown+Enter: 네비게이션 차단은 성공 (history 오버라이드)
+- BUT ArrowDown이 포커스를 리스트 아이템으로 이동시키지 않음
+- `Enter 대상: INPUT (searchInput)` — 항상 searchInput에 머묾
+- **근본 원인: `isTrusted: false`** — 브라우저 보안으로 JS 발행 이벤트는 isTrusted=false
+  - Radix UI / React가 isTrusted를 체크해서 합성 이벤트 무시
+  - 클릭 (simulateRealClick, .click()) 모두 실패한 이유와 동일
+  - 키보드 (ArrowDown, Enter) 도 동일하게 실패
 
-#### 시도 9-fix: Enter 키 네비게이션 차단
-- [x] **9e. history.pushState/replaceState 임시 오버라이드**: Enter 발행 전 차단, 완료 후 복원
-- [x] **9f. popstate/beforeunload 이벤트 차단**: 캡처 페이즈에서 차단
-- [x] **9g. 'navigated' 반환값 제거**: false로 교체, uploadReferences의 history.back() 로직 정리
-- [x] **9h. 패널 닫기 후 대기 시간 증가**: 1000ms → 1500ms (DOM 업데이트 시간 확보)
+#### 시간 최적화 수정
+- [x] **ref 카운트 재시도 5→0**: 어차피 isTrusted:false면 기다려도 무의미 (프롬프트당 5초 절약)
+- [x] **배치 내 실패 캐시**: 한번 실패한 에셋은 같은 배치에서 재시도 안 함 (프롬프트당 12초 절약)
+- [x] **uploadNewAsset 빠른 실패**: 검색바 못 찾으면 즉시 실패 (재귀 selectAssetByName 제거)
 
-#### 시도 10 이후 (9-fix 실패 시 대안)
-- [ ] **10. Drag & Drop 시뮬레이션**
-- [ ] **11. Slate.js 직접 void 노드 삽입**
+#### 시도 10 이후 (isTrusted 우회 필요)
+- [ ] **10. chrome.debugger API**: `Input.dispatchMouseEvent`로 trusted 이벤트 전송 (permissions 필요)
+- [ ] **11. Slate.js 직접 void 노드 삽입**: 에디터 인스턴스에 접근, void 노드 프로그래매틱 삽입
+- [ ] **12. execCommand/InputEvent paste 시뮬레이션**: 클립보드 경유 이미지 붙여넣기
 
 ## 수정하지 않는 것
 | 위치 | 이유 |
