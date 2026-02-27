@@ -188,7 +188,7 @@ async function checkConnection() {
 // IndexedDB for FileSystemDirectoryHandle persistence
 function openHandleDB() {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open('WhiskAutomatorHandles', 1);
+    const req = indexedDB.open('FlowAutomatorHandles', 1);
     req.onupgradeneeded = (e) => e.target.result.createObjectStore('handles');
     req.onsuccess = (e) => resolve(e.target.result);
     req.onerror = (e) => reject(e.target.error);
