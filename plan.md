@@ -12,7 +12,7 @@ Grok.com(React)과 Flow(Google)에서 네이티브 `.click()`이 이벤트 핸�
   - setTimeout + mouseover 방식 → pointerdown/mousedown/pointerup/mouseup/click 동기식
   - 이미 같은 파일의 clickUpscaleInMenu (line 1022)에서 올바른 버전 사용 중
 
-- [ ] **2. `uploadImageToGrok()` (line 696-711)**: button 요소에 대해서만 simulateClick 적용
+- [x] **2. `uploadImageToGrok()` (line 696-711)**: button 요소에 대해서만 simulateClick 적용
   - `input[type="file"]`의 `.click()`은 네이티브 파일 다이얼로그 → 유지
   - React 버튼(`button[aria-label*="attach"]` 등)에만 simulateClick 적용
   - 함수 시작부에 simulateClick 헬퍼 추가 필요
