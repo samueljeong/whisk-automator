@@ -39,21 +39,48 @@ DIV.sc-5bf79b14-15.ekgK 95x24           ← 텍스트 "#soyeon.png"
 | 5 | stopPropagation 제거, preventDefault만 | DIV 95x24 | ref 0→0 | 클릭 대상이 여전히 텍스트(95x24) |
 | 6 | width 제한 제거, height>60 기준으로 카드(607x112) 클릭 | DIV 607x112 (예상) | ? (미확인) | 사용자 "실패" 보고, 상세 불명 |
 
-### 남은 가설
+### 시도 #7, #8 추가 (2026-02-27 심야)
 
-1. **preventDefault가 Flow 핸들러를 방해**: React의 합성 이벤트 시스템에서 `event.defaultPrevented`를 체크할 수 있음. `preventDefault` 제거 후 테스트 필요.
-2. **simulateRealClick의 isTrusted=false**: 디스패치된 이벤트는 `isTrusted: false`. Flow가 이를 체크하면 무시될 수 있음. 해결 불가 (브라우저 보안).
-3. **클릭 대상 여전히 잘못됨**: 시도 #6이 제대로 로드되지 않았을 가능성 (사용자가 확장 리로드 안 했을 수 있음).
-4. **에셋 패널이 닫혀야 ref가 증가**: 클릭 후 패널이 열린 상태에서 ref 체크하면 0으로 나올 수 있음.
-5. **다른 이벤트 타입 필요**: click이 아닌 mousedown/pointerdown에 핸들러가 붙어있을 수 있음.
-6. **네이티브 .click() 사용**: Flow가 React가 아닌 Lit/Web Components면 네이티브 .click()이 오히려 동작할 수 있음.
+| # | 시도 | 결과 | 실패 원인 |
+|---|------|------|----------|
+| 7 | preventDefault 완전 제거 | 메인화면으로 네비게이션, ref 0→0 | 네비게이션 차단 없이 페이지 이동 |
+| 8 | history.pushState/replaceState 오버라이드 + .click() 폴백 | 검색 결과 없음 → uploadNewAsset 폴백 | 에셋이 라이브러리에 없어서 검색 자체 실패 |
 
-### 다음 시도 계획
+### 영상 분석 핵심 발견 (2026-02-27 녹화 분석)
 
-**A. preventDefault 제거 테스트**: preventDefault 없이 클릭 → 네비게이션 발생하더라도 ref가 증가하는지 확인
-**B. 네이티브 .click() 테스트**: simulateRealClick 대신 element.click() 사용
-**C. 에셋 패널 닫기 후 ref 확인**: 클릭→패널닫기(Esc)→ref 체크 순서로 변경
-**D. 완전히 다른 접근**: Slate.js 에디터에 직접 레퍼런스 삽입 (클릭 우회)
+**Frame 4-5**: `#soyeon` 검색 → "일치하는 결과 없음" 표시 → `selectAssetByName`이 클릭 로직까지 도달 못함
+**Frame 7**: `uploadNewAsset` 폴백 실행 → 파일 인터셉터가 `#soyeon.png` 전달 성공
+**Frame 11**: 에셋 패널에 `#soyeon.png` 카드가 썸네일과 함께 표시됨 (업로드 성공!)
+**Frame 16-34**: `분석 대기 중... (5초/20초/35초/50초), void: 0/0` — ref 카운트가 영원히 0
+**Frame 36**: `분석 타임아웃 (60초)` → `업로드 후 레퍼런스 증가 없음 (ref: 0 → 0)` → `에셋 업로드 실패, 스킵`
+**Frame 38**: 레퍼런스 없이 프롬프트 텍스트만 입력 후 생성 진행
+
+### 근본 원인 확정
+
+**Flow의 에셋 삽입 메커니즘**: 에셋을 업로드하면 **라이브러리에만 추가**됨. 프롬프트에 레퍼런스로 삽입하려면 **에셋 카드를 클릭**해야 함.
+
+현재 `uploadNewAsset`의 치명적 결함:
+1. 파일 업로드 → 성공 (패널에 에셋 카드 표시됨)
+2. `waitForAnalysisComplete()` 호출 → **ref 카운트 증가를 수동적으로 기다림**
+3. 하지만 **에셋 카드를 클릭하지 않으므로** ref가 절대 증가하지 않음
+4. 60초 후 타임아웃 → 실패
+
+**두 함수의 관계**:
+- `selectAssetByName`: 에셋이 이미 라이브러리에 있을 때 → 검색 → 카드 클릭 (클릭 자체도 미해결)
+- `uploadNewAsset`: 에셋이 없을 때 → 업로드 → **클릭 없이 대기** → 실패
+
+### 수정 방향 (신규)
+
+**uploadNewAsset에 클릭 로직 추가**:
+1. 파일 업로드 완료 후, 패널에 나타난 에셋 카드를 찾아서 클릭
+2. 이때 에셋 이름으로 검색하면 방금 업로드한 에셋이 나타남
+3. 카드를 클릭하면 ref가 삽입됨 → waitForAnalysisComplete 성공
+
+**selectAssetByName 클릭 문제도 동시 해결 필요**:
+- simulateRealClick과 .click() 모두 실패한 상태
+- 대안: `element.dispatchEvent(new PointerEvent('click', {...}))` 단독 사용
+- 대안: 에셋 카드의 특정 자식 요소(이미지 영역)를 클릭 대상으로
+- 최종 대안: 클릭 포기 → Slate.js 에디터에 직접 void 노드 삽입
 
 ---
 
