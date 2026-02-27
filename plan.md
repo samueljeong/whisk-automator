@@ -51,7 +51,7 @@
   6. Esc로 패널 닫기 (기존 유지, 라인 2141-2146)
   7. ref 카운트 증가 확인 (기존 유지, 라인 2148-2157)
   ```
-- [ ] **9c. KeyboardEvent 발행 방식**: searchInput에 직접 dispatch
+- [x] **9c. KeyboardEvent 발행 방식**: searchInput에 직접 dispatch
   ```js
   searchInput.dispatchEvent(new KeyboardEvent('keydown', {
     key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, bubbles: true
