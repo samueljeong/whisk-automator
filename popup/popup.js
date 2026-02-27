@@ -2743,13 +2743,20 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
             // 매 프롬프트마다 레퍼런스 에셋 추가 (Flow가 생성 후 초기화하므로)
             if (thisGroup && charForThisPrompt) {
               var promptEl = findPromptInput();
-              var currentVoids = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]').length;
-              if (currentVoids === 0) {
+              // 레퍼런스 감지: void 내부에 img가 있는 것만 카운트 (Slate 기본 void 제외)
+              var refImages = promptEl.querySelectorAll('[contenteditable="false"] img, [data-slate-void] img');
+              var refCount = 0;
+              for (var ri = 0; ri < refImages.length; ri++) {
+                var riRect = refImages[ri].getBoundingClientRect();
+                if (riRect.width > 10 && riRect.height > 10) refCount++;
+              }
+              console.log('[Flow Auto] 프롬프트 내 레퍼런스 이미지: ' + refCount + '개');
+              if (refCount === 0) {
                 console.log('[Flow Auto] 레퍼런스 추가: ' + charForThisPrompt);
                 await uploadReferences(charForThisPrompt, characters);
                 await sleep(1000);
               } else {
-                console.log('[Flow Auto] 레퍼런스 이미 있음 (void: ' + currentVoids + ')');
+                console.log('[Flow Auto] 레퍼런스 이미 있음 (' + refCount + '개)');
               }
             }
 
