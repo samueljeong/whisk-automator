@@ -15,7 +15,7 @@ const FLOW_PROMPT_TEMPLATES = {
 - 구체적인 시각 묘사 포함 (구도, 조명, 분위기, 색감, 스타일)
 - 인물이 있다면 표정, 자세, 의상 묘사
 - 출력은 프롬프트만 (번호, 설명, 구분선 없이)
-- Whisk/이미지생성 AI에 최적화된 형식
+- Flow/이미지생성 AI에 최적화된 형식
 
 ## 프롬프트 스타일 예시
 a lone warrior standing on a misty mountain peak at dawn, dramatic backlight, cinematic composition, detailed armor with battle scars, determined expression, volumetric fog, epic fantasy style
@@ -51,7 +51,7 @@ a lone warrior standing on a misty mountain peak at dawn, dramatic backlight, ci
 - 시각적 디테일 구체적으로 (구도, 조명, 분위기, 색감, 스타일)
 - 인물: 표정, 자세, 의상 포함
 - 출력은 프롬프트만 (번호/설명/구분선 없이)
-- Whisk/이미지생성 AI에 최적화
+- Flow/이미지생성 AI에 최적화
 
 ## 프롬프트 스타일 예시
 a lone warrior standing on a misty mountain peak at dawn, dramatic backlight, cinematic composition, detailed armor with battle scars, determined expression, volumetric fog, epic fantasy style
