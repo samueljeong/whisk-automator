@@ -2044,32 +2044,43 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     }
 
     if (matchedEl) {
-      // 에셋 카드는 <a> 태그로 감싸져 있음.
-      // <a>에 선택 핸들러가 붙어있으므로 <a> 자체를 클릭해야 에셋 선택이 됨.
-      // 단, href가 있으면 네비게이션이 발생하므로 href를 일시 제거 후 클릭.
+      // 디버그: matchedEl의 조상 체인 전체 로깅
+      var debugEl = matchedEl;
+      var debugChain = [];
+      for (var dbg = 0; dbg < 12 && debugEl && debugEl !== document.body; dbg++) {
+        var dbgRect = debugEl.getBoundingClientRect();
+        debugChain.push(
+          debugEl.tagName +
+          (debugEl.id ? '#' + debugEl.id : '') +
+          (debugEl.className ? '.' + String(debugEl.className).substring(0, 30).replace(/\s+/g, '.') : '') +
+          (debugEl.tagName === 'A' ? '[href=' + (debugEl.getAttribute('href') || 'none').substring(0, 40) + ']' : '') +
+          ' ' + Math.round(dbgRect.width) + 'x' + Math.round(dbgRect.height)
+        );
+        debugEl = debugEl.parentElement;
+      }
+      console.log('[Flow Auto] DOM 체인:\n  ' + debugChain.join('\n  → '));
+
+      // 전략 1: 클릭 방식 — 모든 네비게이션 차단 후 클릭
       var clickTarget = matchedEl;
 
-      // 1) matchedEl → 부모 탐색하며 에셋 카드(<a> 또는 적절한 크기의 컨테이너) 찾기
+      // matchedEl 자체 또는 조상에서 <a> 태그 & 적절한 크기의 컨테이너 찾기
       var current = matchedEl;
-      var anchorTarget = null; // <a> 태그가 있으면 여기에 저장
-      for (var up = 0; up < 8; up++) {
-        var parent = current.parentElement;
-        if (!parent || parent === document.body) break;
-        var pRect = parent.getBoundingClientRect();
-        // 부모가 리스트 컨테이너처럼 너무 크면 멈춤
-        if (pRect.height > 300 || pRect.width > 500) break;
-        // <a> 태그 발견 → 에셋 카드 자체일 가능성 높음
-        if (parent.tagName === 'A' && parent.href) {
-          anchorTarget = parent;
+      var anchorTarget = null;
+      for (var up = 0; up < 10; up++) {
+        if (!current || current === document.body) break;
+        // <a> 태그 발견 (href 유무 상관없이)
+        if (current.tagName === 'A') {
+          anchorTarget = current;
+          console.log('[Flow Auto] <a> 태그 발견 (level ' + up + '): href=' + (current.getAttribute('href') || 'none'));
         }
-        // 적절한 크기의 카드면 클릭 대상 후보
-        if (pRect.height >= 30 && pRect.height <= 200 && pRect.width >= 50) {
-          clickTarget = parent;
+        var cRect = current.getBoundingClientRect();
+        if (cRect.height >= 30 && cRect.height <= 250 && cRect.width >= 50 && cRect.width <= 500) {
+          clickTarget = current;
         }
-        current = parent;
+        current = current.parentElement;
       }
 
-      // <a> 태그가 발견되면 그것을 클릭 대상으로 사용 (선택 핸들러가 여기 붙어있음)
+      // <a> 태그가 있으면 그것을 클릭 대상으로 (선택 핸들러가 여기 붙어있을 가능성)
       if (anchorTarget) {
         clickTarget = anchorTarget;
       }
@@ -2080,33 +2091,123 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         Math.round(targetRect.width) + 'x' + Math.round(targetRect.height) +
         ' at(' + Math.round(targetRect.left) + ',' + Math.round(targetRect.top) + ')');
 
-      // 2) clickTarget 및 모든 조상 <a>의 href를 일시 제거 → 네비게이션 차단
+      // 모든 조상 <a> 태그의 href 일시 제거
       var savedLinks = [];
-      var ancestor = clickTarget;
+      var ancestor = matchedEl;
       while (ancestor && ancestor !== document.body) {
         if (ancestor.tagName === 'A' && ancestor.hasAttribute('href')) {
           savedLinks.push({ el: ancestor, href: ancestor.getAttribute('href') });
           ancestor.removeAttribute('href');
-          console.log('[Flow Auto] <a> href 일시 제거: ' + savedLinks[savedLinks.length - 1].href.substring(0, 60));
+          console.log('[Flow Auto] <a> href 제거: ' + savedLinks[savedLinks.length - 1].href.substring(0, 60));
         }
         ancestor = ancestor.parentElement;
       }
 
-      // 3) 캡처링 단계에서 click 기본 동작 차단 (이중 안전장치)
-      var preventNav = function(e) { e.preventDefault(); };
+      // 모든 click/pointerup 이벤트에 preventDefault + 네비게이션 차단
+      var preventNav = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('[Flow Auto] click preventDefault 실행: ' + e.target.tagName);
+        return false;
+      };
+      // beforeunload로 하드 네비게이션 차단
+      var preventUnload = function(e) {
+        e.preventDefault();
+        console.log('[Flow Auto] beforeunload 차단');
+        return '';
+      };
       document.addEventListener('click', preventNav, true);
+      window.addEventListener('beforeunload', preventUnload);
 
-      // 4) simulateRealClick 실행 — <a> 태그의 선택 핸들러 발동
+      // URL 감시 시작
+      var urlBefore = window.location.href;
+
+      // 클릭 실행
       simulateRealClick(clickTarget);
+      await sleep(300);
 
-      // 5) href 복원 + 리스너 제거
+      // href 복원 + 리스너 제거
       for (var sl = 0; sl < savedLinks.length; sl++) {
         savedLinks[sl].el.setAttribute('href', savedLinks[sl].href);
       }
       document.removeEventListener('click', preventNav, true);
+      window.removeEventListener('beforeunload', preventUnload);
 
-      await sleep(500);
-      assetFound = true;
+      // URL 변경 감지
+      if (window.location.href !== urlBefore) {
+        console.warn('[Flow Auto] 클릭 후 URL 변경 감지! → history.back()');
+        window.history.back();
+        await sleep(1000);
+      }
+
+      // 클릭으로 ref 증가 확인
+      var clickRefCheck = countRefImages(findPromptInput());
+      console.log('[Flow Auto] 클릭 후 ref 체크: ' + beforeVoids + ' → ' + clickRefCheck);
+
+      if (clickRefCheck > beforeVoids) {
+        assetFound = true;
+      } else {
+        // 전략 2: 키보드 방식 — 검색 결과에서 화살표키+Enter
+        console.log('[Flow Auto] 클릭 실패, 키보드 방식 시도...');
+
+        // 패널이 닫혔을 수 있으므로 다시 열기
+        var ingredientBtn2 = findIngredientButton();
+        if (ingredientBtn2) {
+          simulateRealClick(ingredientBtn2);
+          await sleep(800);
+        }
+
+        // 검색바 다시 찾기
+        var searchInput2 = null;
+        var inputs2 = document.querySelectorAll('input[type="text"], input[type="search"], input:not([type])');
+        for (var si2 = 0; si2 < inputs2.length; si2++) {
+          var ph2 = (inputs2[si2].placeholder || '').toLowerCase();
+          var rect2 = inputs2[si2].getBoundingClientRect();
+          if (rect2.width > 0 && (ph2.includes('에셋') || ph2.includes('검색') || ph2.includes('search') || ph2.includes('asset'))) {
+            searchInput2 = inputs2[si2];
+            break;
+          }
+        }
+        if (!searchInput2) {
+          for (var fi2 = 0; fi2 < inputs2.length; fi2++) {
+            var fiRect2 = inputs2[fi2].getBoundingClientRect();
+            if (fiRect2.width > 100 && fiRect2.top > 0 && fiRect2.top < window.innerHeight) {
+              searchInput2 = inputs2[fi2];
+              break;
+            }
+          }
+        }
+
+        if (searchInput2) {
+          // 검색어 재입력
+          searchInput2.focus();
+          await sleep(200);
+          searchInput2.value = '';
+          searchInput2.dispatchEvent(new Event('input', { bubbles: true }));
+          await sleep(200);
+          searchInput2.value = charName;
+          searchInput2.dispatchEvent(new Event('input', { bubbles: true }));
+          searchInput2.dispatchEvent(new Event('change', { bubbles: true }));
+          await sleep(1000);
+
+          // ArrowDown → Enter (검색 결과 선택)
+          console.log('[Flow Auto] 키보드: ArrowDown + Enter');
+          searchInput2.dispatchEvent(new KeyboardEvent('keydown', {
+            key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, bubbles: true, cancelable: true
+          }));
+          await sleep(200);
+          searchInput2.dispatchEvent(new KeyboardEvent('keydown', {
+            key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true
+          }));
+          await sleep(500);
+
+          var kbRefCheck = countRefImages(findPromptInput());
+          console.log('[Flow Auto] 키보드 후 ref 체크: ' + beforeVoids + ' → ' + kbRefCheck);
+          if (kbRefCheck > beforeVoids) {
+            assetFound = true;
+          }
+        }
+      }
     }
 
     if (!assetFound) {
