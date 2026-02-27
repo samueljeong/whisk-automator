@@ -20,7 +20,7 @@ Grok.com(React)과 Flow(Google)에서 네이티브 `.click()`이 이벤트 핸�
 - [x] **3. `dismissPopups()` (line 941)**: `.click()` → simulateClick
   - 함수 내부에 simulateClick 헬퍼 추가 필요
 
-- [ ] **4. `clickPageDownloadButton()` (line 1273)**: 버튼만 simulateClick, `<a>` 링크는 유지
+- [x] **4. `clickPageDownloadButton()` (line 1273)**: 버튼만 simulateClick, `<a>` 링크는 유지
   - 함수 내부에 simulateClick 헬퍼 추가 필요
 
 ### popup.js (1곳)
