@@ -512,7 +512,6 @@ async function loadState() {
             characters: mergedChars,
             scenes: mergedScenes,
             // 저장소에 명시적으로 저장된 값 우선, undefined일 때만 DEFAULT 사용
-            styleImage: savedProj.styleImage || defaultProj.styleImage || '',
             stylePrefix: savedProj.stylePrefix !== undefined ? savedProj.stylePrefix : (defaultProj.stylePrefix || ''),
             styleSuffix: savedProj.styleSuffix !== undefined ? savedProj.styleSuffix : (defaultProj.styleSuffix || '')
           };
