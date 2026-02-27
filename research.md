@@ -69,18 +69,51 @@ DIV.sc-5bf79b14-15.ekgK 95x24           ← 텍스트 "#soyeon.png"
 - `selectAssetByName`: 에셋이 이미 라이브러리에 있을 때 → 검색 → 카드 클릭 (클릭 자체도 미해결)
 - `uploadNewAsset`: 에셋이 없을 때 → 업로드 → **클릭 없이 대기** → 실패
 
-### 수정 방향 (신규)
+### 영상 2차 분석 (2026-02-27 23:06 녹화) — selectAssetByName 경로
 
-**uploadNewAsset에 클릭 로직 추가**:
-1. 파일 업로드 완료 후, 패널에 나타난 에셋 카드를 찾아서 클릭
-2. 이때 에셋 이름으로 검색하면 방금 업로드한 에셋이 나타남
-3. 카드를 클릭하면 ref가 삽입됨 → waitForAnalysisComplete 성공
+이번엔 `#yonga`가 라이브러리에 **존재**해서 selectAssetByName의 클릭 로직까지 도달:
 
-**selectAssetByName 클릭 문제도 동시 해결 필요**:
-- simulateRealClick과 .click() 모두 실패한 상태
-- 대안: `element.dispatchEvent(new PointerEvent('click', {...}))` 단독 사용
-- 대안: 에셋 카드의 특정 자식 요소(이미지 영역)를 클릭 대상으로
-- 최종 대안: 클릭 포기 → Slate.js 에디터에 직접 void 노드 삽입
+```
+에셋 발견: "#yonga.png" → 클릭 대상: DIV.sc-3128f8f-0 bTtjRP 458x250 at(24,108)
+에셋 카드 클릭 시작 (SPA 네비게이션 차단)
+simulateRealClick 실패 (ref: 0), 네이티브 .click() 시도
+에셋 클릭 완료, 패널 닫기
+에셋 "#yonga" 삽입 결과, ref: 0 → 0
+⚠ 에셋 "#yonga" 삽입 실패 — 레퍼런스 증가 없음
+페이지 이동 감지, history.back() 복귀
+```
+
+**확정된 사실**:
+1. 에셋 검색/발견은 정상 동작 (458x250 카드 정확히 찾음)
+2. `simulateRealClick()` → ref 삽입 안 됨
+3. 네이티브 `.click()` → ref 삽입 안 됨
+4. 두 방법 모두 페이지 이동만 발생 (SPA 네비게이션 차단 실패 or location 변경)
+5. history.pushState 오버라이드가 네비게이션을 막지 못함
+
+### DOM 구조 비교
+
+| 시기 | 클래스 패턴 | 카드 크기 | 텍스트 라벨 |
+|------|-----------|----------|-----------|
+| 이전 | sc-5bf79b14-* | 607x112 | 95x24 |
+| 현재 | sc-6e2527b8-*, sc-3128f8f-* | 458x250 | 62x16 |
+
+styled-components 해시가 다름 → Flow UI가 업데이트됐거나 다른 패널 상태
+
+### 결론: 클릭 방식으로는 불가능
+
+**8회 시도 + 2가지 클릭 방법 모두 실패**. 에셋 카드 클릭이 JavaScript로는 레퍼런스 삽입을 트리거하지 못함.
+
+가능한 원인:
+- `isTrusted: false` 체크 (브라우저 보안, 해결 불가)
+- React/Lit 이벤트 시스템이 합성 이벤트 무시
+- 클릭 핸들러가 특정 이벤트 속성(pointerId, pressure 등) 검증
+
+### 남은 대안 (클릭 우회)
+
+1. **키보드 네비게이션**: 검색 후 ArrowDown + Enter로 선택 (가장 간단)
+2. **Drag & Drop**: 카드에서 프롬프트 영역으로 드래그 이벤트 시뮬레이션
+3. **Slate.js 직접 삽입**: 프롬프트 에디터의 Slate 인스턴스에 접근, void 노드 프로그래매틱 삽입
+4. **chrome.debugger API**: `Input.dispatchMouseEvent`로 trusted 이벤트 전송 (권한 필요)
 
 ---
 
