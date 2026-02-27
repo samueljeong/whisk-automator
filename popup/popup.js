@@ -2240,23 +2240,56 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
     // 비디오는 순차, 이미지는 배치 모드
     var BATCH_SIZE = (selectedOutputType === 'video') ? 1 : 4;
-    var totalBatches = Math.ceil(promptsWithCharacters.length / BATCH_SIZE);
-    console.log('[Flow Auto] 배치 모드: ' + BATCH_SIZE + '개씩 (' + totalBatches + '배치, 총 ' + promptsWithCharacters.length + '개)');
+    var currentRefGroup = null; // 현재 업로드된 레퍼런스 캐릭터 조합
+    var batchNum = 0;
 
-    // 3. 배치 루프
-    for (var batchStart = 0; batchStart < promptsWithCharacters.length; batchStart += BATCH_SIZE) {
+    console.log('[Flow Auto] 배치 모드: ' + BATCH_SIZE + '개씩 (총 ' + promptsWithCharacters.length + '개)');
+
+    // 3. characterGroup 기반 배치 루프
+    var i = 0;
+    while (i < promptsWithCharacters.length) {
       if (isStopRequested()) {
         console.log('[Flow Auto] 사용자 정지 요청 — 자동화 중단');
         try { chrome.runtime.sendMessage({ action: 'AUTOMATION_STOPPED' }); } catch(e) {}
         return;
       }
 
-      var batchEnd = Math.min(batchStart + BATCH_SIZE, promptsWithCharacters.length);
-      var batchCount = batchEnd - batchStart;
-      var batchNum = Math.floor(batchStart / BATCH_SIZE) + 1;
+      var item = promptsWithCharacters[i];
+      var thisGroup = item.characterGroup || ''; // "" = 캐릭터 없음
 
-      console.log('[Flow Auto] === 배치 ' + batchNum + '/' + totalBatches +
-        ' (' + (batchStart + 1) + '~' + batchEnd + '/' + promptsWithCharacters.length + ') ===');
+      // === 레퍼런스 전환 체크 ===
+      if (thisGroup !== currentRefGroup) {
+        if (thisGroup && item.character) {
+          // 새 캐릭터 조합 → 레퍼런스 교체
+          console.log('[Flow Auto] 레퍼런스 전환: "' + (currentRefGroup || '없음') + '" → "' + thisGroup + '"');
+          await clearReferences();
+          await sleep(500);
+          await uploadReferences(item.character, characters);
+          await sleep(1000);
+        } else if (currentRefGroup) {
+          // 캐릭터 없는 프롬프트 → 레퍼런스 제거
+          console.log('[Flow Auto] 레퍼런스 제거 (캐릭터 없음)');
+          await clearReferences();
+          await sleep(500);
+        }
+        currentRefGroup = thisGroup;
+      }
+
+      // === 같은 characterGroup 내 연속 프롬프트 수집 (배치 범위) ===
+      var batchStart = i;
+      var batchEnd = i;
+      while (batchEnd < promptsWithCharacters.length &&
+             batchEnd - batchStart < BATCH_SIZE &&
+             (promptsWithCharacters[batchEnd].characterGroup || '') === thisGroup) {
+        batchEnd++;
+      }
+
+      var batchCount = batchEnd - batchStart;
+      batchNum++;
+
+      console.log('[Flow Auto] === 배치 ' + batchNum +
+        ' (' + (batchStart + 1) + '~' + batchEnd + '/' + promptsWithCharacters.length + ')' +
+        (thisGroup ? ' [레퍼런스: ' + thisGroup + ']' : '') + ' ===');
 
       var MAX_BATCH_RETRIES = 2;
       var batchRetry = 0;
@@ -2270,35 +2303,35 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
             if (img.src) preGenSrcs.add(img.src);
           });
 
-          // Phase 2: 프롬프트 연속 제출 (기다리지 않고 바로 다음)
-          for (var i = batchStart; i < batchEnd; i++) {
+          // Phase 2: 프롬프트 연속 제출 (레퍼런스는 이미 올라가 있으므로 텍스트만 입력)
+          for (var j = batchStart; j < batchEnd; j++) {
             if (isStopRequested()) {
               try { chrome.runtime.sendMessage({ action: 'AUTOMATION_STOPPED' }); } catch(e) {}
               return;
             }
 
-            var item = promptsWithCharacters[i];
-            var logPrefix = '[' + (item.index + 1) + ']' + (item.filename ? ' [' + item.filename + ']' : '');
+            var batchItem = promptsWithCharacters[j];
+            var logPrefix = '[' + (batchItem.index + 1) + ']' + (batchItem.filename ? ' [' + batchItem.filename + ']' : '');
 
-            console.log('[Flow Auto] 제출 ' + (i + 1) + '/' + promptsWithCharacters.length + ': ' + logPrefix);
+            console.log('[Flow Auto] 제출 ' + (j + 1) + '/' + promptsWithCharacters.length + ': ' + logPrefix);
 
             try {
               chrome.runtime.sendMessage({
                 action: 'PROGRESS_UPDATE',
-                currentIndex: i,
+                currentIndex: j,
                 totalCount: promptsWithCharacters.length,
-                promptIndex: item.index,
+                promptIndex: batchItem.index,
                 status: 'processing',
                 currentPrompt: logPrefix + ' (제출중)'
               });
             } catch(e) {}
 
-            await fillPrompt(item.prompt);
+            await fillPrompt(batchItem.prompt);
             await sleep(500);
             await clickGenerate();
 
             // 배치 내 마지막이 아니면 UI 안정화 대기
-            if (i < batchEnd - 1) {
+            if (j < batchEnd - 1) {
               await sleep(2000);
             }
           }
@@ -2396,6 +2429,8 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
           }
         }
       }
+
+      i = batchEnd;
     }
 
     console.log('[Flow Auto] 모든 프롬프트 완료!');
