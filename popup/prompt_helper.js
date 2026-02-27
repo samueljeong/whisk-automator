@@ -4,7 +4,7 @@
 // ============================================================
 // Whisk 이미지 프롬프트 템플릿
 // ============================================================
-const WHISK_PROMPT_TEMPLATES = {
+const FLOW_PROMPT_TEMPLATES = {
   claude: `당신은 AI 이미지 생성 프롬프트 전문가입니다.
 
 아래 대본/텍스트를 장면별로 분석하여, 각 장면에 대한 영어 이미지 생성 프롬프트를 작성해주세요.
@@ -156,7 +156,7 @@ camera slowly pulls back revealing vast landscape, clouds drifting, cinematic at
   let currentContext = 'whisk'; // 'whisk' or 'grok'
 
   function getTemplates() {
-    return currentContext === 'grok' ? GROK_MOTION_TEMPLATES : WHISK_PROMPT_TEMPLATES;
+    return currentContext === 'grok' ? GROK_MOTION_TEMPLATES : FLOW_PROMPT_TEMPLATES;
   }
 
   function showPrompt(ai) {
