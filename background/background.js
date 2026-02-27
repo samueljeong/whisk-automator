@@ -265,7 +265,7 @@ chrome.downloads.onChanged.addListener((delta) => {
   }
 });
 
-// Discord 초대 탭 자동 닫기 (Whisk가 자동으로 열어버리는 Google Labs Discord)
+// Discord 초대 탭 자동 닫기 (Flow가 자동으로 열어버리는 Google Labs Discord)
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.url && changeInfo.url.includes('discord.com/invite')) {
     console.log('[Flow Automator] Discord 초대 탭 자동 닫기:', changeInfo.url);
