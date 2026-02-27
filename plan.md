@@ -64,7 +64,7 @@
 
 **uploadNewAsset 수정** (라인 2162-2311):
 
-- [ ] **9d. 업로드 후 selectAssetByName 재호출**:
+- [x] **9d. 업로드 후 selectAssetByName 재호출**:
   - 파일 업로드 완료(라인 2277) 후 패널 닫기
   - `selectAssetByName(searchName)` 호출 (키보드 방식으로 수정된 버전)
   - 이미 라이브러리에 추가됐으므로 검색→키보드 선택 가능
