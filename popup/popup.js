@@ -2257,12 +2257,19 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     console.log('[Flow Auto] 새 에셋 분석 대기: ' + searchName);
     await waitForAnalysisComplete(promptEl, beforeVoids, searchName);
 
-    // 5. 패널 닫기
+    // 6. 패널 닫기
     document.dispatchEvent(new KeyboardEvent('keydown', {
       key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true
     }));
-    await sleep(300);
+    await sleep(500);
 
+    // 7. 실제 레퍼런스 삽입 검증 (selectAssetByName과 동일)
+    var afterVoids = countRefImages(promptEl);
+    if (afterVoids <= beforeVoids) {
+      console.warn('[Flow Auto] 에셋 "' + searchName + '" 업로드 후 레퍼런스 증가 없음 (ref: ' + beforeVoids + ' → ' + afterVoids + ')');
+      return false;
+    }
+    console.log('[Flow Auto] 에셋 "' + searchName + '" 업로드 성공 (ref: ' + beforeVoids + ' → ' + afterVoids + ')');
     return true;
   }
 
