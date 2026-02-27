@@ -2108,9 +2108,14 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     }));
     await sleep(1000);
 
-    // 6. 에셋 패널에 있는 건 이미 분석 완료 → 대기 불필요
-    var afterCloseVoids = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]').length;
-    console.log('[Flow Auto] 에셋 "' + charName + '" 삽입 완료 (분석 완료 에셋), void: ' + beforeVoids + ' → ' + afterCloseVoids);
+    // 6. 에셋 삽입 검증: 실제 레퍼런스 이미지가 증가했는지 확인
+    var afterCloseVoids = countRefImages(promptEl);
+    console.log('[Flow Auto] 에셋 "' + charName + '" 삽입 결과, ref: ' + beforeVoids + ' → ' + afterCloseVoids);
+
+    if (afterCloseVoids <= beforeVoids) {
+      console.warn('[Flow Auto] 에셋 "' + charName + '" 삽입 실패 — 레퍼런스 이미지 증가 없음');
+      return false;
+    }
 
     return true;
   }
