@@ -1990,31 +1990,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
           // 분석 완료 대기 (새 업로드이므로 시간 소요)
           console.log('[Flow Auto] 새 에셋 분석 대기: ' + name);
-          var analysisWaited = 0;
-          await sleep(3000);
-          analysisWaited += 3000;
-          while (analysisWaited < 60000) {
-            if (isStopRequested()) throw new Error('__STOPPED__');
-            var currentVoids = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]').length;
-            if (currentVoids > beforeVoids) {
-              var hasLoading = false;
-              var voidEls = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]');
-              for (var vi = 0; vi < voidEls.length; vi++) {
-                var loadingInThumb = voidEls[vi].querySelectorAll(
-                  '[class*="loading"], [class*="spinner"], [class*="progress"], ' +
-                  '[role="progressbar"], svg circle[stroke-dasharray]'
-                );
-                if (loadingInThumb.length > 0) { hasLoading = true; break; }
-                if (parseFloat(getComputedStyle(voidEls[vi]).opacity) < 0.9) { hasLoading = true; break; }
-              }
-              if (!hasLoading) {
-                console.log('[Flow Auto] 새 에셋 분석 완료: ' + name + ' (' + (analysisWaited / 1000) + '초)');
-                break;
-              }
-            }
-            await sleep(1000);
-            analysisWaited += 1000;
-          }
+          await waitForAnalysisComplete(promptEl, beforeVoids, name);
         } else {
           console.warn('[Flow Auto] 캐릭터 "' + name + '" 이미지 없음, 스킵');
         }
