@@ -298,10 +298,7 @@ async function scanCharacterFolder(rootHandle) {
     for (const [name, scene] of Object.entries(proj.scenes || {})) {
       if (scene.fromFolder) delete proj.scenes[name];
     }
-    if (proj.styleFromFolder) {
-      proj.styleImage = '';
-      proj.styleFromFolder = false;
-    }
+    // styleImage 제거됨 (Flow에는 스타일 이미지 슬롯 없음)
     if (proj.stylePrefixFromFolder) {
       proj.stylePrefix = '';
       proj.stylePrefixFromFolder = false;
