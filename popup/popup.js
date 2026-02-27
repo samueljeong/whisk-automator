@@ -1665,16 +1665,40 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     }
 
     // 하위 메뉴에서 대상 모델 찾기
-    var subItems = subMenu.querySelectorAll('*');
+    // displayName에서 핵심 키워드 추출 (이모지, 특수문자 무시하고 매칭)
+    var modelKeywords = displayName.split(/\s+/); // ["Nano", "Banana", "2"] 등
+    var subItems = subMenu.querySelectorAll('[role="menuitem"], [role="menuitemradio"], button, div, span');
+    var bestMatch = null;
+    var bestScore = 0;
+
     for (var j = 0; j < subItems.length; j++) {
       var subTxt = subItems[j].textContent.trim();
-      if (subTxt === displayName && subItems[j].getBoundingClientRect().width > 0) {
-        var subClickable = subItems[j].closest('button, [role="menuitem"], [role="menuitemradio"]') || subItems[j];
-        console.log('[Flow Auto] 모델 선택: "' + displayName + '"');
-        simulateRealClick(subClickable);
-        await sleep(300);
-        return true;
+      if (subItems[j].getBoundingClientRect().width === 0) continue;
+
+      // 각 키워드가 포함되어 있는지 점수 매기기
+      var score = 0;
+      for (var k = 0; k < modelKeywords.length; k++) {
+        if (subTxt.includes(modelKeywords[k])) score++;
       }
+
+      // 모든 키워드 매칭 + 가장 짧은 텍스트 (정확한 항목) 우선
+      if (score === modelKeywords.length && score > bestScore) {
+        bestScore = score;
+        bestMatch = subItems[j];
+      } else if (score === modelKeywords.length && score === bestScore) {
+        // 같은 점수면 텍스트 길이가 짧은 쪽 (더 정확한 매칭)
+        if (subTxt.length < (bestMatch.textContent || '').trim().length) {
+          bestMatch = subItems[j];
+        }
+      }
+    }
+
+    if (bestMatch) {
+      var subClickable = bestMatch.closest('button, [role="menuitem"], [role="menuitemradio"]') || bestMatch;
+      console.log('[Flow Auto] 모델 선택: "' + displayName + '" → "' + bestMatch.textContent.trim().substring(0, 40) + '"');
+      simulateRealClick(subClickable);
+      await sleep(300);
+      return true;
     }
 
     console.log('[Flow Auto] 모델 "' + displayName + '" 하위 메뉴에 미발견');
