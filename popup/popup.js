@@ -1388,6 +1388,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
   var downloadedSrcs = new Set();   // 이미 다운로드한 이미지 src 추적
   var assetSrcs = new Set();        // 에셋 이미지 src 추적 (다운로드/완료 감지에서 제외)
+  var selectedAssetChars = new Set(); // 이미 에셋 선택 완료된 캐릭터 조합 (프롬프트별 재선택 방지)
   var consecutiveFailures = 0;      // 연속 실패 카운터 (2회 연속 시 페이지 리로드)
 
   function isStopRequested() {
