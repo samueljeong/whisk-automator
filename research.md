@@ -289,3 +289,88 @@ function simulateClick(element) {
 | dismissPopups (1416,1429,1438,1458) | .click() | simulateRealClick | ✅ |
 | selectAssetByName (에셋 클릭) | simulateRealClick | **미해결** | ❌ |
 | uploadNewAsset (ref 검증) | return true 고정 | ref 카운트 체크 | ✅ |
+
+---
+
+# Supabase OTP 인증 + 라이선스 마이그레이션 리서치
+
+## 현재 라이선스 시스템 분석
+
+### 구조 (`popup/license.js`, 106줄)
+- **서버**: Flask on Render.com (`https://drama-s2ns.onrender.com`)
+- **엔드포인트**: `POST /api/whisk/validate` → `{ key: "WHISK-XXXX-XXXX" }` → `{ valid, expires }`
+- **키 저장**: Render 환경변수 `ACTIVE_KEYS` = `"KEY1:EXPIRY1,KEY2:EXPIRY2,..."`
+- **클라이언트 캐시**: `chrome.storage.local` → `whisk_license` 키
+  - 24시간 캐시 + 7일 오프라인 유예
+- **라이선스 서버 프로젝트**: `~/Projects/코딩/whisk-license-server/`
+
+### UI 흐름
+1. `popup.html` 로드 → `checkLicense()` 호출
+2. 유효 → `showMainUI(result)` → 라이선스 바에 만료일 표시
+3. 무효 → `showLicenseScreen()` → 키 입력 모달
+4. "키 변경" → `clearLicenseCache()` → `showLicenseScreen()`
+
+### popup.html 라이선스 관련 요소
+- `#licenseScreen` — 잠금 화면 (키 입력 모달)
+- `#licenseKeyInput` — `FLOW-XXXX-XXXX` 입력 필드
+- `#licenseSubmitBtn` — 확인 버튼
+- `#licenseError` — 에러 메시지
+- `.license-bar` — 상단 바: 만료일 `#licenseStatus` + `#licenseChangeBtn`
+
+### popup.js 라이선스 호출부
+- `DOMContentLoaded` → `checkLicense()` → `showMainUI()` or `showLicenseScreen()`
+- `#licenseSubmitBtn` 클릭 → `submitLicenseKey()` → 성공 시 `showMainUI()`
+- `#licenseChangeBtn` 클릭 → `clearLicenseCache()` → `showLicenseScreen()`
+
+### manifest.json 관련
+```json
+"host_permissions": [
+  "https://labs.google/*",
+  "https://drama-s2ns.onrender.com/*",  // ← 현재 라이선스 서버
+  "https://grok.com/*"
+]
+```
+
+## Supabase OTP 가이드 요약 (참조: supabase_otp_license_guide.md)
+
+### 3-레이어 구조
+1. **인증**: Supabase GoTrue — `POST /auth/v1/otp` → `POST /auth/v1/verify` → 토큰 발급
+2. **라이선스**: Edge Function `check-license` — JWT → user_id → `licenses` 테이블 조회
+3. **기능 제한**: 클라이언트 tier별 제어 (free/pro/enterprise)
+
+### 토큰 관리
+- access_token + refresh_token → `chrome.storage.local`
+- 만료 1분 전 자동 갱신 (`/auth/v1/token?grant_type=refresh_token`)
+- 갱신 실패 시 로그아웃
+
+### 라이선스 캐시
+- 5분 TTL (서버 부하 방지)
+- 오프라인 시 24시간까지 캐시된 라이선스 허용
+
+## 변경 영향 분석
+
+### 수정 필요 파일 (5개)
+| 파일 | 변경 내용 | 규모 |
+|------|----------|------|
+| `popup/license.js` | 전면 재작성: OTP 인증 + 토큰 관리 + 라이선스 체크 | 대 |
+| `popup/popup.html` | 라이선스 화면: 키 입력 → 이메일 OTP UI로 교체 | 중 |
+| `popup/popup.js` | 라이선스 관련 함수 호출부 수정 (API 동일하게 유지 가능) | 소 |
+| `popup/popup.css` | OTP 입력 UI 스타일 추가 | 소 |
+| `manifest.json` | `host_permissions`에 Supabase URL 추가, Render URL 제거 | 소 |
+
+### 변경 없는 파일
+- `popup/grok.js`, `prompt_helper.js`, `prompt_safety.js` — 라이선스 무관
+- `content/` 전체, `background/background.js` — 무관
+- `characters.json` — 무관
+
+### Supabase 인프라 설정 (1회, 수동)
+1. Supabase 프로젝트 생성 → URL + anon key
+2. Authentication → Email OTP 활성화
+3. `licenses` 테이블 + RLS 생성
+4. Edge Function `check-license` 배포
+
+## 결정 필요 사항
+1. **Freemium 티어**: 현재는 키 있으면 전체/없으면 잠금. free/pro 나눌 건지?
+2. **기존 키 방식 병행**: OTP만? 키도 유지?
+3. **오프라인 유예**: 현재 7일 → 유지? 24시간?
+4. **디바이스 핑거프린트**: 중복 로그인 방지 필요?
