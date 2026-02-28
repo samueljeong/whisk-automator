@@ -187,10 +187,49 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
   - 제출 전/후 DOM diff로 새 카드 찾기 → `promptCards[j] = newCard`
   - 다운로드 시 `promptCards[j]` 내부의 img를 다운로드 → 정확한 프롬프트 매핑
 
-- [ ] **13b. 부분 실패 시 누락 프롬프트 재시도**
-  - 타임아웃 시 `detectedNewImages.length < batchCount`이면:
-    - 생성된 이미지 먼저 다운로드
-    - 누락된 프롬프트 식별 → 다음 배치에 재삽입 또는 별도 재시도
+- [ ] **13b. 텍스트 매칭 근본 수정 — 제출 시점 카드 추적 방식**
+
+  **현재 문제**: `findPromptForImage`가 카드 텍스트에서 `originalPrompt.substring(0, 40)` 검색 → 전부 실패 → 위치 폴백 → 5개 중 4개만 생성됐을 때 파일명 밀림
+
+  **근본 원인 추정**:
+  1. Flow 카드의 `textContent`에 프롬프트가 포함되지 않을 수 있음 (접힌 카드, 트렁케이션)
+  2. `text.length > 5000` 커트오프에 의해 올바른 레벨 건너뜀
+  3. 스타일 prefix/suffix가 포함된 전체 프롬프트가 카드에 표시되지만, `originalPrompt`는 이들 없이 검색
+
+  **수정 방향 — 제출 시점 카드 추적**:
+  Phase 2에서 각 프롬프트 제출 직전/직후의 DOM 차이로 새로 생긴 카드를 추적
+  ```
+  제출 전: 피드 컨테이너의 자식 수 = N
+  제출 후 (clickGenerate 후 sleep): 자식 수 = N+1
+  새 카드 = 피드컨테이너.children[마지막] (또는 첫 번째, Flow가 위/아래 중 어디에 추가하는지에 따라)
+  promptCards[j] = 새 카드
+  ```
+  다운로드 시: `promptCards[j]` 내부의 `img[src*=getMediaUrlRedirect]`를 찾아 다운로드
+  → 카드 단위로 프롬프트-이미지 1:1 매핑, 텍스트 매칭 불필요
+
+  **한계**: 카드 컨테이너의 셀렉터를 정확히 알아야 함 → 디버그 로그 추가 후 확인 필요
+
+  **대안 (카드 추적이 어려우면)**: `findPromptForImage` 강화
+  - `originalPrompt` 대신 `prompt` (스타일 포함 전체 텍스트) 사용
+  - `text.length > 5000` 제한 제거 (피드 컨테이너도 검색 대상에 포함)
+  - 매칭 결과를 상세 로그로 출력 (어디서 실패하는지 확인)
+
+- [ ] **13d. Phase 3 조기 종료 — 진전 없으면 빠르게 마감**
+  - 현재: 90초 풀 대기. 4/5 감지 후 50초+ 낭비
+  - 수정: "마지막으로 새 이미지가 감지된 시점" 추적 → 20초간 변화 없으면 조기 종료
+  ```js
+  var lastChangeTime = Date.now();
+  var lastDetectedCount = 0;
+  // 폴링 루프 내:
+  if (detectedNewImages.length > lastDetectedCount) {
+    lastDetectedCount = detectedNewImages.length;
+    lastChangeTime = Date.now();
+  }
+  if (Date.now() - lastChangeTime > 20000 && detectedNewImages.length > 0) {
+    console.log('[Flow Auto] 20초간 변화 없음 — 조기 종료');
+    break;
+  }
+  ```
 
 - [x] **13c. test_prompts.txt에 [filename:] 태그 추가** — 테스트용
 
