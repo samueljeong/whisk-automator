@@ -1307,28 +1307,9 @@ async function startAutomation() {
     };
   });
 
-  // 스타일별 → 캐릭터 조합별 그룹핑 (스타일 전환 > 캐릭터 전환 비용)
-  // [style:male][용아] → [style:male][소소] → [style:female][소연] → [배경]
-  promptsWithCharacters.sort((a, b) => {
-    // 1. 스타일 태그로 먼저 그룹핑
-    const styleA = a.style || '';
-    const styleB = b.style || '';
-    if (styleA !== styleB) {
-      // 스타일 있는 것 먼저, 같은 스타일끼리 묶기
-      if (styleA && !styleB) return -1;
-      if (!styleA && styleB) return 1;
-      return styleA.localeCompare(styleB);
-    }
-    // 2. 같은 스타일 내에서 캐릭터 조합별 그룹핑
-    const grpA = a.characterGroup || '';
-    const grpB = b.characterGroup || '';
-    if (grpA && !grpB) return -1;
-    if (!grpA && grpB) return 1;
-    if (grpA !== grpB) return grpA.localeCompare(grpB);
-    return a.index - b.index; // 같은 조합 내에서는 원래 순서 유지
-  });
-
-  console.log('[Popup] 스타일→캐릭터 그룹핑:',
+  // 정렬 제거: 매 프롬프트마다 에셋을 재선택하므로 그룹핑 불필요
+  // 원래 프롬프트 순서 유지 → 제출 순서 = 원래 순서 = 파일명 순서
+  console.log('[Popup] 프롬프트 순서 (원본 유지):',
     promptsWithCharacters.map(p => `[씬${p.index + 1}]${p.style ? `{${p.style}}` : ''}${p.character || '배경'}`).join(', '));
 
   // 캐릭터 맵 + 장면 맵 생성 (별명 포함)
