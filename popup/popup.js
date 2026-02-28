@@ -2860,8 +2860,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       batchNum++;
 
       console.log('[Flow Auto] === 배치 ' + batchNum +
-        ' (' + (batchStart + 1) + '~' + batchEnd + '/' + promptsWithCharacters.length + ')' +
-        (thisGroup ? ' [레퍼런스: ' + thisGroup + ']' : '') + ' ===');
+        ' (' + (batchStart + 1) + '~' + batchEnd + '/' + promptsWithCharacters.length + ') ===');
 
       var MAX_BATCH_RETRIES = 2;
       var batchRetry = 0;
