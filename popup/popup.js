@@ -2945,9 +2945,9 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
             await sleep(500);
             await clickGenerate();
 
-            // 배치 내 마지막이 아니면 UI 안정화 대기
+            // 배치 내 마지막이 아니면 UI 안정화 대기 (Flow가 프롬프트 처리 후 초기화 시간)
             if (j < batchEnd - 1) {
-              await sleep(2000);
+              await sleep(500);
             }
           }
 
