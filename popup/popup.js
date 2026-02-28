@@ -2712,33 +2712,57 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
   }
 
   // 배치 다운로드: 새 이미지를 수집하여 프롬프트 순서대로 다운로드
+  // 에셋 이미지(~100KB)와 생성 이미지(~500KB+)를 크기로 구분
+  var MIN_GENERATED_IMAGE_SIZE = 200 * 1024; // 200KB 이상만 생성 이미지로 간주
   async function downloadBatch(batchStart, batchEnd, preGenSrcs) {
-    var newImages = [];
+    var candidateImages = [];
     document.querySelectorAll('img').forEach(function(img) {
       if (img.src && img.src.includes('getMediaUrlRedirect') &&
           !preGenSrcs.has(img.src) && !downloadedSrcs.has(img.src)) {
-        newImages.push(img);
+        candidateImages.push(img);
       }
     });
 
     // 위치순 정렬 (위→아래 = 생성 순서)
-    newImages.sort(function(a, b) {
+    candidateImages.sort(function(a, b) {
       var ar = a.getBoundingClientRect();
       var br = b.getBoundingClientRect();
       if (Math.abs(ar.top - br.top) < 20) return ar.left - br.left;
       return ar.top - br.top;
     });
 
+    console.log('[Flow Auto] 배치 다운로드: 후보 이미지 ' + candidateImages.length + '개, 크기 필터 적용...');
+
+    // 후보 이미지를 fetch해서 실제 크기로 필터링 (에셋 이미지 제외)
+    var verifiedImages = [];
+    for (var ci = 0; ci < candidateImages.length; ci++) {
+      try {
+        var headResp = await fetch(candidateImages[ci].src);
+        var headBlob = await headResp.blob();
+        var fileSize = headBlob.size;
+        if (fileSize >= MIN_GENERATED_IMAGE_SIZE) {
+          verifiedImages.push({ img: candidateImages[ci], blob: headBlob, size: fileSize });
+          console.log('[Flow Auto] 이미지 #' + (ci + 1) + ': ' + Math.round(fileSize / 1024) + 'KB → 생성 이미지 (다운로드 대상)');
+        } else {
+          console.log('[Flow Auto] 이미지 #' + (ci + 1) + ': ' + Math.round(fileSize / 1024) + 'KB → 에셋/썸네일 (스킵)');
+          downloadedSrcs.add(candidateImages[ci].src); // 에셋도 등록하여 재처리 방지
+        }
+      } catch (e) {
+        console.warn('[Flow Auto] 이미지 #' + (ci + 1) + ' fetch 실패, 스킵:', e.message);
+        downloadedSrcs.add(candidateImages[ci].src);
+      }
+    }
+
     var batchCount = batchEnd - batchStart;
-    var dlCount = Math.min(newImages.length, batchCount);
-    console.log('[Flow Auto] 배치 다운로드: 새 이미지 ' + newImages.length + '개, 다운로드 ' + dlCount + '개');
+    var dlCount = Math.min(verifiedImages.length, batchCount);
+    console.log('[Flow Auto] 크기 필터 후: 생성 이미지 ' + verifiedImages.length + '개, 다운로드 ' + dlCount + '개');
 
     for (var di = 0; di < dlCount; di++) {
       var pIdx = batchStart + di;
       if (pIdx >= promptsWithCharacters.length) break;
 
       var pItem = promptsWithCharacters[pIdx];
-      downloadedSrcs.add(newImages[di].src);
+      downloadedSrcs.add(verifiedImages[di].img.src);
 
       // 파일명 결정
       var fullFilename;
@@ -2752,8 +2776,9 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       }
 
       try {
-        var response = await fetch(newImages[di].src);
-        var blob = await response.blob();
+        // 이미 fetch된 blob 재사용
+        var blob = verifiedImages[di].blob;
+        console.log('[Flow Auto] DL ' + (di + 1) + '/' + dlCount + ': ' + fullFilename + ' (' + Math.round(blob.size / 1024) + 'KB)');
 
         if (useCustomDir) {
           var reader = new FileReader();
@@ -2775,15 +2800,14 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
             filename: savePath + '/' + fullFilename
           });
         }
-        console.log('[Flow Auto] DL ' + (di + 1) + '/' + dlCount + ': ' + fullFilename);
       } catch (e) {
         console.error('[Flow Auto] 다운로드 실패: ' + fullFilename, e.message);
       }
     }
 
     // 남은 이미지도 downloadedSrcs에 등록 (다음 배치 오염 방지)
-    for (var ri = dlCount; ri < newImages.length; ri++) {
-      downloadedSrcs.add(newImages[ri].src);
+    for (var ri = dlCount; ri < verifiedImages.length; ri++) {
+      downloadedSrcs.add(verifiedImages[ri].img.src);
     }
 
     return dlCount;
