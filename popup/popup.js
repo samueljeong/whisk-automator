@@ -1387,6 +1387,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
   console.log('[Flow Auto] Output type:', selectedOutputType || 'image');
 
   var downloadedSrcs = new Set();   // 이미 다운로드한 이미지 src 추적
+  var assetSrcs = new Set();        // 에셋 이미지 src 추적 (다운로드/완료 감지에서 제외)
   var consecutiveFailures = 0;      // 연속 실패 카운터 (2회 연속 시 페이지 리로드)
 
   function isStopRequested() {
