@@ -2970,6 +2970,12 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
       var flowTagMap = characters.__flowTagMap || {};
 
+      // Phase 0 시작 전 이미지 스냅샷 (Phase 0 중 나타나는 에셋 이미지 추적용)
+      var prePhase0Srcs = new Set();
+      document.querySelectorAll('img').forEach(function(img) {
+        if (img.src) prePhase0Srcs.add(img.src);
+      });
+
       for (var ui = 0; ui < uniqueChars.length; ui++) {
         if (isStopRequested()) {
           console.log('[Flow Auto] 사용자 정지 요청 — 자동화 중단');
@@ -2984,14 +2990,37 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         console.log('[Flow Auto] Phase 0 [' + (ui + 1) + '/' + uniqueChars.length + ']: ' + charName +
           (flowTag ? ' (Flow태그: ' + flowTag + ')' : ''));
 
-        try {
-          // 에셋 패널 열고 검색 → 이미 있으면 패널 닫고 넘어감
-          var found = await selectAssetByName(searchName);
+        var needsUpload = false;
 
-          if (!found && !uploadedAssetNames.has(searchName)) {
-            // 에셋 없음 → 업로드
-            var dataUrl = characters[charName] || characters[charName.normalize('NFC')];
-            if (dataUrl) {
+        // 1단계: 에셋이 이미 라이브러리에 있는지 확인
+        try {
+          var found = await selectAssetByName(searchName);
+          if (found) {
+            console.log('[Flow Auto] Phase 0: 에셋 "' + searchName + '" 이미 존재');
+          } else {
+            needsUpload = true;
+          }
+        } catch (e) {
+          if (e.message === '__STOPPED__') {
+            try { chrome.runtime.sendMessage({ action: 'AUTOMATION_STOPPED' }); } catch(e2) {}
+            return;
+          }
+          console.warn('[Flow Auto] Phase 0: 에셋 검색 실패 (' + charName + '):', e.message);
+          needsUpload = true;
+          // 패널이 열린 채 남았을 수 있으므로 닫기
+          try {
+            document.dispatchEvent(new KeyboardEvent('keydown', {
+              key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true
+            }));
+            await sleep(500);
+          } catch(e2) {}
+        }
+
+        // 2단계: 에셋 없으면 업로드
+        if (needsUpload && !uploadedAssetNames.has(searchName)) {
+          var dataUrl = characters[charName] || characters[charName.normalize('NFC')];
+          if (dataUrl) {
+            try {
               console.log('[Flow Auto] Phase 0: 에셋 "' + searchName + '" 업로드 중...');
               var uploaded = await uploadNewAsset(searchName, dataUrl);
               if (uploaded) {
@@ -3000,22 +3029,35 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
               } else {
                 console.warn('[Flow Auto] Phase 0: 에셋 "' + searchName + '" 업로드 실패');
               }
-            } else {
-              console.warn('[Flow Auto] Phase 0: 캐릭터 "' + charName + '" 이미지 데이터 없음');
+            } catch (e) {
+              if (e.message === '__STOPPED__') {
+                try { chrome.runtime.sendMessage({ action: 'AUTOMATION_STOPPED' }); } catch(e2) {}
+                return;
+              }
+              console.warn('[Flow Auto] Phase 0: 업로드 실패 (' + charName + '):', e.message);
+              // 패널 닫기
+              try {
+                document.dispatchEvent(new KeyboardEvent('keydown', {
+                  key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true
+                }));
+                await sleep(500);
+              } catch(e2) {}
             }
-          } else if (found) {
-            console.log('[Flow Auto] Phase 0: 에셋 "' + searchName + '" 이미 존재 (선택 확인)');
+          } else {
+            console.warn('[Flow Auto] Phase 0: 캐릭터 "' + charName + '" 이미지 데이터 없음');
           }
-        } catch (e) {
-          if (e.message === '__STOPPED__') {
-            try { chrome.runtime.sendMessage({ action: 'AUTOMATION_STOPPED' }); } catch(e2) {}
-            return;
-          }
-          console.warn('[Flow Auto] Phase 0: 에셋 준비 실패 (' + charName + '):', e.message);
         }
 
         await sleep(500);
       }
+
+      // Phase 0 중 나타난 에셋 이미지를 assetSrcs에 등록 (Phase 3 오인 방지)
+      document.querySelectorAll('img').forEach(function(img) {
+        if (img.src && img.src.includes('getMediaUrlRedirect') && !prePhase0Srcs.has(img.src)) {
+          assetSrcs.add(img.src);
+          console.log('[Flow Auto] Phase 0 에셋 이미지 등록: ' + img.src.substring(0, 80) + '...');
+        }
+      });
 
       // 프롬프트 영역 초기화 (Phase 0에서 에셋이 삽입됐을 수 있으므로)
       try {
