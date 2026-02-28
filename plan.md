@@ -84,6 +84,12 @@
 - [x] **배치 내 실패 캐시**: 한번 실패한 에셋은 같은 배치에서 재시도 안 함 (프롬프트당 12초 절약)
 - [x] **uploadNewAsset 빠른 실패**: 검색바 못 찾으면 즉시 실패 (재귀 selectAssetByName 제거)
 
+#### 다운로드 버그 수정 — 에셋 이미지 오다운로드 방지
+- [x] **assetSrcs Set 도입**: 에셋 업로드 전후 이미지 스냅샷 비교 → 새로 나타난 이미지를 assetSrcs에 등록
+- [x] **downloadBatch 크기 필터**: fetch blob size < 200KB → 에셋/썸네일로 판정, 스킵
+- [x] **모든 이미지 감지 경로에 assetSrcs 필터 적용**: waitForGeneration, downloadBatch, downloadImage, Phase 3 완료 대기
+- [x] **이중 방어**: assetSrcs (URL 기반) + blob 크기 필터 (200KB 미만 스킵)
+
 #### 시도 10 이후 (isTrusted 우회 필요)
 - [ ] **10. chrome.debugger API**: `Input.dispatchMouseEvent`로 trusted 이벤트 전송 (permissions 필요)
 - [ ] **11. Slate.js 직접 void 노드 삽입**: 에디터 인스턴스에 접근, void 노드 프로그래매틱 삽입
