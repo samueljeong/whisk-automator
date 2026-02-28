@@ -182,7 +182,7 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
 
 **해결 방향**: `[filename:]` 태그 사용 시에도 이 문제 존재. 근본적으로 "이미지-프롬프트 1:1 추적"이 필요.
 
-- [ ] **13a. 프롬프트별 개별 생성 추적**: 각 프롬프트 제출 직후 → 해당 카드 요소 기록
+- [x] **13a. 프롬프트별 개별 생성 추적**: 카드 텍스트 기반 매칭으로 구현
   - Flow는 제출 즉시 타임라인에 새 카드(div) 추가. 이 카드에 로딩 후 img가 나타남.
   - 제출 전/후 DOM diff로 새 카드 찾기 → `promptCards[j] = newCard`
   - 다운로드 시 `promptCards[j]` 내부의 img를 다운로드 → 정확한 프롬프트 매핑
