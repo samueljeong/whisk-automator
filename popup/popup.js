@@ -2936,10 +2936,9 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
               });
             }
 
-            // 에셋 업로드 후 preGenSrcs 갱신 (에셋 이미지가 생성 결과로 오인되는 것 방지)
-            document.querySelectorAll('img').forEach(function(img) {
-              if (img.src) preGenSrcs.add(img.src);
-            });
+            // 에셋 이미지 필터링은 assetSrcs가 담당 (preGenSrcs는 배치 시작 시점 스냅샷 유지)
+            // preGenSrcs를 여기서 갱신하면 이전 프롬프트의 생성 이미지까지 흡수하여
+            // Phase 3에서 감지 못하는 버그 발생
 
             await fillPrompt(batchItem.prompt);
             await sleep(500);
