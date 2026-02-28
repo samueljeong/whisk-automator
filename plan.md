@@ -102,12 +102,14 @@
   - `[contenteditable="false"] img`, `[data-slate-void] img` 셀렉터가 Flow 에셋 노드와 불일치
   - 타이밍 문제가 아니라 **셀렉터 자체가 틀림**
 
-#### 시도 11: 검증 제거 + 캐릭터 조합별 1회 선택 (최종 수정)
+#### 시도 11: 검증 제거 + 매 프롬프트 에셋 재선택
 - [x] **selectAssetByName**: ref 카운트 검증 완전 제거. 검색 결과 있으면 `return true`
-- [x] **selectedAssetChars Set 도입**: 배치 루프에서 캐릭터 조합별 1회만 `uploadReferences` 호출
-  - `countRefImages()` 의존 제거 → `selectedAssetChars.has(charForThisPrompt)`로 대체
-  - 첫 번째 프롬프트에서 에셋 선택 → 캐시 → 이후 프롬프트는 에셋 선택 스킵
-- [x] **uploadedAssetNames Set**: 같은 에셋 2회 이상 업로드 방지
+- [x] **uploadedAssetNames Set**: 같은 에셋 2회 이상 업로드 방지 (업로드만 1회 제한)
+- [x] ~~selectedAssetChars~~ **제거**: Flow는 생성 후 프롬프트 초기화 → 매 프롬프트마다 에셋 재선택 필요
+  - 테스트에서 확인: 프롬프트 3에서 에셋 선택 → 프롬프트 4에서 스킵 → 에셋 미적용
+- [x] **프롬프트 간 딜레이 감소**: 2000ms → 500ms (배치 내)
+- [x] **preGenSrcs 전체 갱신 제거**: 배치 루프 내 catch-all 갱신이 이전 프롬프트 생성 이미지를 흡수 → Phase 3 감지 방해
+  - assetSrcs가 에셋 이미지 필터링 전담, preGenSrcs는 배치 시작 시점 스냅샷만 유지
 
 #### 남은 대안 (현재 접근이 실패하면)
 - [ ] **chrome.debugger API**: `Input.dispatchMouseEvent`로 trusted 이벤트 전송 (permissions 필요)
