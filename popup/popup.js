@@ -2381,6 +2381,9 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
   // 11. 캐릭터별 레퍼런스 일괄 선택
   // flowTagMap: 캐릭터 이름 → Flow 태그 (영문, 에셋 검색용)
+  // uploadedAssetNames: 이미 업로드한 에셋 추적 (같은 세션에서 중복 업로드 방지)
+  var uploadedAssetNames = new Set();
+
   async function uploadReferences(charNames, characterMap) {
     var names = charNames.split(',').map(function(n) { return n.trim(); });
     var flowTagMap = characterMap.__flowTagMap || {};
@@ -2395,24 +2398,30 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       console.log('[Flow Auto] 레퍼런스 선택 ' + (i + 1) + '/' + names.length + ': ' + name +
         (flowTag ? ' (Flow태그: ' + flowTag + ')' : ' (태그 미설정, 한글 검색)'));
 
-      // 에셋 패널에서 검색 → 선택 (flowTag 우선)
+      // 에셋 패널에서 검색 → 키보드 선택
       var selected = await selectAssetByName(searchName);
 
       if (!selected) {
-        // 에셋 미발견 또는 삽입 실패 → 새 에셋 업로드 시도
-        var dataUrl = characterMap[name] || characterMap[name.normalize('NFC')];
-        if (dataUrl) {
-          console.log('[Flow Auto] 새 에셋 업로드: ' + searchName);
-          var uploaded = await uploadNewAsset(searchName, dataUrl);
-          if (!uploaded) {
-            console.warn('[Flow Auto] 에셋 업로드 실패: ' + searchName + ', 스킵');
-          }
+        // 검색 결과 없음 → 최초 1회만 업로드 (이미 업로드한 에셋은 스킵)
+        if (uploadedAssetNames.has(searchName)) {
+          console.log('[Flow Auto] 에셋 "' + searchName + '" 이미 업로드됨 — 재업로드 스킵');
         } else {
-          console.warn('[Flow Auto] 캐릭터 "' + name + '" 이미지 없음, 스킵');
+          var dataUrl = characterMap[name] || characterMap[name.normalize('NFC')];
+          if (dataUrl) {
+            console.log('[Flow Auto] 새 에셋 업로드 (최초 1회): ' + searchName);
+            var uploaded = await uploadNewAsset(searchName, dataUrl);
+            if (uploaded) {
+              uploadedAssetNames.add(searchName);
+            } else {
+              console.warn('[Flow Auto] 에셋 업로드 실패: ' + searchName + ', 스킵');
+            }
+          } else {
+            console.warn('[Flow Auto] 캐릭터 "' + name + '" 이미지 없음, 스킵');
+          }
         }
       }
 
-      await sleep(500);
+      await sleep(300);
     }
 
     console.log('[Flow Auto] 레퍼런스 선택 완료: ' + names.length + '명');
