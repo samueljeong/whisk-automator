@@ -2503,11 +2503,12 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         }
       }
 
-      // 이미지: getMediaUrlRedirect 패턴 새 img 감지
+      // 이미지: getMediaUrlRedirect 패턴 새 img 감지 (에셋 이미지 제외)
       var newCount = 0;
       document.querySelectorAll('img').forEach(function(img) {
         if (img.src && img.src.includes('getMediaUrlRedirect') &&
-            !knownSrcs.has(img.src) && !downloadedSrcs.has(img.src)) {
+            !knownSrcs.has(img.src) && !downloadedSrcs.has(img.src) &&
+            !assetSrcs.has(img.src)) {
           newCount++;
         }
       });
