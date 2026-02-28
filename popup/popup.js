@@ -2727,24 +2727,70 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
   // Flow 카드는 이미지 + 프롬프트 텍스트를 함께 표시하므로, 카드 텍스트에서 프롬프트를 찾음
   function findPromptForImage(imgElement, batchPrompts, alreadyMatched) {
     var el = imgElement;
-    for (var depth = 0; depth < 15; depth++) {
+    var bestMatch = -1;
+    var bestMatchLen = 0;
+
+    for (var depth = 0; depth < 20; depth++) {
       el = el.parentElement;
       if (!el || el === document.body) break;
       var text = el.textContent || '';
-      if (text.length < 30) continue;   // 카드 레벨까지 올라가기
-      if (text.length > 5000) break;    // 피드 컨테이너를 넘어감
+      if (text.length < 20) continue;   // 카드 레벨까지 올라가기
 
       for (var i = 0; i < batchPrompts.length; i++) {
         if (alreadyMatched.has(i)) continue;
-        // originalPrompt = 스타일 접두/접미 없는 고유 프롬프트 텍스트
-        var searchStr = batchPrompts[i].originalPrompt;
-        if (!searchStr || searchStr.length < 10) continue;
-        var matchText = searchStr.substring(0, 40);
-        if (text.includes(matchText)) {
-          return i;
+        // originalPrompt (스타일 없는 고유 텍스트) + prompt (스타일 포함 전체) 둘 다 시도
+        var candidates = [
+          batchPrompts[i].originalPrompt,
+          batchPrompts[i].prompt
+        ];
+
+        for (var ci = 0; ci < candidates.length; ci++) {
+          var searchStr = candidates[ci];
+          if (!searchStr || searchStr.length < 10) continue;
+
+          // 고유성을 위해 가능한 긴 substring 사용 (최대 80자)
+          var matchLen = Math.min(searchStr.length, 80);
+          var matchText = searchStr.substring(0, matchLen);
+
+          if (text.includes(matchText) && matchLen > bestMatchLen) {
+            bestMatch = i;
+            bestMatchLen = matchLen;
+          }
         }
       }
+
+      // 매칭을 찾았으면 더 위로 올라갈 필요 없음
+      if (bestMatch >= 0) {
+        console.log('[Flow Auto] 텍스트매칭 성공: 이미지→프롬프트 #' + bestMatch +
+          ' (depth=' + depth + ', matchLen=' + bestMatchLen + ')');
+        return bestMatch;
+      }
+
+      // 너무 큰 컨테이너에 도달하면 중단 (false positive 방지)
+      if (text.length > 10000) break;
     }
+
+    // 매칭 실패 — 디버그 로그
+    console.warn('[Flow Auto] 텍스트매칭 실패: 이미지 src=' +
+      (imgElement.src || '').substring(0, 60) + '...');
+    // 카드 후보 텍스트 샘플 출력 (디버깅용)
+    var debugEl = imgElement;
+    for (var dd = 0; dd < 10; dd++) {
+      debugEl = debugEl.parentElement;
+      if (!debugEl || debugEl === document.body) break;
+      var dt = (debugEl.textContent || '').substring(0, 100);
+      if (dt.length >= 20) {
+        console.log('[Flow Auto] 매칭후보 depth=' + dd + ' len=' + (debugEl.textContent || '').length + ': "' + dt + '..."');
+      }
+    }
+    // 프롬프트 검색어 출력
+    for (var pi = 0; pi < batchPrompts.length; pi++) {
+      if (!alreadyMatched.has(pi)) {
+        var op = batchPrompts[pi].originalPrompt || '';
+        console.log('[Flow Auto] 프롬프트[' + pi + '] 검색어: "' + op.substring(0, 50) + '"');
+      }
+    }
+
     return -1;
   }
 
