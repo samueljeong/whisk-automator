@@ -2907,9 +2907,23 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
               var refCount = countRefImages(promptEl);
               console.log('[Flow Auto] 프롬프트 내 레퍼런스 이미지: ' + refCount + '개');
               if (refCount === 0) {
+                // 에셋 업로드 전 이미지 src 스냅샷 (업로드 후 새로 나타난 것 = 에셋 이미지)
+                var preAssetSrcs = new Set();
+                document.querySelectorAll('img').forEach(function(img) {
+                  if (img.src) preAssetSrcs.add(img.src);
+                });
+
                 console.log('[Flow Auto] 레퍼런스 추가: ' + charForThisPrompt);
                 await uploadReferences(charForThisPrompt, characters);
                 await sleep(1000);
+
+                // 에셋 업로드 후 새로 나타난 이미지를 assetSrcs에 등록
+                document.querySelectorAll('img').forEach(function(img) {
+                  if (img.src && img.src.includes('getMediaUrlRedirect') && !preAssetSrcs.has(img.src)) {
+                    assetSrcs.add(img.src);
+                    console.log('[Flow Auto] 에셋 이미지 등록: ' + img.src.substring(0, 80) + '...');
+                  }
+                });
               } else {
                 console.log('[Flow Auto] 레퍼런스 이미 있음 (' + refCount + '개)');
               }
