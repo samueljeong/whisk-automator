@@ -2913,18 +2913,19 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
               });
             } catch(e) {}
 
-            // 에셋 레퍼런스 추가 — 캐릭터 조합별 1회만 실행
-            // Flow가 생성 후 프롬프트를 초기화하지만, 에셋은 프로젝트에 1번 등록하면 자동으로 유지됨
-            if (thisGroup && charForThisPrompt && !selectedAssetChars.has(charForThisPrompt)) {
+            // 에셋 레퍼런스 추가 — 매 프롬프트마다 실행
+            // Flow는 생성 후 프롬프트를 초기화하므로 에셋을 매번 다시 선택해야 함
+            // (업로드는 uploadedAssetNames로 1회만, 선택은 매번)
+            if (thisGroup && charForThisPrompt) {
               // 에셋 업로드 전 이미지 src 스냅샷 (업로드 후 새로 나타난 것 = 에셋 이미지)
               var preAssetSrcs = new Set();
               document.querySelectorAll('img').forEach(function(img) {
                 if (img.src) preAssetSrcs.add(img.src);
               });
 
-              console.log('[Flow Auto] 레퍼런스 추가 (최초 1회): ' + charForThisPrompt);
+              console.log('[Flow Auto] 레퍼런스 선택: ' + charForThisPrompt);
               await uploadReferences(charForThisPrompt, characters);
-              await sleep(1000);
+              await sleep(500);
 
               // 에셋 업로드 후 새로 나타난 이미지를 assetSrcs에 등록
               document.querySelectorAll('img').forEach(function(img) {
@@ -2933,12 +2934,6 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
                   console.log('[Flow Auto] 에셋 이미지 등록: ' + img.src.substring(0, 80) + '...');
                 }
               });
-
-              // 이 캐릭터 조합은 선택 완료 — 이후 프롬프트에서는 스킵
-              selectedAssetChars.add(charForThisPrompt);
-              console.log('[Flow Auto] 에셋 선택 완료 캐시: "' + charForThisPrompt + '"');
-            } else if (thisGroup && charForThisPrompt) {
-              console.log('[Flow Auto] 에셋 "' + charForThisPrompt + '" 이미 선택됨 — 스킵');
             }
 
             // 에셋 업로드 후 preGenSrcs 갱신 (에셋 이미지가 생성 결과로 오인되는 것 방지)
