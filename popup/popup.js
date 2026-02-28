@@ -3209,8 +3209,10 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
               lastChangeTime = Date.now();
             }
 
-            // 조기 종료: 1개 이상 감지됐고 20초간 변화 없으면 나머지는 생성 실패로 간주
-            if (detectedNewImages.length > 0 && Date.now() - lastChangeTime > STALL_TIMEOUT) {
+            // 조기 종료: 대부분 완료됐는데 마지막 1개만 안 나올 때만 작동
+            // (2/5에서 조기 종료하면 안 됨 — 나머지 3개가 아직 생성 중일 수 있음)
+            var almostDone = detectedNewImages.length >= batchCount - 1; // N-1개 이상
+            if (almostDone && Date.now() - lastChangeTime > STALL_TIMEOUT) {
               console.log('[Flow Auto] ' + (STALL_TIMEOUT / 1000) + '초간 새 이미지 없음 — 조기 종료 (' +
                 detectedNewImages.length + '/' + batchCount + ')');
               break;
