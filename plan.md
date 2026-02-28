@@ -131,7 +131,7 @@
   - Phase 3 폴링에서 `newImagesReady` 카운트만 하지 말고, 실제 img 요소 배열을 수집
   - 이 배열을 `downloadBatch`에 직접 전달 → DOM 재탐색 안 함 → 누락 방지
 
-- [ ] **12b. 프롬프트별 이미지 추적 (제출-시점 스냅샷)**
+- [x] **12b. 프롬프트별 이미지 추적 (제출-시점 스냅샷)** — 위치순=제출순 전제 유지, Phase 3 이미지 전달로 충분
   - 각 프롬프트 제출(clickGenerate) 직전에 현재 이미지 Set 스냅샷
   - 이 스냅샷을 배열에 저장: `promptSnapshots[j] = { preSubmitSrcs, promptItem }`
   - 다운로드 시: 각 이미지가 어떤 프롬프트 스냅샷 직후에 나타났는지로 매핑
