@@ -3029,6 +3029,9 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
           var pollInterval = 2000;
           var waited = 0;
           var detectedNewImages = [];
+          var lastDetectedCount = 0;
+          var lastChangeTime = Date.now();
+          var STALL_TIMEOUT = 20000; // 20초간 새 이미지 없으면 조기 종료
 
           while (waited < maxWait && detectedNewImages.length < batchCount) {
             if (isStopRequested()) {
@@ -3048,6 +3051,19 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
                 detectedNewImages.push(img);
               }
             });
+
+            // 진전 감지: 새 이미지가 나타났으면 타이머 리셋
+            if (detectedNewImages.length > lastDetectedCount) {
+              lastDetectedCount = detectedNewImages.length;
+              lastChangeTime = Date.now();
+            }
+
+            // 조기 종료: 1개 이상 감지됐고 20초간 변화 없으면 나머지는 생성 실패로 간주
+            if (detectedNewImages.length > 0 && Date.now() - lastChangeTime > STALL_TIMEOUT) {
+              console.log('[Flow Auto] ' + (STALL_TIMEOUT / 1000) + '초간 새 이미지 없음 — 조기 종료 (' +
+                detectedNewImages.length + '/' + batchCount + ')');
+              break;
+            }
 
             if (waited % 10000 === 0) {
               console.log('[Flow Auto] 대기 중... ' + detectedNewImages.length + '/' + batchCount + ' (' + (waited / 1000) + '초)');
