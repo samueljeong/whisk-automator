@@ -2804,8 +2804,58 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     var dlCount = Math.min(verifiedImages.length, batchCount);
     console.log('[Flow Auto] 크기 필터 후: 생성 이미지 ' + verifiedImages.length + '개, 다운로드 ' + dlCount + '개');
 
+    // === 프롬프트-이미지 1:1 매칭 (카드 텍스트 기반) ===
+    var batchPrompts = [];
+    for (var bp = batchStart; bp < batchEnd; bp++) {
+      batchPrompts.push(promptsWithCharacters[bp]);
+    }
+
+    var imageToPromptMap = []; // verifiedImages 인덱스 → batchPrompts 인덱스
+    var matchedPrompts = new Set();
+    var matchCount = 0;
+
+    for (var mi = 0; mi < verifiedImages.length; mi++) {
+      var matchIdx = findPromptForImage(verifiedImages[mi].img, batchPrompts, matchedPrompts);
+      if (matchIdx >= 0) {
+        imageToPromptMap[mi] = matchIdx;
+        matchedPrompts.add(matchIdx);
+        matchCount++;
+      } else {
+        imageToPromptMap[mi] = -1;
+      }
+    }
+
+    // 매칭 안 된 이미지 → 매칭 안 된 프롬프트에 순서대로 배정 (위치 기반 폴백)
+    if (matchCount < verifiedImages.length) {
+      var unmatchedPromptIndices = [];
+      for (var upi = 0; upi < batchCount; upi++) {
+        if (!matchedPrompts.has(upi)) unmatchedPromptIndices.push(upi);
+      }
+      var unmatchedIdx = 0;
+      for (var fi = 0; fi < verifiedImages.length; fi++) {
+        if (imageToPromptMap[fi] === -1 && unmatchedIdx < unmatchedPromptIndices.length) {
+          imageToPromptMap[fi] = unmatchedPromptIndices[unmatchedIdx++];
+        }
+      }
+    }
+
+    console.log('[Flow Auto] 프롬프트 매칭: ' + matchCount + '/' + verifiedImages.length + ' 텍스트 매칭, ' +
+      (verifiedImages.length - matchCount) + '개 위치 폴백');
+
+    // 매칭 안 된 프롬프트 = 생성 실패
+    if (matchCount > 0 && matchedPrompts.size < batchCount) {
+      for (var fpi = 0; fpi < batchCount; fpi++) {
+        if (!matchedPrompts.has(fpi)) {
+          var failedItem = batchPrompts[fpi];
+          console.warn('[Flow Auto] ⚠ 프롬프트 #' + (failedItem.index + 1) + ' 생성 실패 (이미지 미감지): ' +
+            (failedItem.filename || failedItem.originalPrompt.substring(0, 30)));
+        }
+      }
+    }
+
     for (var di = 0; di < dlCount; di++) {
-      var pIdx = batchStart + di;
+      var promptBatchIdx = imageToPromptMap[di];
+      var pIdx = (promptBatchIdx >= 0) ? (batchStart + promptBatchIdx) : (batchStart + di);
       if (pIdx >= promptsWithCharacters.length) break;
 
       var pItem = promptsWithCharacters[pIdx];
@@ -2822,10 +2872,11 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         fullFilename = 'flow_' + (pItem.index + 1) + '_' + autoName + '.png';
       }
 
+      var matchMethod = (imageToPromptMap[di] >= 0 && matchCount > 0) ? '텍스트매칭' : '위치폴백';
       try {
-        // 이미 fetch된 blob 재사용
         var blob = verifiedImages[di].blob;
-        console.log('[Flow Auto] DL ' + (di + 1) + '/' + dlCount + ': ' + fullFilename + ' (' + Math.round(blob.size / 1024) + 'KB)');
+        console.log('[Flow Auto] DL ' + (di + 1) + '/' + dlCount + ': ' + fullFilename +
+          ' (' + Math.round(blob.size / 1024) + 'KB, ' + matchMethod + ')');
 
         if (useCustomDir) {
           var reader = new FileReader();
