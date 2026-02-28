@@ -140,7 +140,7 @@
 
   **더 단순한 접근**: Flow는 타임라인에 제출 순서대로 카드를 배치. Phase 3에서 감지한 이미지를 위치순으로 정렬하면 = 제출 순서. **핵심은 Phase 3의 이미지 목록을 downloadBatch까지 유지하는 것.**
 
-- [ ] **12c. 진행률: 배치 완료 시 모든 프롬프트에 'completed' 전송**
+- [x] **12c. 진행률: 배치 완료 시 모든 프롬프트에 'completed' 전송**
   - 현재: `batchEnd - 1` 프롬프트만 completed
   - 수정: batchStart ~ batchEnd-1 모든 프롬프트에 개별 PROGRESS_UPDATE 전송
 
