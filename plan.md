@@ -90,10 +90,17 @@
 - [x] **모든 이미지 감지 경로에 assetSrcs 필터 적용**: waitForGeneration, downloadBatch, downloadImage, Phase 3 완료 대기
 - [x] **이중 방어**: assetSrcs (URL 기반) + blob 크기 필터 (200KB 미만 스킵)
 
-#### 시도 10 이후 (isTrusted 우회 필요)
-- [ ] **10. chrome.debugger API**: `Input.dispatchMouseEvent`로 trusted 이벤트 전송 (permissions 필요)
-- [ ] **11. Slate.js 직접 void 노드 삽입**: 에디터 인스턴스에 접근, void 노드 프로그래매틱 삽입
-- [ ] **12. execCommand/InputEvent paste 시뮬레이션**: 클립보드 경유 이미지 붙여넣기
+#### 시도 10: ref 카운트 폴링 (타이밍 문제 수정)
+- [x] **핵심 발견**: 키보드 Enter가 실제로 에셋을 삽입했었음! (메모리 #11170 확인)
+  - ref 카운트를 UI 렌더링 전에 체크해서 0→0 오탐지 → uploadNewAsset 폴백 → 중복 삽입
+  - isTrusted:false가 근본 원인이 아니라 **타이밍 문제**였음
+- [x] **selectAssetByName 수정**: 1회 즉시 체크 → 500ms 간격 최대 5초 폴링
+- [x] **uploadNewAsset 수정**: 동일하게 폴링 방식으로 변경
+
+#### 시도 10 이후 (폴링으로도 안 되면)
+- [ ] **11. chrome.debugger API**: `Input.dispatchMouseEvent`로 trusted 이벤트 전송 (permissions 필요)
+- [ ] **12. Slate.js 직접 void 노드 삽입**: 에디터 인스턴스에 접근, void 노드 프로그래매틱 삽입
+- [ ] **13. execCommand/InputEvent paste 시뮬레이션**: 클립보드 경유 이미지 붙여넣기
 
 ## 수정하지 않는 것
 | 위치 | 이유 |
