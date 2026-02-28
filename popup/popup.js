@@ -2965,7 +2965,8 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
             newImagesReady = 0;
             document.querySelectorAll('img').forEach(function(img) {
               if (img.src && img.src.includes('getMediaUrlRedirect') &&
-                  !preGenSrcs.has(img.src) && !downloadedSrcs.has(img.src)) {
+                  !preGenSrcs.has(img.src) && !downloadedSrcs.has(img.src) &&
+                  !assetSrcs.has(img.src)) {
                 newImagesReady++;
               }
             });
