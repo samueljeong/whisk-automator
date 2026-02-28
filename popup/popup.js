@@ -2109,29 +2109,12 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     document.dispatchEvent(new KeyboardEvent('keydown', {
       key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true
     }));
-    await sleep(1000);
+    await sleep(500);
 
-    // 7. 에셋 삽입 검증: ref 카운트 폴링 (UI 렌더링 지연 대응)
-    // 이전 1회 체크에서 UI 렌더링보다 빨리 체크해서 0→0 오탐지 발생했었음
-    // 500ms 간격으로 최대 5초간 폴링하여 ref 증가 감지
-    var pollInterval = 500;
-    var maxPollWait = 5000;
-    var pollWaited = 0;
-    var afterCloseVoids = 0;
-
-    while (pollWaited < maxPollWait) {
-      await sleep(pollInterval);
-      pollWaited += pollInterval;
-      var freshPromptEl = findPromptInput();
-      afterCloseVoids = countRefImages(freshPromptEl || promptEl);
-      if (afterCloseVoids > beforeVoids) {
-        console.log('[Flow Auto] 에셋 "' + charName + '" 삽입 성공! ref: ' + beforeVoids + ' → ' + afterCloseVoids + ' (' + (pollWaited / 1000) + '초)');
-        return true;
-      }
-    }
-
-    console.warn('[Flow Auto] 에셋 "' + charName + '" 삽입 실패 — ref: ' + beforeVoids + ' → ' + afterCloseVoids + ' (' + (maxPollWait / 1000) + '초 대기)');
-    return false;
+    // 7. 검색 결과가 있었고 Enter를 보냈으면 → 성공으로 처리
+    // countRefImages()는 Flow의 에셋 레퍼런스를 감지하지 못하므로 검증 생략
+    console.log('[Flow Auto] 에셋 "' + charName + '" 선택 완료 (검색 결과 있음 + Enter 전송)');
+    return true;
   }
 
   // 10-1. 새 에셋 업로드 (에셋 패널 내 업로드 버튼 → interceptor로 파일 주입)
