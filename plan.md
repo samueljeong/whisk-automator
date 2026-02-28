@@ -118,7 +118,61 @@
 - [x] **BATCH_SIZE 4→8**: 더 많은 프롬프트를 한 배치에 수용
 - [x] **에셋 선택은 프롬프트별 개별 처리**: 배치 단위가 아닌 프롬프트 단위로 에셋 선택
 
-#### 남은 대안 (현재 접근이 실패하면)
+#### 다운로드 버그 수정 — 파일명 매핑 + 누락 + 진행률 (3차 테스트)
+
+**3가지 버그**:
+1. 5개 제출 → 4개만 다운로드 (flow_4 누락)
+2. 파일명이 프롬프트와 불일치 (위치 기반 매핑 깨짐)
+3. 진행률 UI: 마지막 프롬프트만 'completed', 나머지 'processing' 고정
+
+**수정 계획**:
+
+- [ ] **12a. Phase 3에서 감지된 이미지 목록을 downloadBatch에 전달**
+  - Phase 3 폴링에서 `newImagesReady` 카운트만 하지 말고, 실제 img 요소 배열을 수집
+  - 이 배열을 `downloadBatch`에 직접 전달 → DOM 재탐색 안 함 → 누락 방지
+
+- [ ] **12b. 프롬프트별 이미지 추적 (제출-시점 스냅샷)**
+  - 각 프롬프트 제출(clickGenerate) 직전에 현재 이미지 Set 스냅샷
+  - 이 스냅샷을 배열에 저장: `promptSnapshots[j] = { preSubmitSrcs, promptItem }`
+  - 다운로드 시: 각 이미지가 어떤 프롬프트 스냅샷 직후에 나타났는지로 매핑
+
+  **하지만 이 방법은 복잡하고, 배치 제출에서 이미지가 프롬프트 완료 전에 다 제출되므로 스냅샷 차이로 구분 불가.**
+
+  **더 단순한 접근**: Flow는 타임라인에 제출 순서대로 카드를 배치. Phase 3에서 감지한 이미지를 위치순으로 정렬하면 = 제출 순서. **핵심은 Phase 3의 이미지 목록을 downloadBatch까지 유지하는 것.**
+
+- [ ] **12c. 진행률: 배치 완료 시 모든 프롬프트에 'completed' 전송**
+  - 현재: `batchEnd - 1` 프롬프트만 completed
+  - 수정: batchStart ~ batchEnd-1 모든 프롬프트에 개별 PROGRESS_UPDATE 전송
+
+**구현 상세**:
+
+```js
+// Phase 3: 이미지 수집 (카운트 → 배열)
+var detectedNewImages = [];
+// ... while 폴링 루프 내 ...
+detectedNewImages = [];
+document.querySelectorAll('img').forEach(function(img) {
+  if (img.src && img.src.includes('getMediaUrlRedirect') &&
+      !preGenSrcs.has(img.src) && !downloadedSrcs.has(img.src) &&
+      !assetSrcs.has(img.src)) {
+    detectedNewImages.push(img);
+  }
+});
+// ... 루프 완료 후 ...
+// downloadBatch에 전달
+await downloadBatch(batchStart, batchEnd, preGenSrcs, detectedNewImages);
+```
+
+```js
+// downloadBatch: DOM 재탐색 대신 전달받은 이미지 사용
+async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
+  var candidateImages = detectedImages || [];
+  // DOM 재탐색 코드 제거 (또는 detectedImages가 없을 때만 폴백)
+  // ... 나머지는 동일 ...
+}
+```
+
+#### 남은 대안 (에셋 삽입이 실패하면)
 - [ ] **chrome.debugger API**: `Input.dispatchMouseEvent`로 trusted 이벤트 전송 (permissions 필요)
 - [ ] **Slate.js 직접 void 노드 삽입**: 에디터 인스턴스에 접근, void 노드 프로그래매틱 삽입
 - [ ] **execCommand/InputEvent paste 시뮬레이션**: 클립보드 경유 이미지 붙여넣기
