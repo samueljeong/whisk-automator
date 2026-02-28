@@ -127,7 +127,7 @@
 
 **수정 계획**:
 
-- [ ] **12a. Phase 3에서 감지된 이미지 목록을 downloadBatch에 전달**
+- [x] **12a. Phase 3에서 감지된 이미지 목록을 downloadBatch에 전달**
   - Phase 3 폴링에서 `newImagesReady` 카운트만 하지 말고, 실제 img 요소 배열을 수집
   - 이 배열을 `downloadBatch`에 직접 전달 → DOM 재탐색 안 함 → 누락 방지
 
