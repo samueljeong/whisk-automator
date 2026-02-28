@@ -2902,7 +2902,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
             // 에셋 레퍼런스 추가 — 매 프롬프트마다 실행
             // Flow는 생성 후 프롬프트를 초기화하므로 에셋을 매번 다시 선택해야 함
             // (업로드는 uploadedAssetNames로 1회만, 선택은 매번)
-            if (thisGroup && charForThisPrompt) {
+            if (charForThisPrompt) {
               // 에셋 업로드 전 이미지 src 스냅샷 (업로드 후 새로 나타난 것 = 에셋 이미지)
               var preAssetSrcs = new Set();
               document.querySelectorAll('img').forEach(function(img) {
