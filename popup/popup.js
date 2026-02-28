@@ -2836,13 +2836,14 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     await sleep(1000);
 
     // 비디오는 순차, 이미지는 배치 모드
-    var BATCH_SIZE = (selectedOutputType === 'video') ? 1 : 4;
-    var currentRefGroup = null; // 현재 업로드된 레퍼런스 캐릭터 조합
+    // 이미지: 최대 8개씩 일괄 제출 → 생성 완료 대기 → 일괄 다운로드
+    var BATCH_SIZE = (selectedOutputType === 'video') ? 1 : 8;
     var batchNum = 0;
 
-    console.log('[Flow Auto] 배치 모드: ' + BATCH_SIZE + '개씩 (총 ' + promptsWithCharacters.length + '개)');
+    console.log('[Flow Auto] 배치 모드: 최대 ' + BATCH_SIZE + '개씩 (총 ' + promptsWithCharacters.length + '개)');
 
-    // 3. characterGroup 기반 배치 루프
+    // 3. 배치 루프 (캐릭터 그룹 무관하게 연속 프롬프트를 묶음)
+    // 에셋 선택은 매 프롬프트마다 개별 처리
     var i = 0;
     while (i < promptsWithCharacters.length) {
       if (isStopRequested()) {
@@ -2851,23 +2852,9 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         return;
       }
 
-      var item = promptsWithCharacters[i];
-      var thisGroup = item.characterGroup || ''; // "" = 캐릭터 없음
-
-      // 레퍼런스 그룹 로깅 (실제 업로드는 Phase 2에서 매 프롬프트마다 처리)
-      if (thisGroup !== currentRefGroup) {
-        console.log('[Flow Auto] 캐릭터 그룹 변경: "' + (currentRefGroup || '없음') + '" → "' + (thisGroup || '없음') + '"');
-        currentRefGroup = thisGroup;
-      }
-
-      // === 같은 characterGroup 내 연속 프롬프트 수집 (배치 범위) ===
+      // === 연속 프롬프트 수집 (캐릭터 그룹 무관) ===
       var batchStart = i;
-      var batchEnd = i;
-      while (batchEnd < promptsWithCharacters.length &&
-             batchEnd - batchStart < BATCH_SIZE &&
-             (promptsWithCharacters[batchEnd].characterGroup || '') === thisGroup) {
-        batchEnd++;
-      }
+      var batchEnd = Math.min(i + BATCH_SIZE, promptsWithCharacters.length);
 
       var batchCount = batchEnd - batchStart;
       batchNum++;
