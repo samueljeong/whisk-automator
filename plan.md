@@ -172,6 +172,28 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
 }
 ```
 
+#### 파일명 매핑 근본 문제 + 부분 실패 처리 (4차 테스트 결과)
+
+**문제**: 5개 제출 → 4개만 생성 (90초 타임아웃). Phase 3에서 4/5로 끝남.
+이건 Flow가 5번째 이미지를 생성 안 한 것 — 다운로드 코드 문제 아님.
+
+**파일명 매핑 근본 문제**: 5개 제출 → 4개 생성 시, 어떤 프롬프트의 이미지가 안 생겼는지 모름.
+위치순 1~4를 프롬프트 1~4에 매핑하면, 실제로는 프롬프트 3이 누락됐는데 4,5가 3,4 파일명을 받을 수 있음.
+
+**해결 방향**: `[filename:]` 태그 사용 시에도 이 문제 존재. 근본적으로 "이미지-프롬프트 1:1 추적"이 필요.
+
+- [ ] **13a. 프롬프트별 개별 생성 추적**: 각 프롬프트 제출 직후 → 해당 카드 요소 기록
+  - Flow는 제출 즉시 타임라인에 새 카드(div) 추가. 이 카드에 로딩 후 img가 나타남.
+  - 제출 전/후 DOM diff로 새 카드 찾기 → `promptCards[j] = newCard`
+  - 다운로드 시 `promptCards[j]` 내부의 img를 다운로드 → 정확한 프롬프트 매핑
+
+- [ ] **13b. 부분 실패 시 누락 프롬프트 재시도**
+  - 타임아웃 시 `detectedNewImages.length < batchCount`이면:
+    - 생성된 이미지 먼저 다운로드
+    - 누락된 프롬프트 식별 → 다음 배치에 재삽입 또는 별도 재시도
+
+- [x] **13c. test_prompts.txt에 [filename:] 태그 추가** — 테스트용
+
 #### 남은 대안 (에셋 삽입이 실패하면)
 - [ ] **chrome.debugger API**: `Input.dispatchMouseEvent`로 trusted 이벤트 전송 (permissions 필요)
 - [ ] **Slate.js 직접 void 노드 삽입**: 에디터 인스턴스에 접근, void 노드 프로그래매틱 삽입
