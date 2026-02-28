@@ -211,7 +211,7 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
   - 불일치 → **Flow가 카드를 위→아래가 아닌 다른 순서로 배치할 수 있음**
   - 정렬 제거 후에도 불일치가 계속되면 → 제출 시점 카드 추적 방식으로 전환
 
-- [ ] **13e. 에셋 사전 준비 — Phase 0에서 일괄 업로드**
+- [x] **13e. 에셋 사전 준비 — Phase 0에서 일괄 업로드**
 
   **현재 문제**: 새 프로젝트에서 에셋이 없으면 첫 프롬프트에서 업로드→분석 대기가 필요한데,
   분석 완료 전에 프롬프트 제출이 시작됨
