@@ -97,10 +97,22 @@
 - [x] **selectAssetByName 수정**: 1회 즉시 체크 → 500ms 간격 최대 5초 폴링
 - [x] **uploadNewAsset 수정**: 동일하게 폴링 방식으로 변경
 
-#### 시도 10 이후 (폴링으로도 안 되면)
-- [ ] **11. chrome.debugger API**: `Input.dispatchMouseEvent`로 trusted 이벤트 전송 (permissions 필요)
-- [ ] **12. Slate.js 직접 void 노드 삽입**: 에디터 인스턴스에 접근, void 노드 프로그래매틱 삽입
-- [ ] **13. execCommand/InputEvent paste 시뮬레이션**: 클립보드 경유 이미지 붙여넣기
+#### 시도 10 결과 — countRefImages() 근본 결함 확정
+- [x] **5초 폴링도 실패**: `countRefImages()`가 Flow의 에셋 레퍼런스를 **구조적으로** 감지 못함
+  - `[contenteditable="false"] img`, `[data-slate-void] img` 셀렉터가 Flow 에셋 노드와 불일치
+  - 타이밍 문제가 아니라 **셀렉터 자체가 틀림**
+
+#### 시도 11: 검증 제거 + 캐릭터 조합별 1회 선택 (최종 수정)
+- [x] **selectAssetByName**: ref 카운트 검증 완전 제거. 검색 결과 있으면 `return true`
+- [x] **selectedAssetChars Set 도입**: 배치 루프에서 캐릭터 조합별 1회만 `uploadReferences` 호출
+  - `countRefImages()` 의존 제거 → `selectedAssetChars.has(charForThisPrompt)`로 대체
+  - 첫 번째 프롬프트에서 에셋 선택 → 캐시 → 이후 프롬프트는 에셋 선택 스킵
+- [x] **uploadedAssetNames Set**: 같은 에셋 2회 이상 업로드 방지
+
+#### 남은 대안 (현재 접근이 실패하면)
+- [ ] **chrome.debugger API**: `Input.dispatchMouseEvent`로 trusted 이벤트 전송 (permissions 필요)
+- [ ] **Slate.js 직접 void 노드 삽입**: 에디터 인스턴스에 접근, void 노드 프로그래매틱 삽입
+- [ ] **execCommand/InputEvent paste 시뮬레이션**: 클립보드 경유 이미지 붙여넣기
 
 ## 수정하지 않는 것
 | 위치 | 이유 |
