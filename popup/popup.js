@@ -2947,6 +2947,87 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     await setupModelAndOutput(selectedModel, selectedOutputType);
     await sleep(1000);
 
+    // === Phase 0: 에셋 사전 준비 ===
+    // 프롬프트에서 고유 캐릭터를 추출하고, 에셋이 없는 것은 미리 업로드
+    // 이렇게 하면 100장+ 이미지에서도 에셋 대기 시간 없음
+    var uniqueChars = [];
+    var seenChars = {};
+    for (var uc = 0; uc < promptsWithCharacters.length; uc++) {
+      var charStr = promptsWithCharacters[uc].character;
+      if (!charStr) continue;
+      var charList = charStr.split(',').map(function(c) { return c.trim(); });
+      for (var cl = 0; cl < charList.length; cl++) {
+        if (charList[cl] && !seenChars[charList[cl]]) {
+          seenChars[charList[cl]] = true;
+          uniqueChars.push(charList[cl]);
+        }
+      }
+    }
+
+    if (uniqueChars.length > 0) {
+      console.log('[Flow Auto] === Phase 0: 에셋 사전 준비 (' + uniqueChars.length + '명) ===');
+      console.log('[Flow Auto] 캐릭터: ' + uniqueChars.join(', '));
+
+      var flowTagMap = characters.__flowTagMap || {};
+
+      for (var ui = 0; ui < uniqueChars.length; ui++) {
+        if (isStopRequested()) {
+          console.log('[Flow Auto] 사용자 정지 요청 — 자동화 중단');
+          try { chrome.runtime.sendMessage({ action: 'AUTOMATION_STOPPED' }); } catch(e) {}
+          return;
+        }
+
+        var charName = uniqueChars[ui];
+        var flowTag = flowTagMap[charName] || flowTagMap[charName.normalize('NFC')] || null;
+        var searchName = flowTag || charName;
+
+        console.log('[Flow Auto] Phase 0 [' + (ui + 1) + '/' + uniqueChars.length + ']: ' + charName +
+          (flowTag ? ' (Flow태그: ' + flowTag + ')' : ''));
+
+        try {
+          // 에셋 패널 열고 검색 → 이미 있으면 패널 닫고 넘어감
+          var found = await selectAssetByName(searchName);
+
+          if (!found && !uploadedAssetNames.has(searchName)) {
+            // 에셋 없음 → 업로드
+            var dataUrl = characters[charName] || characters[charName.normalize('NFC')];
+            if (dataUrl) {
+              console.log('[Flow Auto] Phase 0: 에셋 "' + searchName + '" 업로드 중...');
+              var uploaded = await uploadNewAsset(searchName, dataUrl);
+              if (uploaded) {
+                uploadedAssetNames.add(searchName);
+                console.log('[Flow Auto] Phase 0: 에셋 "' + searchName + '" 업로드 완료');
+              } else {
+                console.warn('[Flow Auto] Phase 0: 에셋 "' + searchName + '" 업로드 실패');
+              }
+            } else {
+              console.warn('[Flow Auto] Phase 0: 캐릭터 "' + charName + '" 이미지 데이터 없음');
+            }
+          } else if (found) {
+            console.log('[Flow Auto] Phase 0: 에셋 "' + searchName + '" 이미 존재 (선택 확인)');
+          }
+        } catch (e) {
+          if (e.message === '__STOPPED__') {
+            try { chrome.runtime.sendMessage({ action: 'AUTOMATION_STOPPED' }); } catch(e2) {}
+            return;
+          }
+          console.warn('[Flow Auto] Phase 0: 에셋 준비 실패 (' + charName + '):', e.message);
+        }
+
+        await sleep(500);
+      }
+
+      // 프롬프트 영역 초기화 (Phase 0에서 에셋이 삽입됐을 수 있으므로)
+      try {
+        await clearReferences();
+      } catch(e) {
+        console.log('[Flow Auto] Phase 0 후 프롬프트 초기화 실패 (무시):', e.message);
+      }
+      await sleep(500);
+
+      console.log('[Flow Auto] === Phase 0 완료: ' + uniqueChars.length + '명 에셋 준비됨 ===');
+    }
+
     // 비디오는 순차, 이미지는 배치 모드
     // 이미지: 최대 8개씩 일괄 제출 → 생성 완료 대기 → 일괄 다운로드
     var BATCH_SIZE = (selectedOutputType === 'video') ? 1 : 8;
