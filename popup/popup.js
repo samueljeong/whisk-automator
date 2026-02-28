@@ -2374,18 +2374,25 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     document.dispatchEvent(new KeyboardEvent('keydown', {
       key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true
     }));
-    await sleep(1500);
+    await sleep(1000);
 
-    // ref 카운트 확인
-    var afterUploadVoids = countRefImages(promptEl);
-    console.log('[Flow Auto] 업로드 후 에셋 선택 결과, ref: ' + beforeVoids + ' → ' + afterUploadVoids);
+    // ref 카운트 폴링 (UI 렌더링 지연 대응)
+    var upPollInterval = 500;
+    var upMaxPollWait = 5000;
+    var upPollWaited = 0;
+    var afterUploadVoids = 0;
 
-    if (afterUploadVoids > beforeVoids) {
-      console.log('[Flow Auto] 에셋 "' + searchName + '" 업로드 + 선택 성공');
-      return true;
+    while (upPollWaited < upMaxPollWait) {
+      await sleep(upPollInterval);
+      upPollWaited += upPollInterval;
+      afterUploadVoids = countRefImages(promptEl);
+      if (afterUploadVoids > beforeVoids) {
+        console.log('[Flow Auto] 에셋 "' + searchName + '" 업로드 + 선택 성공! ref: ' + beforeVoids + ' → ' + afterUploadVoids + ' (' + (upPollWaited / 1000) + '초)');
+        return true;
+      }
     }
 
-    console.warn('[Flow Auto] 에셋 "' + searchName + '" 업로드 후 선택 실패');
+    console.warn('[Flow Auto] 에셋 "' + searchName + '" 업로드 후 선택 실패 — ref: ' + beforeVoids + ' → ' + afterUploadVoids);
     return false;
   }
 
