@@ -2538,7 +2538,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
     for (const img of images) {
       if (img.src && img.width > 100 && img.height > 100 &&
-          !downloadedSrcs.has(img.src) &&
+          !downloadedSrcs.has(img.src) && !assetSrcs.has(img.src) &&
           (!preGenSrcs || !preGenSrcs.has(img.src))) {
         newImages.push(img);
       }
