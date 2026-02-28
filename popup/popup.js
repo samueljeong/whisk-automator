@@ -2723,6 +2723,31 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     return await downloadImage(promptText, index, customFilename, preGenSrcs);
   }
 
+  // 이미지 카드의 텍스트를 읽어서 프롬프트와 매칭 (1:1 추적)
+  // Flow 카드는 이미지 + 프롬프트 텍스트를 함께 표시하므로, 카드 텍스트에서 프롬프트를 찾음
+  function findPromptForImage(imgElement, batchPrompts, alreadyMatched) {
+    var el = imgElement;
+    for (var depth = 0; depth < 15; depth++) {
+      el = el.parentElement;
+      if (!el || el === document.body) break;
+      var text = el.textContent || '';
+      if (text.length < 30) continue;   // 카드 레벨까지 올라가기
+      if (text.length > 5000) break;    // 피드 컨테이너를 넘어감
+
+      for (var i = 0; i < batchPrompts.length; i++) {
+        if (alreadyMatched.has(i)) continue;
+        // originalPrompt = 스타일 접두/접미 없는 고유 프롬프트 텍스트
+        var searchStr = batchPrompts[i].originalPrompt;
+        if (!searchStr || searchStr.length < 10) continue;
+        var matchText = searchStr.substring(0, 40);
+        if (text.includes(matchText)) {
+          return i;
+        }
+      }
+    }
+    return -1;
+  }
+
   // 배치 다운로드: 새 이미지를 수집하여 프롬프트 순서대로 다운로드
   // 에셋 이미지(~100KB)와 생성 이미지(~500KB+)를 크기로 구분
   var MIN_GENERATED_IMAGE_SIZE = 200 * 1024; // 200KB 이상만 생성 이미지로 간주
