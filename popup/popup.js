@@ -2111,18 +2111,27 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     }));
     await sleep(1000);
 
-    // 7. 에셋 삽입 검증: ref 카운트 확인 (1회만, 키보드 이벤트가 isTrusted:false라 반복해도 무의미)
-    await sleep(500);
-    var freshPromptEl = findPromptInput();
-    var afterCloseVoids = countRefImages(freshPromptEl || promptEl);
-    console.log('[Flow Auto] 에셋 "' + charName + '" 삽입 결과, ref: ' + beforeVoids + ' → ' + afterCloseVoids);
+    // 7. 에셋 삽입 검증: ref 카운트 폴링 (UI 렌더링 지연 대응)
+    // 이전 1회 체크에서 UI 렌더링보다 빨리 체크해서 0→0 오탐지 발생했었음
+    // 500ms 간격으로 최대 5초간 폴링하여 ref 증가 감지
+    var pollInterval = 500;
+    var maxPollWait = 5000;
+    var pollWaited = 0;
+    var afterCloseVoids = 0;
 
-    if (afterCloseVoids <= beforeVoids) {
-      console.warn('[Flow Auto] 에셋 "' + charName + '" 삽입 실패 — 레퍼런스 이미지 증가 없음');
-      return false;
+    while (pollWaited < maxPollWait) {
+      await sleep(pollInterval);
+      pollWaited += pollInterval;
+      var freshPromptEl = findPromptInput();
+      afterCloseVoids = countRefImages(freshPromptEl || promptEl);
+      if (afterCloseVoids > beforeVoids) {
+        console.log('[Flow Auto] 에셋 "' + charName + '" 삽입 성공! ref: ' + beforeVoids + ' → ' + afterCloseVoids + ' (' + (pollWaited / 1000) + '초)');
+        return true;
+      }
     }
 
-    return true;
+    console.warn('[Flow Auto] 에셋 "' + charName + '" 삽입 실패 — ref: ' + beforeVoids + ' → ' + afterCloseVoids + ' (' + (maxPollWait / 1000) + '초 대기)');
+    return false;
   }
 
   // 10-1. 새 에셋 업로드 (에셋 패널 내 업로드 버튼 → interceptor로 파일 주입)
