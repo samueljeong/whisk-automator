@@ -3182,7 +3182,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
           var detectedNewImages = [];
           var lastDetectedCount = 0;
           var lastChangeTime = Date.now();
-          var STALL_TIMEOUT = 20000; // 20초간 새 이미지 없으면 조기 종료
+          var STALL_TIMEOUT = 30000; // 30초간 새 이미지 없으면 조기 종료
 
           while (waited < maxWait && detectedNewImages.length < batchCount) {
             if (isStopRequested()) {
