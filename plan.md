@@ -111,6 +111,13 @@
 - [x] **preGenSrcs 전체 갱신 제거**: 배치 루프 내 catch-all 갱신이 이전 프롬프트 생성 이미지를 흡수 → Phase 3 감지 방해
   - assetSrcs가 에셋 이미지 필터링 전담, preGenSrcs는 배치 시작 시점 스냅샷만 유지
 
+#### 속도 최적화: characterGroup 배치 제약 제거
+- [x] **배치 형성에서 characterGroup 제약 제거**: 캐릭터가 달라도 같은 배치로 묶음
+  - 이전: 용아→배치1, 소연→배치2, ... (1개씩 → 각각 생성 대기 30초)
+  - 이후: 모든 프롬프트 → 배치1 (일괄 제출 → 한 번만 대기)
+- [x] **BATCH_SIZE 4→8**: 더 많은 프롬프트를 한 배치에 수용
+- [x] **에셋 선택은 프롬프트별 개별 처리**: 배치 단위가 아닌 프롬프트 단위로 에셋 선택
+
 #### 남은 대안 (현재 접근이 실패하면)
 - [ ] **chrome.debugger API**: `Input.dispatchMouseEvent`로 trusted 이벤트 전송 (permissions 필요)
 - [ ] **Slate.js 직접 void 노드 삽입**: 에디터 인스턴스에 접근, void 노드 프로그래매틱 삽입
