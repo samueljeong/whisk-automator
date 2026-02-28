@@ -187,7 +187,7 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
   - 제출 전/후 DOM diff로 새 카드 찾기 → `promptCards[j] = newCard`
   - 다운로드 시 `promptCards[j]` 내부의 img를 다운로드 → 정확한 프롬프트 매핑
 
-- [ ] **13b. 파일명 매핑 근본 수정 — 정렬 제거 + 위치 폴백 신뢰**
+- [x] **13b. 파일명 매핑 근본 수정 — 정렬 제거 + 위치 폴백 신뢰**
 
   **근본 원인 확정 (5차 테스트)**:
   1. `promptsWithCharacters`가 스타일→캐릭터 그룹 순으로 **정렬됨** (라인 1312-1329)
