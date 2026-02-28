@@ -3071,9 +3071,9 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       console.log('[Flow Auto] === Phase 0 완료: ' + uniqueChars.length + '명 에셋 준비됨 ===');
     }
 
-    // 비디오는 순차, 이미지는 배치 모드
-    // 이미지: 최대 8개씩 일괄 제출 → 생성 완료 대기 → 일괄 다운로드
-    var BATCH_SIZE = (selectedOutputType === 'video') ? 1 : 8;
+    // 이미지/비디오 모두 1개씩 순차 처리
+    // 1개 제출 → 1개 생성 대기 → 다운로드 → 다음 (파일명 100% 정확)
+    var BATCH_SIZE = 1;
     var batchNum = 0;
 
     console.log('[Flow Auto] 배치 모드: 최대 ' + BATCH_SIZE + '개씩 (총 ' + promptsWithCharacters.length + '개)');
