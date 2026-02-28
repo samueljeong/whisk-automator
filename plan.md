@@ -214,7 +214,7 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
   - `text.length > 5000` 제한 제거 (피드 컨테이너도 검색 대상에 포함)
   - 매칭 결과를 상세 로그로 출력 (어디서 실패하는지 확인)
 
-- [ ] **13d. Phase 3 조기 종료 — 진전 없으면 빠르게 마감**
+- [x] **13d. Phase 3 조기 종료 — 진전 없으면 빠르게 마감**
   - 현재: 90초 풀 대기. 4/5 감지 후 50초+ 낭비
   - 수정: "마지막으로 새 이미지가 감지된 시점" 추적 → 20초간 변화 없으면 조기 종료
   ```js
