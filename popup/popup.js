@@ -2883,7 +2883,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
             }
 
             var batchItem = promptsWithCharacters[j];
-            var charForThisPrompt = batchItem.character || item.character;
+            var charForThisPrompt = batchItem.character || '';
             var logPrefix = '[' + (batchItem.index + 1) + ']' + (batchItem.filename ? ' [' + batchItem.filename + ']' : '');
 
             console.log('[Flow Auto] 제출 ' + (j + 1) + '/' + promptsWithCharacters.length + ': ' + logPrefix);
