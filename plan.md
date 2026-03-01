@@ -591,7 +591,7 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
   ```
   Pro 사용자에게만 표시 (Stripe Customer Portal 연결용, 6B에서 구현)
 
-- [ ] **6A-3. `popup/popup.js` — Pro 만료일 표시 형식 변경**
+- [x] **6A-3. `popup/popup.js` — Pro 만료일 표시 형식 변경**
 
   현재: `Pro · user@email.com · 만료: 2026. 4. 1.`
   변경: `Pro · user@email.com · 4월 1일까지`
