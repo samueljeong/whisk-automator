@@ -2974,16 +2974,8 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       console.log('[Flow Auto] 배치 다운로드: DOM 탐색 이미지 ' + candidateImages.length + '개 (폴백)');
     }
 
-    // 위치순 정렬 (아래→위 = 제출 순서)
-    // Flow는 최신 생성물을 위에 표시 (역순) → 아래가 먼저 제출된 프롬프트
-    candidateImages.sort(function(a, b) {
-      var ar = a.getBoundingClientRect();
-      var br = b.getBoundingClientRect();
-      if (Math.abs(ar.top - br.top) < 20) return ar.left - br.left;
-      return br.top - ar.top; // 아래→위 (제출 순서 = 프롬프트 순서)
-    });
-
-    console.log('[Flow Auto] 배치 다운로드: 후보 이미지 ' + candidateImages.length + '개, 크기 필터 적용...');
+    // 정렬 없음: detectedImages가 이미 출현 순서대로 들어있음 (Phase 3에서 FIFO 추적)
+    console.log('[Flow Auto] 배치 다운로드: 후보 이미지 ' + candidateImages.length + '개 (출현순서), 크기 필터 적용...');
 
     // 후보 이미지를 fetch해서 실제 크기로 필터링 (에셋 이미지 제외)
     var verifiedImages = [];
