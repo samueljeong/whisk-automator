@@ -1900,66 +1900,80 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     setReactInputValue(searchInput, assetName);
     await sleep(800);
 
-    // 3. 에셋 아이템 찾기 (크기 + 텍스트 매칭, onclick 의존 제거)
-    var target = null;
-    var expectedName = '#' + assetName + '.png';
-    var allDivs = panel.querySelectorAll('div');
-    var candidates = [];
-    for (var i = 0; i < allDivs.length; i++) {
-      var d = allDivs[i];
-      var txt = (d.textContent || '').trim();
-      var rect = d.getBoundingClientRect();
-      // 에셋 아이템: ~250x56 크기, 텍스트가 정확히 "#name.png"
-      if (txt === expectedName && rect.width > 200 && rect.height > 30 && rect.height < 80) {
-        candidates.push(d);
+    // 3. "일치하는 결과 없음" 체크
+    var searchRect = searchInput.getBoundingClientRect();
+    var noResults = false;
+    var checkEls = panel.querySelectorAll('div, span, p');
+    for (var nr = 0; nr < checkEls.length; nr++) {
+      var nrText = (checkEls[nr].textContent || '').trim();
+      if (nrText === '일치하는 결과 없음' || nrText === 'No matching results' || nrText === 'No results found') {
+        noResults = true;
+        break;
       }
     }
-    // 후보 중 가장 안쪽(자식이 적은) 요소 선택 — 가장 구체적인 아이템
-    if (candidates.length > 0) {
-      candidates.sort(function(a, b) { return a.children.length - b.children.length; });
-      target = candidates[0];
-      console.log('[Flow Auto] 에셋 아이템 발견: "' + expectedName + '" (' + candidates.length + '개 후보)');
-    }
-    // 폴백: 이름 부분 매치 + 적절한 크기
-    if (!target) {
-      for (var i = 0; i < allDivs.length; i++) {
-        var d2 = allDivs[i];
-        var txt2 = (d2.textContent || '').trim();
-        var rect2 = d2.getBoundingClientRect();
-        if (txt2.indexOf(assetName) >= 0 && rect2.width > 200 && rect2.height > 30 && rect2.height < 80) {
-          target = d2;
-          console.log('[Flow Auto] 에셋 폴백 매치: "' + txt2.slice(0, 30) + '"');
-          break;
-        }
-      }
-    }
-    if (!target) {
-      console.error('[Flow Auto] 에셋 아이템 못 찾음: ' + assetName);
-      // 디버그: 패널 내 모든 아이템 로깅
-      for (var i = 0; i < allDivs.length; i++) {
-        var dd = allDivs[i];
-        var rr = dd.getBoundingClientRect();
-        if (rr.width > 200 && rr.height > 30 && rr.height < 80) {
-          console.log('[Flow Auto]   후보: "' + (dd.textContent || '').trim().slice(0, 40) + '" ' +
-            Math.round(rr.width) + 'x' + Math.round(rr.height));
-        }
-      }
-      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    if (noResults) {
+      console.warn('[Flow Auto] @에셋 "' + assetName + '" 검색 결과 없음');
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true }));
       await sleep(300);
       return false;
     }
 
-    // 4. 클릭으로 void 삽입 + 패널 닫기
-    target.click();
+    // 4. 키보드로 선택 (selectAssetByName과 동일한 검증된 방식)
+    console.log('[Flow Auto] @에셋 "' + assetName + '" 키보드 선택 시도');
+
+    // SPA 네비게이션 차단
+    var origPushState = history.pushState.bind(history);
+    var origReplaceState = history.replaceState.bind(history);
+    var navBlocked = false;
+    history.pushState = function() {
+      console.log('[Flow Auto] 네비게이션 차단됨 (pushState):', arguments[2]);
+      navBlocked = true;
+    };
+    history.replaceState = function() {
+      console.log('[Flow Auto] 네비게이션 차단됨 (replaceState):', arguments[2]);
+      navBlocked = true;
+    };
+    var blockNav = function(e) { e.preventDefault(); e.stopImmediatePropagation(); };
+    window.addEventListener('popstate', blockNav, true);
+    window.addEventListener('beforeunload', blockNav, true);
+
+    // ArrowDown → 첫 번째 결과 포커스
+    searchInput.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, bubbles: true, cancelable: true
+    }));
+    searchInput.dispatchEvent(new KeyboardEvent('keyup', {
+      key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, bubbles: true
+    }));
     await sleep(300);
-    var img = target.querySelector('img');
-    if (img) {
-      img.click();
-      await sleep(300);
+
+    // Enter 대상 결정
+    var focusedEl = document.activeElement;
+    var enterTarget = (focusedEl && focusedEl !== searchInput && focusedEl !== document.body) ? focusedEl : searchInput;
+    console.log('[Flow Auto] Enter 대상: ' + enterTarget.tagName + ' class="' +
+      (enterTarget.className || '').toString().substring(0, 60) + '"');
+
+    // Enter → 선택 확정
+    enterTarget.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true
+    }));
+    enterTarget.dispatchEvent(new KeyboardEvent('keyup', {
+      key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true
+    }));
+    await sleep(800);
+
+    // SPA 네비게이션 차단 해제
+    history.pushState = origPushState;
+    history.replaceState = origReplaceState;
+    window.removeEventListener('popstate', blockNav, true);
+    window.removeEventListener('beforeunload', blockNav, true);
+    if (navBlocked) {
+      console.log('[Flow Auto] 네비게이션이 차단되어 페이지 유지됨');
     }
+
+    // 5. 패널 닫기
     if (document.querySelector(AT_PANEL_SELECTOR)) {
-      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-      await sleep(300);
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true }));
+      await sleep(500);
     }
 
     // 6. 잔여 @ 문자 제거 — void 직전의 @ 텍스트 노드 삭제
