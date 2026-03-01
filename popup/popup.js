@@ -3009,97 +3009,14 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     var dlCount = Math.min(verifiedImages.length, batchCount);
     console.log('[Flow Auto] 크기 필터 후: 생성 이미지 ' + verifiedImages.length + '개, 다운로드 ' + dlCount + '개');
 
-    // === 프롬프트-이미지 1:1 매칭 (카드 텍스트 기반) ===
-    var batchPrompts = [];
-    for (var bp = batchStart; bp < batchEnd; bp++) {
-      batchPrompts.push(promptsWithCharacters[bp]);
-    }
-
-    // === 스냅샷 기반 매칭 ===
-    // submitSnapshots[j] = 프롬프트 j 제출 직후의 모든 이미지 src
-    // 프롬프트 j의 결과 = submitSnapshots[j]에 없지만 실제 생성된 이미지
-    var imageToPromptMap = []; // verifiedImages 인덱스 → batchPrompts 인덱스
-    var matchedPrompts = new Set();
-    var matchedImages = new Set();
-    var matchCount = 0;
-
-    if (submitSnapshots && submitSnapshots.length === batchCount) {
-      // 스냅샷 기반 매칭: 각 프롬프트 제출 시점 이후에 나타난 이미지 찾기
-      // 역순으로: 마지막 프롬프트부터 → 해당 스냅샷에 없는 이미지 = 그 프롬프트의 결과
-      for (var si = batchCount - 1; si >= 0; si--) {
-        var snap = submitSnapshots[si];
-        for (var vi = 0; vi < verifiedImages.length; vi++) {
-          if (matchedImages.has(vi)) continue;
-          var imgSrc = verifiedImages[vi].img.src;
-          // 이 이미지가 프롬프트 si 제출 시점에 없었다면 = si 이후에 생성됨
-          if (!snap.has(imgSrc)) {
-            // si+1 ~ 마지막 프롬프트 중 아직 매칭 안 된 가장 가까운 프롬프트에 배정
-            // (여러 이미지가 같은 스냅샷 이후에 나타날 수 있으므로)
-            // 단순화: 이전 스냅샷(si-1)에도 없으면 더 이전 프롬프트의 결과
-            var belongsTo = si;
-            if (si > 0 && !submitSnapshots[si - 1].has(imgSrc)) {
-              continue; // 더 이전 스냅샷에서 처리
-            }
-            if (!matchedPrompts.has(belongsTo)) {
-              imageToPromptMap[vi] = belongsTo;
-              matchedPrompts.add(belongsTo);
-              matchedImages.add(vi);
-              matchCount++;
-              console.log('[Flow Auto] 스냅샷매칭: 이미지 #' + vi + ' → 프롬프트 #' + belongsTo);
-            }
-          }
-        }
-      }
-      // 스냅샷[0]에도 없는 이미지 = 첫 번째 프롬프트 이전부터 있었거나, preGenSrcs에 포함돼야 했던 것
-      // → 매칭 안 된 것들은 텍스트 매칭 폴백
-    }
-
-    // 미매칭 이미지에 대해 텍스트 매칭 폴백
-    for (var mi = 0; mi < verifiedImages.length; mi++) {
-      if (matchedImages.has(mi)) continue;
-      var matchIdx = findPromptForImage(verifiedImages[mi].img, batchPrompts, matchedPrompts);
-      if (matchIdx >= 0) {
-        imageToPromptMap[mi] = matchIdx;
-        matchedPrompts.add(matchIdx);
-        matchedImages.add(mi);
-        matchCount++;
-      } else {
-        imageToPromptMap[mi] = -1;
-      }
-    }
-
-    // 여전히 미매칭 → 순서대로 배정
-    if (matchedImages.size < verifiedImages.length) {
-      var unmatchedPromptIndices = [];
-      for (var upi = 0; upi < batchCount; upi++) {
-        if (!matchedPrompts.has(upi)) unmatchedPromptIndices.push(upi);
-      }
-      var unmatchedIdx = 0;
-      for (var fi = 0; fi < verifiedImages.length; fi++) {
-        if (!matchedImages.has(fi) && unmatchedIdx < unmatchedPromptIndices.length) {
-          imageToPromptMap[fi] = unmatchedPromptIndices[unmatchedIdx++];
-          matchedImages.add(fi);
-        }
-      }
-    }
-
-    console.log('[Flow Auto] 프롬프트 매칭: ' + matchCount + '/' + verifiedImages.length +
-      ' (스냅샷+텍스트), ' + (verifiedImages.length - matchCount) + '개 순서폴백');
-
-    // 매칭 안 된 프롬프트 = 생성 실패
-    if (matchedPrompts.size < batchCount) {
-      for (var fpi = 0; fpi < batchCount; fpi++) {
-        if (!matchedPrompts.has(fpi)) {
-          var failedItem = batchPrompts[fpi];
-          console.warn('[Flow Auto] ⚠ 프롬프트 #' + (failedItem.index + 1) + ' 생성 실패 (이미지 미감지): ' +
-            (failedItem.filename || failedItem.originalPrompt.substring(0, 30)));
-        }
-      }
-    }
+    // === 출현 순서 매칭 ===
+    // detectedImages는 Phase 3에서 출현 순서대로 수집됨
+    // Flow는 FIFO이므로: 먼저 나타난 이미지 = 먼저 제출한 프롬프트
+    // verifiedImages도 같은 순서 (candidateImages = detectedImages 순서 유지, 크기 필터만 적용)
+    console.log('[Flow Auto] 출현 순서 매칭: 이미지 ' + dlCount + '개 → 프롬프트 ' + batchCount + '개');
 
     for (var di = 0; di < dlCount; di++) {
-      var promptBatchIdx = imageToPromptMap[di];
-      var pIdx = (promptBatchIdx >= 0) ? (batchStart + promptBatchIdx) : (batchStart + di);
+      var pIdx = batchStart + di;
       if (pIdx >= promptsWithCharacters.length) break;
 
       var pItem = promptsWithCharacters[pIdx];
@@ -3116,13 +3033,12 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         fullFilename = 'flow_' + (pItem.index + 1) + '_' + autoName + '.png';
       }
 
-      var matchMethod = matchedImages.has(di) ? '스냅샷/텍스트매칭' : '순서폴백';
       try {
         var blob = verifiedImages[di].blob;
         console.log('[Flow Auto] DL ' + (di + 1) + '/' + dlCount + ': ' + fullFilename +
-          ' (' + Math.round(blob.size / 1024) + 'KB, ' + matchMethod + ')');
+          ' (' + Math.round(blob.size / 1024) + 'KB, 출현순서 #' + (di + 1) + ')');
 
-        // blob → data URL 변환 후 background에 전달 (blob URL은 background에서 접근 불가)
+        // blob → data URL 변환 후 background에 전달
         var reader = new FileReader();
         var dataUrl = await new Promise(function(resolve, reject) {
           reader.onload = function() { resolve(reader.result); };
@@ -3139,7 +3055,16 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       }
     }
 
-    // 남은 이미지도 downloadedSrcs에 등록 (다음 배치 오염 방지)
+    // 미매칭 프롬프트 로그
+    if (dlCount < batchCount) {
+      for (var fpi = dlCount; fpi < batchCount; fpi++) {
+        var failedItem = promptsWithCharacters[batchStart + fpi];
+        console.warn('[Flow Auto] ⚠ 프롬프트 #' + (failedItem.index + 1) + ' 이미지 미감지: ' +
+          (failedItem.filename || failedItem.originalPrompt.substring(0, 30)));
+      }
+    }
+
+    // 남은 이미지도 downloadedSrcs에 등록
     for (var ri = dlCount; ri < verifiedImages.length; ri++) {
       downloadedSrcs.add(verifiedImages[ri].img.src);
     }
