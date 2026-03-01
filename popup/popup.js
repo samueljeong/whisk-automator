@@ -3592,7 +3592,10 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
               });
 
               console.log('[Flow Auto] @에셋 세그먼트 입력: ' + batchItem.segments.length + '개');
-              await fillPromptWithAssets(batchItem.segments);
+              var assetResult = await fillPromptWithAssets(batchItem.segments);
+              if (!assetResult) {
+                throw new Error('에셋 삽입 실패 — @태그에 해당하는 에셋이 Flow에 없습니다. 에셋을 먼저 업로드해주세요.');
+              }
               await sleep(500);
 
               // 에셋 입력 후 새로 나타난 이미지를 assetSrcs에 등록
