@@ -3409,11 +3409,13 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         }
 
         var charName = uniqueChars[ui];
+        // @태그 방식: charName이 이미 영문 태그 (yonga, soso 등)
+        // 기존 방식 호환: flowTagMap에서 한글→영문 변환
         var flowTag = flowTagMap[charName] || flowTagMap[charName.normalize('NFC')] || null;
         var searchName = flowTag || charName;
 
         console.log('[Flow Auto] Phase 0 [' + (ui + 1) + '/' + uniqueChars.length + ']: ' + charName +
-          (flowTag ? ' (Flow태그: ' + flowTag + ')' : ''));
+          (flowTag ? ' (Flow태그: ' + flowTag + ')' : ' (직접 검색)'));
 
         var needsUpload = false;
 
