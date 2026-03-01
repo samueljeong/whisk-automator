@@ -654,7 +654,7 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
 
 ### 6B-4. Supabase Edge Function 3개
 
-- [ ] **`activate-subscription`** — 구독 활성화 (결제 페이지에서 호출)
+- [x] **`activate-subscription`** — 구독 활성화 (결제 페이지에서 호출)
   ```
   입력: { userId, billingKey, planType }
   처리:
