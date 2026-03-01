@@ -705,7 +705,7 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
   - 취소 시 `cancel-subscription` Edge Function 호출
   - 취소 후 UI: "Pro · 4월 1일에 만료됩니다" (경고색)
 
-- [ ] **`popup/license.js` — 취소 예정 상태 반영**
+- [x] **`popup/license.js` — 취소 예정 상태 반영**
   - `checkLicense()` 응답에 `cancel_at_period_end` 포함
   - `check_license` RPC 수정: `cancel_at_period_end` 반환
 
