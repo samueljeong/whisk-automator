@@ -1,0 +1,217 @@
+(async function() {
+  var log = [];
+  function p(s) { log.push(s); console.log(s); }
+  function sleep(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
+
+  p("=== v7: @ dropdown DOM deep inspection ===");
+
+  var editor = document.querySelector('[role="textbox"][contenteditable="true"]');
+  if (!editor) { p("ERROR: no editor"); return; }
+
+  // clear editor
+  editor.focus();
+  document.execCommand("selectAll", false, null);
+  document.execCommand("delete", false, null);
+  await sleep(300);
+
+  // snapshot before @ - record all popper/overlay/dropdown elements
+  var before = document.querySelectorAll("[data-radix-popper-content-wrapper], [role='listbox'], [role='menu'], [role='dialog'], [data-radix-menu-content], [data-floating-ui-portal]");
+  p("popups BEFORE @: " + before.length);
+
+  // type @ with full keyboard sequence
+  editor.focus();
+  var o = { key: "@", code: "Digit2", keyCode: 50, which: 50, shiftKey: true, bubbles: true, cancelable: true };
+  editor.dispatchEvent(new KeyboardEvent("keydown", o));
+  editor.dispatchEvent(new KeyboardEvent("keypress", o));
+  editor.dispatchEvent(new InputEvent("beforeinput", { inputType: "insertText", data: "@", bubbles: true, cancelable: true, composed: true }));
+  document.execCommand("insertText", false, "@");
+  editor.dispatchEvent(new KeyboardEvent("keyup", o));
+  p("@ typed");
+
+  // wait and poll for new elements
+  await sleep(500);
+
+  // scan 1: all new popups/overlays
+  p("\n--- SCAN 1: all popup-like elements ---");
+  var selectors = [
+    "[data-radix-popper-content-wrapper]",
+    "[role='listbox']",
+    "[role='menu']",
+    "[role='option']",
+    "[role='dialog']",
+    "[data-radix-menu-content]",
+    "[data-floating-ui-portal]",
+    "[data-radix-collection-item]",
+    "[data-state='open']"
+  ];
+
+  for (var si = 0; si < selectors.length; si++) {
+    var sel = selectors[si];
+    var els = document.querySelectorAll(sel);
+    for (var ei = 0; ei < els.length; ei++) {
+      var el = els[ei];
+      var r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) {
+        p("  " + sel + " #" + ei + ": " + Math.round(r.width) + "x" + Math.round(r.height) + " at (" + Math.round(r.left) + "," + Math.round(r.top) + ")");
+        p("    tag=" + el.tagName + " class=" + (el.className || "").toString().slice(0, 80));
+        p("    text=" + (el.textContent || "").replace(/\n/g, " ").trim().slice(0, 100));
+      }
+    }
+  }
+
+  // scan 2: find THE dropdown (visible, reasonable size, appeared after @)
+  p("\n--- SCAN 2: identify the @ dropdown ---");
+  var allPoppers = document.querySelectorAll("[data-radix-popper-content-wrapper]");
+  var dropdown = null;
+  for (var i = 0; i < allPoppers.length; i++) {
+    var r2 = allPoppers[i].getBoundingClientRect();
+    if (r2.width > 50 && r2.height > 50) {
+      p("candidate popper " + i + ": " + Math.round(r2.width) + "x" + Math.round(r2.height));
+      dropdown = allPoppers[i];
+    }
+  }
+
+  if (!dropdown) {
+    // try broader search
+    var allVisible = document.querySelectorAll("div[style*='position'], div[class*='dropdown'], div[class*='popover'], div[class*='menu'], div[class*='suggest'], div[class*='autocomplete']");
+    for (var i = 0; i < allVisible.length; i++) {
+      var r3 = allVisible[i].getBoundingClientRect();
+      if (r3.width > 100 && r3.height > 100 && r3.top < editor.getBoundingClientRect().top) {
+        p("broader candidate: " + allVisible[i].tagName + " " + Math.round(r3.width) + "x" + Math.round(r3.height));
+        if (!dropdown) dropdown = allVisible[i];
+      }
+    }
+  }
+
+  if (!dropdown) { p("NO dropdown found"); }
+
+  if (dropdown) {
+    p("\n--- SCAN 3: dropdown internal structure ---");
+    p("dropdown size: " + Math.round(dropdown.getBoundingClientRect().width) + "x" + Math.round(dropdown.getBoundingClientRect().height));
+
+    // check for input fields
+    var inputs = dropdown.querySelectorAll("input");
+    p("input fields: " + inputs.length);
+    for (var i = 0; i < inputs.length; i++) {
+      p("  input[" + i + "]: type=" + inputs[i].type + " placeholder=" + (inputs[i].placeholder || "none") + " value=" + (inputs[i].value || "empty"));
+    }
+
+    // check children structure (first 2 levels)
+    p("\nchildren L1: " + dropdown.children.length);
+    for (var c1 = 0; c1 < dropdown.children.length && c1 < 5; c1++) {
+      var ch1 = dropdown.children[c1];
+      var r4 = ch1.getBoundingClientRect();
+      p("  [" + c1 + "] " + ch1.tagName + " " + Math.round(r4.width) + "x" + Math.round(r4.height) + " class=" + (ch1.className || "").toString().slice(0, 60));
+      p("      text=" + (ch1.textContent || "").replace(/\n/g, " ").trim().slice(0, 80));
+
+      // L2
+      for (var c2 = 0; c2 < ch1.children.length && c2 < 5; c2++) {
+        var ch2 = ch1.children[c2];
+        var r5 = ch2.getBoundingClientRect();
+        p("    [" + c1 + "." + c2 + "] " + ch2.tagName + " " + Math.round(r5.width) + "x" + Math.round(r5.height) + " class=" + (ch2.className || "").toString().slice(0, 60));
+        p("        text=" + (ch2.textContent || "").replace(/\n/g, " ").trim().slice(0, 60));
+      }
+    }
+
+    // check for clickable items (asset entries)
+    p("\n--- SCAN 4: clickable asset items ---");
+    var items = dropdown.querySelectorAll("div, button, li, a, span");
+    var assetItems = [];
+    for (var i = 0; i < items.length; i++) {
+      var txt = (items[i].textContent || "").trim();
+      if (txt.indexOf("#") === 0 || txt.indexOf("yonga") >= 0 || txt.indexOf("soyeon") >= 0) {
+        var r6 = items[i].getBoundingClientRect();
+        if (r6.width > 50 && r6.height > 20) {
+          p("  asset: " + items[i].tagName + " " + Math.round(r6.width) + "x" + Math.round(r6.height) + " \"" + txt.slice(0, 50) + "\"");
+          p("    class=" + (items[i].className || "").toString().slice(0, 80));
+          p("    onclick=" + (items[i].onclick ? "YES" : "no") + " role=" + (items[i].getAttribute("role") || "none"));
+          if (assetItems.length < 3) assetItems.push(items[i]);
+        }
+      }
+    }
+
+    // scan 5: try typing in editor to see if dropdown filters
+    p("\n--- SCAN 5: typing 'yong' to test filtering ---");
+    var itemsBefore = dropdown.querySelectorAll("img").length;
+    p("images before filter: " + itemsBefore);
+
+    // type each char with keyboard events on editor
+    editor.focus();
+    var chars = ["y", "o", "n", "g"];
+    for (var ci = 0; ci < chars.length; ci++) {
+      var ch = chars[ci];
+      var ke = { key: ch, code: "Key" + ch.toUpperCase(), bubbles: true, cancelable: true };
+      editor.dispatchEvent(new KeyboardEvent("keydown", ke));
+      editor.dispatchEvent(new InputEvent("beforeinput", { inputType: "insertText", data: ch, bubbles: true, cancelable: true, composed: true }));
+      document.execCommand("insertText", false, ch);
+      editor.dispatchEvent(new KeyboardEvent("keyup", ke));
+      await sleep(100);
+    }
+    await sleep(500);
+
+    // check if dropdown still exists and filtered
+    var dropdownAfter = document.querySelector("[data-radix-popper-content-wrapper]");
+    if (dropdownAfter) {
+      var r7 = dropdownAfter.getBoundingClientRect();
+      p("dropdown after typing: " + Math.round(r7.width) + "x" + Math.round(r7.height));
+      var imgsAfter = dropdownAfter.querySelectorAll("img").length;
+      p("images after filter: " + imgsAfter);
+      var textAfter = (dropdownAfter.textContent || "").replace(/\n/g, " ").trim().slice(0, 200);
+      p("text after filter: " + textAfter);
+
+      // scan 6: try Enter or ArrowDown+Enter to select
+      p("\n--- SCAN 6: select with keyboard ---");
+
+      // try ArrowDown on editor
+      editor.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }));
+      await sleep(200);
+
+      var highlighted = dropdownAfter.querySelector("[data-highlighted], [aria-selected='true'], [data-state='checked']");
+      p("highlighted after ArrowDown on editor: " + (highlighted ? "YES " + (highlighted.textContent || "").trim().slice(0, 50) : "none"));
+
+      // try ArrowDown on document
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }));
+      await sleep(200);
+
+      highlighted = dropdownAfter.querySelector("[data-highlighted], [aria-selected='true'], [data-state='checked']");
+      p("highlighted after ArrowDown on document: " + (highlighted ? "YES " + (highlighted.textContent || "").trim().slice(0, 50) : "none"));
+
+      // try Enter on editor
+      editor.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+      await sleep(500);
+
+      var panelGone = !document.querySelector("[data-radix-popper-content-wrapper]");
+      p("panel gone after Enter on editor: " + panelGone);
+
+      if (!panelGone) {
+        // try Enter on document
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+        await sleep(500);
+        panelGone = !document.querySelector("[data-radix-popper-content-wrapper]");
+        p("panel gone after Enter on document: " + panelGone);
+      }
+    } else {
+      p("dropdown CLOSED after typing (unexpected)");
+    }
+
+    // check editor final state
+    p("\n--- FINAL STATE ---");
+    var voids = editor.querySelectorAll("[data-slate-void]");
+    p("void nodes: " + voids.length);
+    for (var i = 0; i < voids.length; i++) {
+      p("  void " + i + ": " + (voids[i].textContent || "").trim().slice(0, 50));
+    }
+    p("editor text: " + (editor.textContent || "").replace(/\u200B/g, "").replace(/\uFEFF/g, "").trim().slice(0, 150));
+    p("editor HTML (300): " + editor.innerHTML.slice(0, 300));
+  }
+
+  // cleanup
+  editor.focus();
+  document.execCommand("selectAll", false, null);
+  document.execCommand("delete", false, null);
+
+  p("\n=== v7 DONE ===");
+  var fullLog = log.join("\n");
+  console.log("\n" + fullLog);
+  try { await navigator.clipboard.writeText(fullLog); p("copied!"); } catch(e) { p("copy failed - select console output"); }
+})();
