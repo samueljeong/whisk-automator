@@ -742,21 +742,19 @@ async function loadState() {
         const savedHandle = await loadDirHandle();
         if (savedHandle) {
           let perm = await savedHandle.queryPermission({ mode: 'readwrite' });
-          if (perm === 'prompt') {
-            // 사이드 패널 로드 시 권한 재요청 시도
-            perm = await savedHandle.requestPermission({ mode: 'readwrite' });
-          }
           if (perm === 'granted') {
+            // 권한 유지됨 → 바로 복원
             customDirHandle = savedHandle;
             saveLocation.value = '\uD83D\uDCC1 ' + savedHandle.name;
             saveLocation.readOnly = true;
+            console.log('[Flow] 커스텀 폴더 복원 (granted):', savedHandle.name);
           } else {
-            // Permission lost — 폴더 이름을 다운로드 하위 경로로 폴백
-            await clearDirHandle();
-            var fallbackName = result.customDirName || 'flow-images';
-            saveLocation.value = fallbackName;
-            saveLocation.readOnly = false;
-            console.log('[Flow] 커스텀 폴더 권한 만료 → 다운로드/' + fallbackName + ' 으로 폴백');
+            // 'prompt' 또는 'denied' → handle은 유지하되 UI에 표시
+            // requestPermission은 사용자 제스처가 필요하므로 시작 버튼 클릭 시 재요청
+            customDirHandle = savedHandle;
+            saveLocation.value = '\uD83D\uDCC1 ' + savedHandle.name + ' (권한 필요)';
+            saveLocation.readOnly = true;
+            console.log('[Flow] 커스텀 폴더 대기 (권한 재요청 필요):', savedHandle.name);
           }
         }
       } catch (e) {
