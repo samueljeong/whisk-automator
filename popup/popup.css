@@ -764,9 +764,18 @@ footer {
   border-radius: 6px;
   color: #fff;
   font-size: 14px;
-  font-family: monospace;
   text-align: center;
-  letter-spacing: 1px;
+}
+
+.license-input-group input[type="email"] {
+  text-align: left;
+  font-family: inherit;
+  letter-spacing: 0;
+}
+
+.license-input-group input[type="text"] {
+  font-family: monospace;
+  letter-spacing: 2px;
 }
 
 .license-input-group input:focus {
