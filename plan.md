@@ -353,20 +353,20 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
   const FREE_DAILY_LIMIT = 5;
   ```
 
-- [ ] **2b. OTP 인증 함수**
+- [x] **2b. OTP 인증 함수**
   ```
   sendOtp(email)       — POST /auth/v1/otp → 6자리 코드 이메일 발송
   verifyOtp(email, code) — POST /auth/v1/verify → access_token + refresh_token 발급
   signOut()            — 토큰 삭제 + 캐시 삭제
   ```
 
-- [ ] **2c. 토큰 관리 함수**
+- [x] **2c. 토큰 관리 함수**
   ```
   getAccessToken()     — 캐시된 토큰 반환, 만료 1분 전이면 자동 갱신
   refreshToken()       — POST /auth/v1/token?grant_type=refresh_token
   ```
 
-- [ ] **2d. 라이선스 체크 함수**
+- [x] **2d. 라이선스 체크 함수**
   ```
   checkLicense()       — 메인 진입점 (기존과 동일한 인터페이스)
     - 로그인 상태: Edge Function 호출 → { tier, expires_at } 반환
@@ -378,19 +378,19 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
     { valid: false } — 사실상 발생 안 함 (Free 항상 유효)
   ```
 
-- [ ] **2e. Free 일일 카운트 관리**
+- [x] **2e. Free 일일 카운트 관리**
   ```
   getFreeUsageToday()  — chrome.storage에서 오늘 사용량 조회
   incrementFreeUsage() — 카운트 +1, 날짜 바뀌면 리셋
   canGenerate()        — Free면 5장 한도 체크, Pro면 항상 true
   ```
 
-- [ ] **2f. 디바이스 핑거프린트 (동시 접속 1대)**
+- [x] **2f. 디바이스 핑거프린트 (동시 접속 1대)**
   ```
   getDeviceHash()      — chrome.runtime.id + userAgent + 화면 해상도 → SHA-256
   ```
 
-- [ ] **2g. 기존 함수 호환 레이어**
+- [x] **2g. 기존 함수 호환 레이어**
   ```
   기존 popup.js가 호출하는 함수:
   - checkLicense()     → 유지 (내부 로직만 변경)
@@ -409,7 +409,7 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
 
 ## Phase 3: popup.html UI 변경
 
-- [ ] **3a. 라이선스 잠금 화면 → OTP 로그인 화면으로 교체**
+- [x] **3a. 라이선스 잠금 화면 → OTP 로그인 화면으로 교체**
   ```
   현재:
     [WHISK-XXXX-XXXX 입력] [확인]
@@ -420,7 +420,7 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
     + "무료로 계속 사용" 링크 (Free 모드 진입)
   ```
 
-- [ ] **3b. 라이선스 바 변경**
+- [x] **3b. 라이선스 바 변경**
   ```
   현재:
     [만료: 2026. 3. 1.] [키 변경]
@@ -431,7 +431,7 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
     [무료 · 오늘 2/5장 사용] [Pro 업그레이드 →]
   ```
 
-- [ ] **3c. Free 한도 초과 시 업그레이드 유도 UI**
+- [x] **3c. Free 한도 초과 시 업그레이드 유도 UI**
   ```
   "오늘 무료 한도(5장)를 모두 사용했습니다."
   [이메일로 Pro 업그레이드] 버튼
@@ -441,7 +441,7 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
 
 ## Phase 4: popup.js 수정
 
-- [ ] **4a. 초기화 흐름 변경**
+- [x] **4a. 초기화 흐름 변경**
   ```
   현재:
     DOMContentLoaded → checkLicense() → showMainUI() or showLicenseScreen()
@@ -453,7 +453,7 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
       → 미인증+Free → showMainUI(free)  — 로그인 안 해도 진입 가능
   ```
 
-- [ ] **4b. OTP 로그인 이벤트 핸들러**
+- [x] **4b. OTP 로그인 이벤트 핸들러**
   ```
   #sendOtpBtn 클릭 → sendOtp(email) → OTP 입력 필드 표시
   #verifyOtpBtn 클릭 → verifyOtp(email, code) → checkLicense() → showMainUI()
@@ -461,7 +461,7 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
   #logoutBtn 클릭 → signOut() → showMainUI({ tier: 'free' })
   ```
 
-- [ ] **4c. 생성 시 한도 체크 삽입**
+- [x] **4c. 생성 시 한도 체크 삽입**
   ```
   startAutomation() 시작 부분:
     const allowed = await canGenerate(promptCount);
@@ -472,7 +472,7 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
     updateLicenseBar(); // 남은 횟수 갱신
   ```
 
-- [ ] **4d. Grok 탭 Free 제한**
+- [x] **4d. Grok 탭 Free 제한**
   ```
   Free 사용자: Grok 탭 클릭 시 "Pro 전용 기능입니다" 안내
   Pro 사용자: 기존과 동일
@@ -482,7 +482,7 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
 
 ## Phase 5: manifest.json + 마무리
 
-- [ ] **5a. host_permissions 변경**
+- [x] **5a. host_permissions 변경**
   ```json
   "host_permissions": [
     "https://labs.google/*",
@@ -492,12 +492,12 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
   ]
   ```
 
-- [ ] **5b. popup.css — OTP UI 스타일 추가**
+- [x] **5b. popup.css — OTP UI 스타일 추가**
   - 이메일 입력, OTP 코드 입력, 로딩 스피너
   - Pro/Free 상태 배지 스타일
   - 한도 초과 다이얼로그
 
-- [ ] **5c. 기존 라이선스 서버 정리**
+- [x] **5c. 기존 라이선스 서버 정리**
   - Render.com 서버 중지 (즉시 or Pro 전환 기간 후)
   - `whisk-license-server` 레포 아카이브
 
@@ -527,3 +527,109 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
 | 동시 접속 제한 | Edge Function에서 device_hash 비교 | 단순하고 효과적 |
 | 기존 키 방식 | 완전 제거 | 유지보수 단순화, 사용자 소수 |
 | 오프라인 유예 | 없음 | 인터넷 필수 프로그램 |
+
+---
+
+# Phase 6: Pro UI 개선 + Stripe 결제 연동
+
+## Phase 6A: Pro UI 즉시 수정 (확장 코드만, Stripe 불필요)
+
+> 현재 로그인 후 "무료 · 오늘 0/5장 사용" 표시 → Pro 시 올바른 UI 보여야 함
+> 또한, 로그인한 Free 사용자에게도 업그레이드 버튼이 보여야 함
+
+- [ ] **6A-1. `popup/popup.js` — `updateLicenseBar()` 수정**
+
+  현재 문제: `upgradeBtn`이 로그인 시 숨겨짐 (`upgradeBtn.hidden = !!licenseResult.email`)
+
+  수정 후 (3가지 상태):
+  ```
+  Pro:
+    statusEl = "Pro · user@email.com · 4월 1일까지"
+    upgradeBtn hidden, logoutBtn visible
+
+  로그인 Free:
+    statusEl = "무료 · user@email.com · 오늘 2/5장"
+    upgradeBtn visible ("Pro 업그레이드"), logoutBtn visible
+
+  비로그인 Free:
+    statusEl = "무료 · 오늘 2/5장 사용"
+    upgradeBtn visible ("로그인"), logoutBtn hidden
+  ```
+
+- [ ] **6A-2. `popup/popup.html` — "구독 관리" 버튼 추가**
+  ```html
+  <button id="manageSubBtn" class="btn btn-small btn-secondary" hidden>구독 관리</button>
+  ```
+  Pro 사용자에게만 표시 (Stripe Customer Portal 연결용, 6B에서 구현)
+
+- [ ] **6A-3. `popup/popup.js` — Pro 만료일 표시 형식 변경**
+
+  현재: `Pro · user@email.com · 만료: 2026. 4. 1.`
+  변경: `Pro · user@email.com · 4월 1일까지`
+  → 더 직관적이고 간결한 한국어 표현
+
+- [ ] **6A-4. `popup/popup.js` — upgradeBtn 클릭 동작 분기**
+  ```
+  비로그인 상태: showLoginScreen() (기존 동작)
+  로그인 Free: Stripe Payment Link로 이동 (6B에서 URL 연결)
+  → 6B 전까지는 "결제 준비 중" 알림으로 대체
+  ```
+
+---
+
+## Phase 6B: Stripe 결제 연동 (Stripe 대시보드 + Edge Function + 확장)
+
+### 6B-1. Stripe 대시보드 설정 (수동, 사무엘님 작업)
+
+- [ ] **Stripe 계정 생성/로그인** (stripe.com)
+- [ ] **Product 생성**: "Whisk Pro", 월간 구독
+- [ ] **Price 설정**: ₩X,000/월 (가격 결정 필요)
+- [ ] **Payment Link 생성**: recurring mode, `client_reference_id` 파라미터 허용
+- [ ] **Webhook endpoint 설정**: Supabase Edge Function URL 등록
+- [ ] **Customer Portal 활성화**: 구독 관리 페이지
+
+### 6B-2. Supabase DB 마이그레이션 (수동, SQL Editor)
+
+- [ ] **licenses 테이블에 Stripe 컬럼 추가**
+  ```sql
+  ALTER TABLE licenses ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT;
+  ALTER TABLE licenses ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT;
+  ```
+
+### 6B-3. Supabase Edge Function 배포 (코드)
+
+- [ ] **`stripe-webhook` Edge Function 생성**
+  - `checkout.session.completed` → tier='pro', stripe IDs 저장, expires_at 설정
+  - `invoice.payment_succeeded` → expires_at 갱신 (매달)
+  - `customer.subscription.deleted` → tier='free' 다운그레이드
+  - Stripe 서명 검증 필수
+  - 환경변수: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SIGNING_SECRET
+
+### 6B-4. Chrome 확장 수정 (코드)
+
+- [ ] **`popup/popup.js` — upgradeBtn 클릭 → Payment Link 열기**
+  ```js
+  const email = await getAuthEmail();
+  const userId = /* Supabase user id from token */;
+  const paymentUrl = `https://buy.stripe.com/${PAYMENT_LINK_ID}`
+    + `?prefilled_email=${encodeURIComponent(email)}`
+    + `&client_reference_id=${userId}`;
+  chrome.tabs.create({ url: paymentUrl });
+  ```
+
+- [ ] **`popup/popup.js` — manageSubBtn 클릭 → Customer Portal**
+  - Edge Function `create-portal-session` 호출 → URL 받아서 새 탭 열기
+  - 또는 Stripe Customer Portal 직접 URL 사용
+
+- [ ] **`popup/license.js` — check_license 만료 방어 로직**
+  - 서버 check_license에서 이미 처리하지만, 클라이언트에서도 expires_at 체크
+  - `expires_at < now()` → tier='free' 강제
+
+- [ ] **`popup/popup.js` — 결제 완료 후 즉시 갱신**
+  - 성공 탭 감지 또는 popup 열 때마다 캐시 무시 강제 체크
+
+### 6B-5. 테스트
+
+- [ ] **Stripe 테스트 모드로 결제 → webhook → DB 확인**
+- [ ] **구독 취소 → tier 다운그레이드 확인**
+- [ ] **만료일 갱신 확인 (매달 결제 시뮬레이션)**
