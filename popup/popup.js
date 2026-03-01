@@ -3361,7 +3361,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       if (autoDownload) {
         console.log('[Flow Auto] === 다운로드 시작: ' + detectedNewImages.length + '개 ===');
         await sleep(1000);
-        await downloadBatch(0, totalCount, preGenSrcs, detectedNewImages, submitSnapshots);
+        await downloadBatch(0, totalCount, preGenSrcs, detectedNewImages);
       }
 
       // 진행 상황: 전체 완료
