@@ -277,3 +277,24 @@ function formatExpiry(dateStr) {
     return dateStr || "";
   }
 }
+
+function formatExpiryShort(dateStr) {
+  try {
+    const d = new Date(dateStr);
+    return `${d.getMonth() + 1}월 ${d.getDate()}일`;
+  } catch {
+    return dateStr || "";
+  }
+}
+
+async function getAuthUserId() {
+  const result = await chrome.storage.local.get(AUTH_TOKEN_KEY);
+  const auth = result[AUTH_TOKEN_KEY];
+  if (!auth || !auth.access_token) return null;
+  try {
+    const payload = JSON.parse(atob(auth.access_token.split('.')[1]));
+    return payload.sub || null;
+  } catch {
+    return null;
+  }
+}
