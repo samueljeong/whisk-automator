@@ -287,8 +287,29 @@ document.getElementById('logoutBtn')?.addEventListener('click', async () => {
 });
 
 // Pro 업그레이드 버튼
-document.getElementById('upgradeBtn')?.addEventListener('click', () => {
-  showLoginScreen();
+document.getElementById('upgradeBtn')?.addEventListener('click', async () => {
+  const email = await getAuthEmail();
+  if (!email) {
+    // 비로그인 → 먼저 로그인
+    showLoginScreen();
+    return;
+  }
+  // 로그인 Free → Stripe Payment Link로 이동
+  // TODO: Stripe Payment Link URL 설정 후 활성화
+  const userId = await getAuthUserId();
+  const PAYMENT_LINK_URL = null; // Phase 6B에서 설정
+  if (!PAYMENT_LINK_URL) {
+    alert('결제 시스템 준비 중입니다. 곧 이용 가능합니다!');
+    return;
+  }
+  const paymentUrl = `${PAYMENT_LINK_URL}?prefilled_email=${encodeURIComponent(email)}&client_reference_id=${userId}`;
+  chrome.tabs.create({ url: paymentUrl });
+});
+
+// 구독 관리 버튼 (Stripe Customer Portal)
+document.getElementById('manageSubBtn')?.addEventListener('click', async () => {
+  // TODO: Stripe Customer Portal URL 설정 후 활성화
+  alert('구독 관리 페이지 준비 중입니다.');
 });
 
 // Check connection to Flow page
