@@ -25,7 +25,6 @@ const totalCountEl = document.getElementById('totalCount');
 const currentPromptEl = document.getElementById('currentPrompt');
 const startBtn = document.getElementById('startBtn');
 const stopBtn = document.getElementById('stopBtn');
-const testModeCheck = document.getElementById('testModeCheck');
 const modelSelect = document.getElementById('modelSelect');
 const outputType = document.getElementById('outputType');
 const characterList = document.getElementById('characterList');
@@ -964,10 +963,6 @@ function buildCharacterMap() {
     if (data.flowTag) {
       flowTagMap[name] = data.flowTag;
       flowTagMap[name.normalize('NFC')] = data.flowTag;
-      // 역방향 매핑: flowTag → image (@태그 방식에서 영문 태그로 이미지 조회용)
-      var cleanTag = data.flowTag.replace(/^#/, '');
-      map[cleanTag] = data.image;
-      flowTagMap[cleanTag] = data.flowTag;
     }
     if (data.aliases) {
       data.aliases.forEach(alias => {
@@ -1428,110 +1423,68 @@ async function startAutomation() {
       cleanPrompt = cleanPrompt.replace(/^\[filename:.+?\]\s*/, '');
     }
 
-    // 2. [장면:...], [style:...] 추출 (기존 브라켓 태그 중 에셋 외)
+    // 2. [캐릭터], [장면:...], [style:...] 추출
+    const charNames = [];
     let scene = null;
     let style = null;
-    const metaRegex = /^\[([^\]]+)\]\s*/;
-    let metaM;
-    while ((metaM = cleanPrompt.match(metaRegex)) !== null) {
-      if (metaM[1].startsWith('filename:')) break;
-      if (metaM[1].startsWith('장면:')) {
-        scene = metaM[1].replace('장면:', '').trim();
-        cleanPrompt = cleanPrompt.replace(metaRegex, '');
+    const charRegex = /^\[([^\]]+)\]\s*/;
+    let charM;
+    while ((charM = cleanPrompt.match(charRegex)) !== null) {
+      // [filename:...] 이나 프롬프트 본문이면 중단
+      if (charM[1].startsWith('filename:')) break;
+      // [장면:무림맹] → 장면 태그 추출
+      if (charM[1].startsWith('장면:')) {
+        scene = charM[1].replace('장면:', '').trim();
+        cleanPrompt = cleanPrompt.replace(charRegex, '');
         continue;
       }
-      if (metaM[1].startsWith('style:') || metaM[1].startsWith('스타일:')) {
-        style = metaM[1].replace(/^(style:|스타일:)/, '').trim();
-        cleanPrompt = cleanPrompt.replace(metaRegex, '');
+      // [style:male] 또는 [스타일:male] → 스타일 태그 추출
+      if (charM[1].startsWith('style:') || charM[1].startsWith('스타일:')) {
+        style = charM[1].replace(/^(style:|스타일:)/, '').trim();
+        cleanPrompt = cleanPrompt.replace(charRegex, '');
         continue;
       }
-      break; // 알 수 없는 브라켓은 프롬프트 본문으로 간주
+      charNames.push(charM[1]);
+      cleanPrompt = cleanPrompt.replace(charRegex, '');
+    }
+    if (charNames.length > 0) {
+      character = charNames.join(',');
     }
 
-    // 2-1. @태그 기반 에셋 추출 + 세그먼트 분할
-    // "@yonga A warrior and @soso a girl" → segments + assetTags
-    const assetTags = [];
-    const segments = [];
-    const atRegex = /@(\w+)/g;
-    let atMatch;
-    let lastIdx = 0;
-    while ((atMatch = atRegex.exec(cleanPrompt)) !== null) {
-      // @ 앞의 텍스트
-      if (atMatch.index > lastIdx) {
-        segments.push({ type: 'text', content: cleanPrompt.slice(lastIdx, atMatch.index) });
-      }
-      segments.push({ type: 'asset', tag: atMatch[1] });
-      assetTags.push(atMatch[1]);
-      lastIdx = atMatch.index + atMatch[0].length;
-    }
-    // 마지막 남은 텍스트
-    if (lastIdx < cleanPrompt.length) {
-      segments.push({ type: 'text', content: cleanPrompt.slice(lastIdx) });
-    }
-    // @태그가 없으면 전체를 텍스트 세그먼트로
-    if (segments.length === 0) {
-      segments.push({ type: 'text', content: cleanPrompt });
-    }
-
-    // character 필드: 고유 에셋 태그를 콤마로 연결 (Phase 0 업로드용)
-    character = assetTags.length > 0 ? [...new Set(assetTags)].join(',') : null;
-
-    // 2-1. 자동 스타일 결정: [style:] 태그 없고 에셋 있으면 프로젝트별 매핑에서 결정
-    if (!style && assetTags.length > 0) {
+    // 2-1. 자동 스타일 결정: [style:] 태그 없고 캐릭터 있으면 프로젝트별 매핑에서 결정
+    if (!style && charNames.length > 0) {
       const charStyleMap = (project && project.characterStyleMap) || {};
       const mixedPreset = (project && project.mixedStylePreset) || '';
       const styleTypes = new Set(
-        assetTags.map(n => charStyleMap[n]).filter(Boolean)
+        charNames.map(n => charStyleMap[n]).filter(Boolean)
       );
       if (styleTypes.size === 1) {
         style = [...styleTypes][0];
-        console.log(`[스타일 자동] ${assetTags.join('+')} → ${style}`);
+        console.log(`[스타일 자동] ${charNames.join('+')} → ${style}`);
       } else if (styleTypes.size > 1 && mixedPreset) {
         style = mixedPreset;
-        console.log(`[스타일 자동] ${assetTags.join('+')} → 혼합 → ${style}`);
+        console.log(`[스타일 자동] ${charNames.join('+')} → 혼합 → ${style}`);
       }
     }
 
-    // 3. 스타일 접두어/접미어를 세그먼트에 적용
-    // 첫 텍스트 세그먼트 앞에 prefix, 마지막 텍스트 세그먼트 뒤에 suffix
-    if (projectStylePrefix || projectStyleSuffix) {
-      var firstTextIdx = segments.findIndex(function(s) { return s.type === 'text'; });
-      var lastTextIdx = -1;
-      for (var si = segments.length - 1; si >= 0; si--) {
-        if (segments[si].type === 'text') { lastTextIdx = si; break; }
-      }
-      if (firstTextIdx >= 0 && projectStylePrefix) {
-        var ft = segments[firstTextIdx].content;
-        if (!ft.toLowerCase().startsWith(projectStylePrefix.toLowerCase().trim())) {
-          segments[firstTextIdx].content = projectStylePrefix + ft;
-        }
-      }
-      if (lastTextIdx >= 0 && projectStyleSuffix) {
-        var lt = segments[lastTextIdx].content;
-        if (!lt.toLowerCase().endsWith(projectStyleSuffix.toLowerCase().trim())) {
-          segments[lastTextIdx].content = lt + projectStyleSuffix;
-        }
-      }
+    // 3. 스타일 접두어/접미어 적용 (이미 포함되어 있지 않으면)
+    let finalPrompt = cleanPrompt;
+    if (projectStylePrefix && !cleanPrompt.toLowerCase().startsWith(projectStylePrefix.toLowerCase().trim())) {
+      finalPrompt = projectStylePrefix + finalPrompt;
+    }
+    if (projectStyleSuffix && !cleanPrompt.toLowerCase().endsWith(projectStyleSuffix.toLowerCase().trim())) {
+      finalPrompt = finalPrompt + projectStyleSuffix;
     }
 
-    // 4. 안전 치환 (위험 표현 → 안전 표현) — 텍스트 세그먼트에만 적용
+    // 4. 안전 치환 (위험 표현 → 안전 표현)
+    // 긴 패턴 먼저 매칭되도록 길이 역순 정렬 후 적용
     if (typeof PROMPT_REPLACEMENTS !== 'undefined') {
       const sorted = [...PROMPT_REPLACEMENTS].sort((a, b) => b[0].length - a[0].length);
-      for (var si = 0; si < segments.length; si++) {
-        if (segments[si].type !== 'text') continue;
-        var segText = segments[si].content;
-        for (const [risky, safe] of sorted) {
-          const escaped = risky.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          segText = segText.replace(new RegExp(`\\b${escaped}\\b`, 'gi'), safe);
-        }
-        segments[si].content = segText;
+      for (const [risky, safe] of sorted) {
+        const escaped = risky.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        finalPrompt = finalPrompt.replace(new RegExp(`\\b${escaped}\\b`, 'gi'), safe);
       }
     }
-
-    // finalPrompt: 텍스트 세그먼트만 합친 것 (하위호환 + 로깅용)
-    let finalPrompt = segments.map(function(s) {
-      return s.type === 'text' ? s.content : '@' + s.tag;
-    }).join('');
 
     // 캐릭터 그룹키: "용아,소연" → 정렬해서 "소연,용아" (그룹핑/비교용)
     let characterGroup = '';
@@ -1541,11 +1494,10 @@ async function startAutomation() {
 
     return {
       filename: filename,
-      character: character,           // "@태그"에서 추출: "yonga,soso"
-      characterGroup: characterGroup, // 정렬: "soso,yonga" (그룹핑용)
+      character: character,           // 원본: "용아,소연"
+      characterGroup: characterGroup, // 정렬: "소연,용아" (그룹핑용)
       scene: scene,                   // 장면 태그: "무림맹" (null=없음)
       style: style,                   // 스타일 태그: "male" (null=없음)
-      segments: segments,             // [{type:'asset',tag:'yonga'},{type:'text',content:'...'}]
       prompt: finalPrompt,
       originalPrompt: cleanPrompt,
       index: index
@@ -1853,226 +1805,6 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       await sleep(300);
     }
     console.log('[Flow Auto] 프롬프트 입력 완료: "' + text.substring(0, 50) + (text.length > 50 ? '...' : '') + '"');
-    return true;
-  }
-
-  // 2-A. @에셋 태그 삽입 — Slate 에디터에 @ 입력 → 패널 → 검색 → 선택
-  var AT_PANEL_SELECTOR = '[data-radix-popper-content-wrapper]';
-
-  function typeAtChar(editor) {
-    editor.focus();
-    var o = { key: '@', code: 'Digit2', keyCode: 50, which: 50, shiftKey: true, bubbles: true, cancelable: true };
-    editor.dispatchEvent(new KeyboardEvent('keydown', o));
-    editor.dispatchEvent(new KeyboardEvent('keypress', o));
-    editor.dispatchEvent(new InputEvent('beforeinput', { inputType: 'insertText', data: '@', bubbles: true, cancelable: true, composed: true }));
-    document.execCommand('insertText', false, '@');
-    editor.dispatchEvent(new KeyboardEvent('keyup', o));
-  }
-
-  function setReactInputValue(input, value) {
-    var setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-    setter.call(input, value);
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-  }
-
-  async function insertAssetByAtTag(editor, assetName) {
-    console.log('[Flow Auto] @에셋 삽입: ' + assetName);
-
-    // 1. @ 입력으로 패널 열기
-    typeAtChar(editor);
-    await sleep(800);
-
-    var panel = document.querySelector(AT_PANEL_SELECTOR);
-    if (!panel) {
-      console.warn('[Flow Auto] @패널 안 열림, 재시도...');
-      typeAtChar(editor);
-      await sleep(1200);
-      panel = document.querySelector(AT_PANEL_SELECTOR);
-    }
-    if (!panel) {
-      console.error('[Flow Auto] @패널 열기 실패: ' + assetName);
-      return false;
-    }
-
-    // 2. 검색 input에 에셋명 입력 → 필터링 (selectAssetByName과 동일한 방식)
-    var searchInput = null;
-    var inputs = panel.querySelectorAll('input[type="text"], input[type="search"], input:not([type])');
-    for (var si = 0; si < inputs.length; si++) {
-      var ph = (inputs[si].placeholder || '').toLowerCase();
-      var sRect = inputs[si].getBoundingClientRect();
-      if (sRect.width > 0 && (ph.includes('에셋') || ph.includes('검색') || ph.includes('search') || ph.includes('asset'))) {
-        searchInput = inputs[si];
-        break;
-      }
-    }
-    if (!searchInput) {
-      // 폴백: 패널 내 첫 번째 보이는 input
-      searchInput = panel.querySelector('input');
-    }
-    if (!searchInput) {
-      console.error('[Flow Auto] @패널 검색 input 없음');
-      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-      await sleep(300);
-      return false;
-    }
-    searchInput.focus();
-    await sleep(200);
-    searchInput.value = '';
-    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-    await sleep(200);
-    searchInput.value = assetName;
-    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-    searchInput.dispatchEvent(new Event('change', { bubbles: true }));
-    await sleep(1000);
-
-    // 3. "일치하는 결과 없음" 체크
-    var searchRect = searchInput.getBoundingClientRect();
-    var noResults = false;
-    var checkEls = panel.querySelectorAll('div, span, p');
-    for (var nr = 0; nr < checkEls.length; nr++) {
-      var nrText = (checkEls[nr].textContent || '').trim();
-      if (nrText === '일치하는 결과 없음' || nrText === 'No matching results' || nrText === 'No results found') {
-        noResults = true;
-        break;
-      }
-    }
-    if (noResults) {
-      console.warn('[Flow Auto] @에셋 "' + assetName + '" 검색 결과 없음');
-      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true }));
-      await sleep(300);
-      return false;
-    }
-
-    // 4. 키보드로 선택 (selectAssetByName과 동일한 검증된 방식)
-    console.log('[Flow Auto] @에셋 "' + assetName + '" 키보드 선택 시도');
-
-    // SPA 네비게이션 차단
-    var origPushState = history.pushState.bind(history);
-    var origReplaceState = history.replaceState.bind(history);
-    var navBlocked = false;
-    history.pushState = function() {
-      console.log('[Flow Auto] 네비게이션 차단됨 (pushState):', arguments[2]);
-      navBlocked = true;
-    };
-    history.replaceState = function() {
-      console.log('[Flow Auto] 네비게이션 차단됨 (replaceState):', arguments[2]);
-      navBlocked = true;
-    };
-    var blockNav = function(e) { e.preventDefault(); e.stopImmediatePropagation(); };
-    window.addEventListener('popstate', blockNav, true);
-    window.addEventListener('beforeunload', blockNav, true);
-
-    // Enter → 첫 번째 검색 결과 바로 선택
-    searchInput.dispatchEvent(new KeyboardEvent('keydown', {
-      key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true
-    }));
-    searchInput.dispatchEvent(new KeyboardEvent('keyup', {
-      key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true
-    }));
-    await sleep(800);
-
-    // SPA 네비게이션 차단 해제
-    history.pushState = origPushState;
-    history.replaceState = origReplaceState;
-    window.removeEventListener('popstate', blockNav, true);
-    window.removeEventListener('beforeunload', blockNav, true);
-    if (navBlocked) {
-      console.log('[Flow Auto] 네비게이션이 차단되어 페이지 유지됨');
-    }
-
-    // 5. 패널 닫기
-    if (document.querySelector(AT_PANEL_SELECTOR)) {
-      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true }));
-      await sleep(500);
-    }
-
-    // 6. 잔여 @ 문자 제거 — void 직전의 @ 텍스트 노드 삭제
-    var textSpans = editor.querySelectorAll('[data-slate-string="true"]');
-    for (var i = 0; i < textSpans.length; i++) {
-      var span = textSpans[i];
-      var tn = span.firstChild;
-      if (tn && tn.nodeType === 3) {
-        var val = tn.nodeValue;
-        // "@" 하나만 있거나 끝이 "@"로 끝나는 경우
-        if (val === '@' || val === ' @') {
-          // Slate에게 삭제 알리기: 선택 후 deleteContentBackward
-          var sel = window.getSelection();
-          var range = document.createRange();
-          if (val === '@') {
-            range.selectNodeContents(tn);
-          } else {
-            // " @" → 마지막 @ 만 삭제
-            range.setStart(tn, val.length - 1);
-            range.setEnd(tn, val.length);
-          }
-          sel.removeAllRanges();
-          sel.addRange(range);
-          editor.dispatchEvent(new InputEvent('beforeinput', {
-            inputType: 'deleteContentBackward',
-            bubbles: true, cancelable: true, composed: true
-          }));
-          await sleep(100);
-          break;
-        }
-      }
-    }
-
-    var voidCount = editor.querySelectorAll('[data-slate-void]').length;
-    console.log('[Flow Auto] @에셋 삽입 완료: ' + assetName + ' (voids=' + voidCount + ')');
-    return true;
-  }
-
-  // 2-B. 세그먼트 기반 프롬프트 입력 (에셋 + 텍스트 통합)
-  async function fillPromptWithAssets(segments) {
-    var promptEl = findPromptInput();
-    if (!promptEl) {
-      console.error('[Flow Auto] 프롬프트 에디터 없음');
-      return false;
-    }
-
-    // 에디터 초기화 (기존 내용 제거)
-    promptEl.focus();
-    await sleep(200);
-    var sel = window.getSelection();
-    var range = document.createRange();
-    range.selectNodeContents(promptEl);
-    sel.removeAllRanges();
-    sel.addRange(range);
-    promptEl.dispatchEvent(new InputEvent('beforeinput', {
-      inputType: 'deleteContentBackward',
-      bubbles: true, cancelable: true, composed: true
-    }));
-    await sleep(300);
-
-    console.log('[Flow Auto] 세그먼트 입력 시작: ' + segments.length + '개');
-
-    for (var i = 0; i < segments.length; i++) {
-      var seg = segments[i];
-
-      if (seg.type === 'asset') {
-        var ok = await insertAssetByAtTag(promptEl, seg.tag);
-        if (!ok) {
-          console.error('[Flow Auto] 에셋 삽입 실패: @' + seg.tag + ' — 에셋이 존재하지 않습니다. 중단합니다.');
-          return false;
-        }
-      } else if (seg.type === 'text' && seg.content.length > 0) {
-        // 커서를 에디터 끝으로 이동 후 텍스트 입력
-        promptEl.focus();
-        sel = window.getSelection();
-        range = document.createRange();
-        range.selectNodeContents(promptEl);
-        range.collapse(false);
-        sel.removeAllRanges();
-        sel.addRange(range);
-        document.execCommand('insertText', false, seg.content);
-        await sleep(200);
-        console.log('[Flow Auto] 텍스트 입력: "' + seg.content.substring(0, 40) + (seg.content.length > 40 ? '...' : '') + '"');
-      }
-    }
-
-    var finalVoids = promptEl.querySelectorAll('[data-slate-void]').length;
-    var finalText = (promptEl.textContent || '').replace(/\u200B/g, '').replace(/\uFEFF/g, '').trim();
-    console.log('[Flow Auto] fillPromptWithAssets 완료: voids=' + finalVoids + ' text="' + finalText.substring(0, 60) + '..."');
     return true;
   }
 
@@ -2518,11 +2250,27 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     window.addEventListener('popstate', blockNav, true);
     window.addEventListener('beforeunload', blockNav, true);
 
-    // Enter → 첫 번째 검색 결과 바로 선택
+    // ArrowDown → 첫 번째 결과 포커스
     searchInput.dispatchEvent(new KeyboardEvent('keydown', {
-      key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true
+      key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, bubbles: true, cancelable: true
     }));
     searchInput.dispatchEvent(new KeyboardEvent('keyup', {
+      key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, bubbles: true
+    }));
+    await sleep(300);
+
+    // ArrowDown 후 포커스된 요소 찾기 (Radix는 포커스를 리스트 아이템으로 이동시킴)
+    var focusedEl = document.activeElement;
+    var enterTarget = (focusedEl && focusedEl !== searchInput && focusedEl !== document.body) ? focusedEl : searchInput;
+    console.log('[Flow Auto] Enter 대상: ' + enterTarget.tagName + ' class="' +
+      (enterTarget.className || '').toString().substring(0, 60) + '"' +
+      (enterTarget === searchInput ? ' (searchInput)' : ' (포커스된 요소)'));
+
+    // Enter → 선택 확정
+    enterTarget.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true
+    }));
+    enterTarget.dispatchEvent(new KeyboardEvent('keyup', {
       key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true
     }));
     await sleep(800);
@@ -3434,13 +3182,11 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         }
 
         var charName = uniqueChars[ui];
-        // @태그 방식: charName이 이미 영문 태그 (yonga, soso 등)
-        // 기존 방식 호환: flowTagMap에서 한글→영문 변환
         var flowTag = flowTagMap[charName] || flowTagMap[charName.normalize('NFC')] || null;
         var searchName = flowTag || charName;
 
         console.log('[Flow Auto] Phase 0 [' + (ui + 1) + '/' + uniqueChars.length + ']: ' + charName +
-          (flowTag ? ' (Flow태그: ' + flowTag + ')' : ' (직접 검색)'));
+          (flowTag ? ' (Flow태그: ' + flowTag + ')' : ''));
 
         var needsUpload = false;
 
@@ -3586,46 +3332,35 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
               });
             } catch(e) {}
 
-            // @에셋 태그 방식: 세그먼트 기반으로 에셋+텍스트 통합 입력
-            // segments가 있으면 @태그 방식, 없으면 기존 방식 폴백
-            if (batchItem.segments && batchItem.segments.some(function(s) { return s.type === 'asset'; })) {
-              // 에셋 입력 전 이미지 src 스냅샷
+            // 에셋 레퍼런스 추가 — 매 프롬프트마다 실행
+            // Flow는 생성 후 프롬프트를 초기화하므로 에셋을 매번 다시 선택해야 함
+            // (업로드는 uploadedAssetNames로 1회만, 선택은 매번)
+            if (charForThisPrompt) {
+              // 에셋 업로드 전 이미지 src 스냅샷 (업로드 후 새로 나타난 것 = 에셋 이미지)
               var preAssetSrcs = new Set();
               document.querySelectorAll('img').forEach(function(img) {
                 if (img.src) preAssetSrcs.add(img.src);
               });
 
-              console.log('[Flow Auto] @에셋 세그먼트 입력: ' + batchItem.segments.length + '개');
-              var assetResult = await fillPromptWithAssets(batchItem.segments);
-              if (!assetResult) {
-                throw new Error('에셋 삽입 실패 — @태그에 해당하는 에셋이 Flow에 없습니다. 에셋을 먼저 업로드해주세요.');
-              }
+              console.log('[Flow Auto] 레퍼런스 선택: ' + charForThisPrompt);
+              await uploadReferences(charForThisPrompt, characters);
               await sleep(500);
 
-              // 에셋 입력 후 새로 나타난 이미지를 assetSrcs에 등록
+              // 에셋 업로드 후 새로 나타난 이미지를 assetSrcs에 등록
               document.querySelectorAll('img').forEach(function(img) {
                 if (img.src && img.src.includes('getMediaUrlRedirect') && !preAssetSrcs.has(img.src)) {
                   assetSrcs.add(img.src);
+                  console.log('[Flow Auto] 에셋 이미지 등록: ' + img.src.substring(0, 80) + '...');
                 }
               });
-            } else {
-              // @태그 없는 프롬프트: 기존 방식 (uploadReferences + fillPrompt)
-              if (charForThisPrompt) {
-                var preAssetSrcs = new Set();
-                document.querySelectorAll('img').forEach(function(img) {
-                  if (img.src) preAssetSrcs.add(img.src);
-                });
-                await uploadReferences(charForThisPrompt, characters);
-                await sleep(500);
-                document.querySelectorAll('img').forEach(function(img) {
-                  if (img.src && img.src.includes('getMediaUrlRedirect') && !preAssetSrcs.has(img.src)) {
-                    assetSrcs.add(img.src);
-                  }
-                });
-              }
-              await fillPrompt(batchItem.prompt);
-              await sleep(500);
             }
+
+            // 에셋 이미지 필터링은 assetSrcs가 담당 (preGenSrcs는 배치 시작 시점 스냅샷 유지)
+            // preGenSrcs를 여기서 갱신하면 이전 프롬프트의 생성 이미지까지 흡수하여
+            // Phase 3에서 감지 못하는 버그 발생
+
+            await fillPrompt(batchItem.prompt);
+            await sleep(500);
             await clickGenerate();
 
             // 배치 내 마지막이 아니면 UI 안정화 대기 (Flow가 프롬프트 처리 후 초기화 시간)
@@ -4247,15 +3982,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       // 필터링된 인덱스를 원본 인덱스로 변환
       const origIdx = promptIndexMap.length > 0 ? promptIndexMap[message.promptIndex] : message.promptIndex;
       if (message.status && origIdx !== undefined && prompts[origIdx]) {
-        // 테스트 모드: completed 마킹 스킵 → 프롬프트 재사용 가능
-        if (message.status === 'completed' && testModeCheck && testModeCheck.checked) {
-          console.log('[Popup] 테스트 모드: completed 스킵 (프롬프트 유지)');
-        } else {
-          prompts[origIdx].status = message.status;
-          // Free 사용자: 생성 완료 시 카운트 증가
-          if (message.status === 'completed' && currentTier !== 'pro') {
-            incrementFreeUsage().then(() => refreshLicenseBar());
-          }
+        prompts[origIdx].status = message.status;
+        // Free 사용자: 생성 완료 시 카운트 증가
+        if (message.status === 'completed' && currentTier !== 'pro') {
+          incrementFreeUsage().then(() => refreshLicenseBar());
         }
       }
       // 진행 바 + 현재 프롬프트 즉시 업데이트 (offset 보정)
