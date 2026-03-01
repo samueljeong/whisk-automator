@@ -552,10 +552,10 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
 - **남은 기간까지 Pro 유지** (예: 3월 결제 → 6월 취소 → 다음 해 3월까지 Pro)
 - 환불 없음 (이미 결제된 기간은 사용 가능)
 
-### Stripe 설정
-- `cancel_at_period_end = true` (즉시 해지가 아닌 기간 만료 시 해지)
-- 결제 실패: Stripe 자동 재시도 3회 → 최종 실패 시 구독 취소
-- webhook `customer.subscription.updated`에서 `cancel_at_period_end` 상태 반영
+### PG사 설정 (포트원 + 나이스페이 포스타트)
+- 취소 시: 스케줄된 다음 결제를 취소, 현재 구독 기간 만료까지 Pro 유지
+- 결제 실패: 포트원 Schedule API 재시도 → 최종 실패 시 구독 종료
+- webhook `Transaction.Paid` / `Transaction.Failed`로 상태 반영
 
 ### UI 표시
 - 취소 예정 사용자: `"Pro · 4월 1일에 만료됩니다"` (경고색)
