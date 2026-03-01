@@ -2804,45 +2804,26 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       console.log('[Flow Auto] 이미지 src 기록됨, 총', downloadedSrcs.size, '개');
 
       try {
-        // fetch로 이미지 가져오기
+        // fetch로 이미지 가져오기 → dataUrl 변환 → background에 전달
         const response = await fetch(imageSrc);
         const blob = await response.blob();
 
-        if (useCustomDir) {
-          // File System Access API: 이미지 데이터를 사이드패널로 전송
-          var reader = new FileReader();
-          var dataUrl = await new Promise(function(resolve, reject) {
-            reader.onload = function() { resolve(reader.result); };
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-          });
-          chrome.runtime.sendMessage({
-            action: 'SAVE_IMAGE_DATA',
-            dataUrl: dataUrl,
-            filename: fullFilename
-          });
-          console.log('[Flow Auto] 커스텀 폴더 저장 요청:', fullFilename);
-        } else {
-          // Blob URL → Background → chrome.downloads
-          var blobUrl = URL.createObjectURL(blob);
-          chrome.runtime.sendMessage({
-            action: 'DOWNLOAD_IMAGE',
-            url: blobUrl,
-            filename: fullPath
-          });
-          console.log('[Flow Auto] 다운로드 요청:', fullPath);
-        }
+        var reader = new FileReader();
+        var dataUrl = await new Promise(function(resolve, reject) {
+          reader.onload = function() { resolve(reader.result); };
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        chrome.runtime.sendMessage({
+          action: 'DOWNLOAD_IMAGE',
+          url: dataUrl,
+          filename: fullPath
+        });
+        console.log('[Flow Auto] 다운로드 요청:', fullPath);
         return true;
       } catch (e) {
-        console.log('[Flow Auto] fetch 다운로드 실패, 직접 요청 시도');
-        if (!useCustomDir) {
-          chrome.runtime.sendMessage({
-            action: 'DOWNLOAD_IMAGE',
-            url: imageSrc,
-            filename: fullPath
-          });
-        }
-        return true;
+        console.error('[Flow Auto] 다운로드 실패:', e.message);
+        return false;
       }
     }
 
