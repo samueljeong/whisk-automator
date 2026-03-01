@@ -90,35 +90,45 @@
 - 캐릭터 데이터 구조 → `flowTag` 필드 이미 있음
 - 파일 인터셉터 → 업로드 시에만 사용
 
-### 확인된 사항 (2026-03-01 테스트)
+### 테스트 결과 (2026-03-01)
 
-**`@태그`를 텍스트로 붙여넣기 → 안 됨!**
-- `@yonga Dark room interior...`를 그대로 붙여넣으면 일반 텍스트로 인식
-- **반드시 자동완성 패널을 통해 선택**해야 에셋으로 연결됨
+**테스트 1: 붙여넣기**
+- `@yonga Dark room interior...` 그대로 붙여넣기 → 일반 텍스트로 인식, 에셋 연결 안 됨
+
+**테스트 2: 4가지 입력 방식 비교 (debug v2)**
+
+| 방식 | @ 삽입 | 패널 뜸 | 비고 |
+|------|--------|---------|------|
+| execCommand만 | O | X | 텍스트만 들어감 |
+| **KeyboardEvent 풀 시퀀스** | O | **O** | keydown→keypress→beforeinput→execCommand→keyup |
+| paste (DataTransfer) | X | X | 에디터에 안 들어감 |
+| execCommand + char typing | O | X | 단독으로는 패널 안 뜸 |
+
+**패널 정보 (확정)**:
+- 셀렉터: `[data-radix-popper-content-wrapper]` (740x580)
+- 구조: "이미지 업로드" + "Recently Used" + 에셋 목록
+- 에셋 아이템: DIV ~250x56 (`#yonga.png`, `#soyeon.png` 등)
+- 기존 Ingredient 패널과 동일한 패널을 `@` 단축키로 여는 것
 
 ### 자동화 구현 방향 (확정)
 
-프롬프트를 **@태그 기준으로 분할**하여 단계별 입력:
+프롬프트를 `@태그` 기준으로 분할하여 단계별 입력:
 
 ```
-입력: "@yonga Dark room interior with @soso standing nearby"
+입력: "@yonga A warrior and @soso a girl standing"
 
 단계:
-1. "@" 타이핑 → 자동완성 패널 뜸
-2. "yonga" 입력 → 필터링
-3. ArrowDown + Enter → 에셋 선택 (Slate @mention 노드 생성)
-4. " Dark room interior with " 텍스트 입력
-5. "@" 타이핑 → 자동완성 패널 뜸
-6. "soso" 입력 → 필터링
-7. ArrowDown + Enter → 에셋 선택
-8. " standing nearby" 텍스트 입력
-9. 생성 버튼 클릭
+1. KeyboardEvent 시퀀스로 "@" 입력 → 에셋 패널 뜸
+2. 패널에서 "yonga" 검색/필터 → 선택
+3. " A warrior and " 텍스트 입력 (execCommand)
+4. KeyboardEvent 시퀀스로 "@" 입력 → 에셋 패널 뜸
+5. 패널에서 "soso" 검색/필터 → 선택
+6. " a girl standing" 텍스트 입력
+7. 생성 버튼 클릭
 ```
 
-**기존 코드 활용 가능**: `selectAssetByName`이 이미 검색→ArrowDown→Enter 패턴 사용 중.
-차이점은 Ingredient "+" 버튼 대신 **에디터 안에서 직접 `@` 입력**으로 트리거.
-
-### 남은 조사 사항
-1. `@` 입력 후 자동완성 패널이 뜨기까지 딜레이 (ms)
-2. 자동완성 패널의 DOM 셀렉터 (기존 Ingredient 패널과 다를 수 있음)
-3. 에셋 이름에 한글이 되는지, 영문만인지
+### 남은 조사 사항 (debug v3에서 확인)
+1. 패널 내 검색/필터 입력 방법 (검색창? 타이핑?)
+2. 에셋 선택 방법 (ArrowDown+Enter? 클릭?)
+3. 에셋 선택 후 Slate에 삽입되는 노드 구조 (void node? inline?)
+4. 패널 닫힘 후 커서 위치 (이어서 텍스트 입력 가능한지)
