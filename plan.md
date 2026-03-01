@@ -597,7 +597,7 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
   변경: `Pro · user@email.com · 4월 1일까지`
   → 더 직관적이고 간결한 한국어 표현
 
-- [ ] **6A-4. `popup/popup.js` — upgradeBtn 클릭 동작 분기**
+- [x] **6A-4. `popup/popup.js` — upgradeBtn 클릭 동작 분기**
   ```
   비로그인 상태: showLoginScreen() (기존 동작)
   로그인 Free: Stripe Payment Link로 이동 (6B에서 URL 연결)
