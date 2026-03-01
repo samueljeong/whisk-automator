@@ -3674,32 +3674,14 @@ delayInput.addEventListener('change', saveState);
 saveLocation.addEventListener('change', saveState);
 saveLocation.addEventListener('input', saveState);
 resetLocationBtn.addEventListener('click', async () => {
-  if (!window.showDirectoryPicker) {
-    // Fallback: 텍스트 입력
-    const current = saveLocation.value.trim() || 'flow-images';
-    const newPath = prompt('저장 위치 (다운로드 폴더 기준 하위 경로)', current);
-    if (newPath !== null) {
-      saveLocation.value = newPath.trim() || 'flow-images';
-      saveState();
-    }
-    return;
-  }
-
-  try {
-    const handle = await window.showDirectoryPicker({
-      mode: 'readwrite',
-      startIn: 'downloads'
-    });
-    customDirHandle = handle;
-    saveLocation.value = '\uD83D\uDCC1 ' + handle.name;
-    saveLocation.readOnly = true;
-    await saveDirHandle(handle);
-    updateCustomDirUI();
+  // 다운로드 폴더 기준 하위 경로 입력
+  const current = saveLocation.value.replace(/^📁\s*/, '').trim() || 'flow-images';
+  const newPath = prompt('저장 위치 (다운로드 폴더 기준 하위 경로)', current);
+  if (newPath !== null) {
+    customDirHandle = null;
+    saveLocation.value = newPath.trim() || 'flow-images';
+    saveLocation.readOnly = false;
     saveState();
-  } catch (e) {
-    if (e.name !== 'AbortError') {
-      console.error('[Flow] Folder selection error:', e);
-    }
   }
 });
 
