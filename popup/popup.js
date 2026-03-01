@@ -3687,61 +3687,15 @@ resetLocationBtn.addEventListener('click', async () => {
 
 const openFolderBtn = document.getElementById('openFolderBtn');
 openFolderBtn.addEventListener('click', async () => {
-  if (customDirHandle) {
-    // 커스텀 폴더: File System Access API는 전체 경로를 노출하지 않으므로
-    // Finder에서 직접 열 수 없음 → 폴더 이름 안내
-    try {
-      const perm = await customDirHandle.queryPermission({ mode: 'readwrite' });
-      if (perm !== 'granted') {
-        alert('폴더 접근 권한이 만료되었습니다. "위치 변경"으로 다시 선택해주세요.');
-        customDirHandle = null;
-        await clearDirHandle();
-        saveLocation.value = 'flow-images';
-        saveLocation.readOnly = false;
-        saveState();
-        return;
-      }
-      // 파일 개수 확인
-      let fileCount = 0;
-      try {
-        for await (const entry of customDirHandle.values()) {
-          if (entry.kind === 'file') fileCount++;
-        }
-      } catch (e) {}
-      alert(`📁 저장 폴더: ${customDirHandle.name}\n💾 저장된 파일: ${fileCount}개\n\nFinder에서 "${customDirHandle.name}" 폴더를 직접 열어주세요.\n(크롬 확장 보안 제한으로 자동 열기 불가)`);
-    } catch (e) {
-      console.error('[Flow] Permission check error:', e);
-    }
-    return;
-  }
-  const savePath = saveLocation.value.trim() || 'flow-images';
+  const savePath = saveLocation.value.replace(/^📁\s*/, '').trim() || 'flow-images';
   chrome.runtime.sendMessage({ action: 'OPEN_FOLDER', savePath });
 });
 
-// 초기화 버튼 (커스텀 폴더 → 다운로드 폴더로 복귀)
+// 초기화 버튼
 const resetToDefaultBtn = document.getElementById('resetToDefaultBtn');
 const saveLocationHint = document.getElementById('saveLocationHint');
-resetToDefaultBtn.addEventListener('click', async () => {
-  customDirHandle = null;
-  await clearDirHandle();
-  saveLocation.value = 'flow-images';
-  saveLocation.readOnly = false;
-  resetToDefaultBtn.hidden = true;
-  saveLocationHint.textContent = '다운로드 폴더 기준 하위 경로 (예: flow-images)';
-  saveState();
-});
-
-// 커스텀 폴더 활성화 시 UI 업데이트
-function updateCustomDirUI() {
-  if (customDirHandle) {
-    resetToDefaultBtn.hidden = false;
-    saveLocationHint.textContent = '선택된 폴더에 직접 저장됩니다';
-  } else {
-    resetToDefaultBtn.hidden = true;
-    saveLocationHint.textContent = '다운로드 폴더 기준 하위 경로 (예: flow-images)';
-  }
-}
-updateCustomDirUI();
+if (resetToDefaultBtn) resetToDefaultBtn.hidden = true;
+if (saveLocationHint) saveLocationHint.textContent = '다운로드 폴더 기준 하위 경로 (예: flow-images)';
 
 // 스타일 설정 변경 시 저장
 stylePrefix.addEventListener('change', saveStyleSettings);
