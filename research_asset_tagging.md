@@ -127,8 +127,91 @@
 7. 생성 버튼 클릭
 ```
 
-### 남은 조사 사항 (debug v3에서 확인)
-1. 패널 내 검색/필터 입력 방법 (검색창? 타이핑?)
-2. 에셋 선택 방법 (ArrowDown+Enter? 클릭?)
-3. 에셋 선택 후 Slate에 삽입되는 노드 구조 (void node? inline?)
-4. 패널 닫힘 후 커서 위치 (이어서 텍스트 입력 가능한지)
+### DOM 조사 완료 — debug v3~v8 결과 (2026-03-01)
+
+**테스트 3 (v3): 패널 내부 구조**
+- 검색 input 발견: `placeholder="애셋 검색"`
+- 기본 Event로는 React input 필터링 안 됨
+
+**테스트 4 (v4): React input 필터링**
+- `nativeInputValueSetter` 성공 (22→3개 필터링)
+- 에셋 아이템 직접 `.click()` 실패
+
+**테스트 5 (v5): 키보드 선택**
+- `searchInput`에서 ArrowDown+Enter → 패널 닫히지만 void 삽입 안 됨
+- `document`에서 ArrowDown+Enter → void 삽입 성공 (그러나 불안정)
+
+**테스트 7 (v7): 드롭다운 정밀 조사**
+- `@` 드롭다운 = 기존 Ingredient 패널과 동일 (740x580, `role="dialog"`)
+- 에디터에서 타이핑해도 드롭다운 필터링 안 됨 (패널 내 검색 input 사용해야 함)
+- `onclick=YES`인 에셋 아이템 발견: class=`sc-dbfb6b4a-11` (250x56)
+- ArrowDown 하이라이트 안 됨, Enter는 패널만 닫고 void 삽입 안 함
+
+**테스트 8 (v8): 클릭 방법 비교 — 최종 확정**
+
+| 방법 | void 삽입 | 패널 닫힘 |
+|------|----------|----------|
+| `.click()` on onclick item | **O** | X |
+| mousedown+mouseup+click | O (같은 void) | X |
+| pointer+mouse full | O (같은 void) | X |
+| **img.click()** (자식 img) | O | **O** |
+| child div.click() | O | O |
+| focus+Enter | O | O |
+
+**결론**: `.click()`이 void를 삽입하고, `img.click()`이 패널까지 닫음.
+
+### 확정된 자동화 플로우 (v8 기반)
+
+```
+function insertAssetByAtTag(name):
+  1. editor.focus()
+  2. typeAt()  — KeyboardEvent 풀 시퀀스 (keydown→keypress→beforeinput→execCommand→keyup)
+  3. await sleep(800) — 패널 로딩 대기
+  4. panel = querySelector("[data-radix-popper-content-wrapper]")
+  5. searchInput = panel.querySelector("input")  // placeholder="애셋 검색"
+  6. searchInput.focus()
+  7. nativeInputValueSetter(searchInput, name)  // React 제어 input 우회
+  8. await sleep(800) — 필터링 대기
+  9. targetItem = onclick=YES인 DIV 중 text가 "#name.png"인 것
+  10. targetItem.click()  — void 삽입
+  11. targetItem.querySelector("img").click()  — 패널 닫기
+  12. await sleep(500) — 안정화
+```
+
+### 핵심 함수 레퍼런스
+
+```js
+// @ 입력 (패널 트리거)
+function typeAt() {
+  editor.focus();
+  var o = { key: "@", code: "Digit2", keyCode: 50, which: 50,
+            shiftKey: true, bubbles: true, cancelable: true };
+  editor.dispatchEvent(new KeyboardEvent("keydown", o));
+  editor.dispatchEvent(new KeyboardEvent("keypress", o));
+  editor.dispatchEvent(new InputEvent("beforeinput", {
+    inputType: "insertText", data: "@",
+    bubbles: true, cancelable: true, composed: true }));
+  document.execCommand("insertText", false, "@");
+  editor.dispatchEvent(new KeyboardEvent("keyup", o));
+}
+
+// React input 값 설정 (검색 필터링)
+function setReactInput(input, value) {
+  var setter = Object.getOwnPropertyDescriptor(
+    window.HTMLInputElement.prototype, "value").set;
+  setter.call(input, value);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+}
+```
+
+### 수동 테스트 영상 확인 (Frame 5~29)
+
+| 프레임 | 내용 |
+|--------|------|
+| 5 | `@` 입력 → 패널 열림, #yonga.png / #soyeon.png / Woman... 표시 |
+| 9 | "yong" 타이핑 → #yonga.png 하나로 필터링 |
+| 13 | 에셋 선택 → `#yonga.png` 칩이 에디터에 인라인 삽입 |
+| 25 | 칩 뒤에 "칼을 쥐고" 텍스트 입력 |
+| 29 | 최종: `#yonga.png 칼을 쥐고 있다.` |
+
+→ 수동 플로우와 자동화(v8)가 동일한 결과를 만들어냄 확인
