@@ -32,7 +32,7 @@ Phase 3: 폴링 + 즉시 다운로드 (FIFO — 실패)
   ```
   - Phase 1의 preGenSrcs는 제거 (매 프롬프트마다 개별 스냅샷으로 대체)
 
-- [ ] **2. downloadImage() 다운로드 경로 수정** (줄 2806~2834)
+- [x] **2. downloadImage() 다운로드 경로 수정** (줄 2806~2834)
   - `useCustomDir` 분기 제거
   - 항상: blob → FileReader.readAsDataURL() → dataUrl → DOWNLOAD_IMAGE → background
   - blob URL 사용하지 않음 (cross-context 문제 방지)
