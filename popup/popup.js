@@ -112,8 +112,16 @@ function updateLicenseBar(licenseResult) {
     return;
   }
 
-  if (licenseResult.tier === 'pro') {
-    // Pro 사용자
+  if (licenseResult.tier === 'pro' && licenseResult.cancel_at_period_end) {
+    // Pro 사용자 (취소 예정)
+    const expiry = licenseResult.expires ? formatExpiryShort(licenseResult.expires) : '';
+    statusEl.textContent = `Pro · ${expiry ? expiry + '에 만료됩니다' : '취소 예정'}`;
+    licenseBar.className = 'license-bar license-bar-cancel';
+    logoutBtn.hidden = false;
+    upgradeBtn.hidden = true;
+    manageSubBtn.hidden = true;
+  } else if (licenseResult.tier === 'pro') {
+    // Pro 사용자 (활성)
     const email = licenseResult.email || '';
     const expiry = licenseResult.expires ? formatExpiryShort(licenseResult.expires) : '';
     statusEl.textContent = `Pro · ${email}${expiry ? ' · ' + expiry + '까지' : ''}`;
