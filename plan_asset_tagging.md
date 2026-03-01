@@ -134,7 +134,7 @@
 
 ## Phase 4: 메인 루프 수정
 
-- [ ] **4-1. `runFlowAutomation` 메인 루프 수정**
+- [x] **4-1. `runFlowAutomation` 메인 루프 수정**
   - 기존 흐름: `uploadReferences()` → `fillPrompt()` → 생성
   - 변경 흐름: `fillPromptWithAssets(segments)` → 생성
   - `uploadReferences()` 호출 제거 (에셋이 프롬프트 안에 인라인됨)
