@@ -8,17 +8,29 @@
   <link rel="stylesheet" href="grok.css">
 </head>
 <body>
-  <!-- License Lock Screen -->
-  <div id="licenseScreen" class="license-screen" hidden>
+  <!-- OTP 로그인 화면 -->
+  <div id="loginScreen" class="license-screen" hidden>
     <div class="license-box">
       <h2>Flow 자동화</h2>
-      <p class="license-desc">라이센스 키를 입력해주세요</p>
-      <div class="license-input-group">
-        <input type="text" id="licenseKeyInput" placeholder="FLOW-XXXX-XXXX" maxlength="15" spellcheck="false" autocomplete="off">
-        <button id="licenseSubmitBtn" class="btn btn-primary">확인</button>
+      <p class="license-desc">이메일로 로그인하세요</p>
+      <!-- Step 1: 이메일 입력 -->
+      <div id="otpStep1">
+        <div class="license-input-group">
+          <input type="email" id="otpEmailInput" placeholder="이메일 주소" spellcheck="false" autocomplete="email">
+          <button id="sendOtpBtn" class="btn btn-primary">인증코드 발송</button>
+        </div>
       </div>
-      <p class="license-error" id="licenseError" hidden></p>
-      <p class="license-hint">유튜브 커뮤니티에서 키를 확인하세요</p>
+      <!-- Step 2: OTP 코드 입력 -->
+      <div id="otpStep2" hidden>
+        <p class="otp-sent-msg" id="otpSentMsg"></p>
+        <div class="license-input-group">
+          <input type="text" id="otpCodeInput" placeholder="6자리 코드" maxlength="6" spellcheck="false" autocomplete="one-time-code" inputmode="numeric">
+          <button id="verifyOtpBtn" class="btn btn-primary">확인</button>
+        </div>
+        <button id="otpBackBtn" class="btn btn-small btn-secondary otp-back-btn">다시 입력</button>
+      </div>
+      <p class="license-error" id="otpError" hidden></p>
+      <button id="skipLoginBtn" class="btn-link">무료로 계속 사용 (하루 5장)</button>
     </div>
   </div>
 
