@@ -1423,33 +1423,53 @@ async function startAutomation() {
       cleanPrompt = cleanPrompt.replace(/^\[filename:.+?\]\s*/, '');
     }
 
-    // 2. [캐릭터], [장면:...], [style:...] 추출
-    const charNames = [];
+    // 2. [장면:...], [style:...] 추출 (기존 브라켓 태그 중 에셋 외)
     let scene = null;
     let style = null;
-    const charRegex = /^\[([^\]]+)\]\s*/;
-    let charM;
-    while ((charM = cleanPrompt.match(charRegex)) !== null) {
-      // [filename:...] 이나 프롬프트 본문이면 중단
-      if (charM[1].startsWith('filename:')) break;
-      // [장면:무림맹] → 장면 태그 추출
-      if (charM[1].startsWith('장면:')) {
-        scene = charM[1].replace('장면:', '').trim();
-        cleanPrompt = cleanPrompt.replace(charRegex, '');
+    const metaRegex = /^\[([^\]]+)\]\s*/;
+    let metaM;
+    while ((metaM = cleanPrompt.match(metaRegex)) !== null) {
+      if (metaM[1].startsWith('filename:')) break;
+      if (metaM[1].startsWith('장면:')) {
+        scene = metaM[1].replace('장면:', '').trim();
+        cleanPrompt = cleanPrompt.replace(metaRegex, '');
         continue;
       }
-      // [style:male] 또는 [스타일:male] → 스타일 태그 추출
-      if (charM[1].startsWith('style:') || charM[1].startsWith('스타일:')) {
-        style = charM[1].replace(/^(style:|스타일:)/, '').trim();
-        cleanPrompt = cleanPrompt.replace(charRegex, '');
+      if (metaM[1].startsWith('style:') || metaM[1].startsWith('스타일:')) {
+        style = metaM[1].replace(/^(style:|스타일:)/, '').trim();
+        cleanPrompt = cleanPrompt.replace(metaRegex, '');
         continue;
       }
-      charNames.push(charM[1]);
-      cleanPrompt = cleanPrompt.replace(charRegex, '');
+      break; // 알 수 없는 브라켓은 프롬프트 본문으로 간주
     }
-    if (charNames.length > 0) {
-      character = charNames.join(',');
+
+    // 2-1. @태그 기반 에셋 추출 + 세그먼트 분할
+    // "@yonga A warrior and @soso a girl" → segments + assetTags
+    const assetTags = [];
+    const segments = [];
+    const atRegex = /@(\w+)/g;
+    let atMatch;
+    let lastIdx = 0;
+    while ((atMatch = atRegex.exec(cleanPrompt)) !== null) {
+      // @ 앞의 텍스트
+      if (atMatch.index > lastIdx) {
+        segments.push({ type: 'text', content: cleanPrompt.slice(lastIdx, atMatch.index) });
+      }
+      segments.push({ type: 'asset', tag: atMatch[1] });
+      assetTags.push(atMatch[1]);
+      lastIdx = atMatch.index + atMatch[0].length;
     }
+    // 마지막 남은 텍스트
+    if (lastIdx < cleanPrompt.length) {
+      segments.push({ type: 'text', content: cleanPrompt.slice(lastIdx) });
+    }
+    // @태그가 없으면 전체를 텍스트 세그먼트로
+    if (segments.length === 0) {
+      segments.push({ type: 'text', content: cleanPrompt });
+    }
+
+    // character 필드: 고유 에셋 태그를 콤마로 연결 (Phase 0 업로드용)
+    character = assetTags.length > 0 ? [...new Set(assetTags)].join(',') : null;
 
     // 2-1. 자동 스타일 결정: [style:] 태그 없고 캐릭터 있으면 프로젝트별 매핑에서 결정
     if (!style && charNames.length > 0) {
