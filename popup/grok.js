@@ -275,8 +275,8 @@
       renderQueue();
     }
 
-    // 모드 복원
-    if (result.grok_activeMode === 'grok') {
+    // 모드 복원 (Pro만 Grok 복원)
+    if (result.grok_activeMode === 'grok' && (typeof currentTier === 'undefined' || currentTier === 'pro')) {
       switchMode('grok');
     }
   }
