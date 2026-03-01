@@ -369,8 +369,75 @@ function simulateClick(element) {
 3. `licenses` 테이블 + RLS 생성
 4. Edge Function `check-license` 배포
 
-## 결정 필요 사항
-1. **Freemium 티어**: 현재는 키 있으면 전체/없으면 잠금. free/pro 나눌 건지?
-2. **기존 키 방식 병행**: OTP만? 키도 유지?
-3. **오프라인 유예**: 현재 7일 → 유지? 24시간?
-4. **디바이스 핑거프린트**: 중복 로그인 방지 필요?
+## 결정 필요 사항 (해결됨)
+1. ✅ Freemium 티어: Free 5장/일 + Pro 무제한
+2. ✅ 기존 키 방식: OTP로 완전 교체
+3. ✅ 오프라인 유예: 없음 (인터넷 필수)
+4. ✅ 디바이스 핑거프린트: 1대 제한 (SHA-256 hash)
+
+---
+
+# Pro UI 개선 + Stripe 결제 연동 리서치
+
+## Pro UI 버그 (2026-03-01)
+
+### 증상
+OTP 로그인 성공 → 라이선스 바에 "무료 · 오늘 0/5장 사용"으로 표시
+→ 서버 `check_license`가 `tier: 'free'` 반환하기 때문 (아직 결제 없음)
+
+### 근본 원인
+- OTP 로그인 ≠ Pro. 로그인은 "인증"일 뿐, "결제"가 있어야 Pro.
+- 현재 `updateLicenseBar()` 로직:
+  - `tier === 'pro'` → Pro 바 (초록색 + 만료일)
+  - else → Free 바 ("무료 · 오늘 X/5장")
+- 로그인한 Free 사용자: `logoutBtn` 표시 + `upgradeBtn` 숨김
+  → **문제**: 로그인 했는데 업그레이드 버튼이 안 보임!
+
+### 필요한 UI 상태 (3가지)
+
+| 상태 | 라이선스 바 | 버튼 |
+|------|-----------|------|
+| **비로그인 Free** | `무료 · 오늘 2/5장 사용` | [Pro 업그레이드] |
+| **로그인 Free** | `무료 · user@email.com · 오늘 2/5장 사용` | [Pro 업그레이드] [로그아웃] |
+| **Pro** | `Pro · user@email.com · 만료: 4월 1일` | [구독 관리] [로그아웃] |
+
+### 수정 포인트
+1. `updateLicenseBar()` — 로그인 Free 상태에서도 upgradeBtn 표시
+2. Pro 상태일 때 만료일 표시 + "구독 관리" 버튼 (Stripe Customer Portal)
+3. `upgradeBtn` 클릭 → Stripe Payment Link로 이동 (현재는 loginScreen 표시)
+
+## Stripe 결제 연동 리서치 요약
+
+상세 리서치: `research_stripe.md` 참조
+
+### 추천 아키텍처: Payment Link + Webhook Edge Function
+
+| 구성 요소 | 역할 | 코드량 |
+|-----------|------|--------|
+| Stripe Payment Link | 결제 페이지 (대시보드에서 생성) | 0줄 |
+| Supabase Edge Function | Stripe webhook 수신 → DB 업데이트 | ~100줄 |
+| Chrome 확장 수정 | upgradeBtn → Payment Link URL 열기 | ~10줄 |
+| Stripe Customer Portal | 구독 취소/카드 변경 | 설정만 |
+
+### 결제 흐름
+```
+[확장] "업그레이드" 클릭
+  → chrome.tabs.create({ url: 'https://buy.stripe.com/XXX?prefilled_email=...&client_reference_id=USER_ID' })
+  → [Stripe 결제 페이지] → 카드 입력 → 결제
+  → [Stripe webhook] → checkout.session.completed
+  → [Edge Function] → licenses 테이블: tier='pro', expires_at=+30일
+  → [확장] 다음 checkLicense() 시 Pro 전환 (5분 캐시 후)
+```
+
+### DB 변경 필요
+```sql
+ALTER TABLE licenses ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT;
+ALTER TABLE licenses ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT;
+```
+
+### Webhook 처리 이벤트
+| 이벤트 | 처리 |
+|--------|------|
+| `checkout.session.completed` | tier='pro', expires_at 설정 |
+| `invoice.payment_succeeded` | expires_at 갱신 (매달) |
+| `customer.subscription.deleted` | tier='free' 다운그레이드 |
