@@ -5,7 +5,7 @@
 
 ## 수정 방법
 
-- [ ] **popup.js를 e856585 상태로 되돌리기**
+- [x] **popup.js를 e856585 상태로 되돌리기**
   - `git checkout e856585 -- popup/popup.js`
   - e856585 = "다운로드 폴더 논의 직전" 마지막 정상 커밋
   - 이렇게 하면 cfcc9ac(Phase 3 폴링 변경)과 146d175(img.src 변경) 모두 되돌아감
