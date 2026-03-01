@@ -1899,39 +1899,58 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     setReactInputValue(searchInput, assetName);
     await sleep(800);
 
-    // 3. onclick 핸들러가 있는 에셋 아이템 찾기
+    // 3. 에셋 아이템 찾기 (크기 + 텍스트 매칭, onclick 의존 제거)
     var target = null;
+    var expectedName = '#' + assetName + '.png';
     var allDivs = panel.querySelectorAll('div');
+    var candidates = [];
     for (var i = 0; i < allDivs.length; i++) {
       var d = allDivs[i];
       var txt = (d.textContent || '').trim();
-      if (txt === '#' + assetName + '.png' && d.onclick) {
-        target = d;
-        break;
+      var rect = d.getBoundingClientRect();
+      // 에셋 아이템: ~250x56 크기, 텍스트가 정확히 "#name.png"
+      if (txt === expectedName && rect.width > 200 && rect.height > 30 && rect.height < 80) {
+        candidates.push(d);
       }
     }
-    // 폴백: 이름 부분 매치
+    // 후보 중 가장 안쪽(자식이 적은) 요소 선택 — 가장 구체적인 아이템
+    if (candidates.length > 0) {
+      candidates.sort(function(a, b) { return a.children.length - b.children.length; });
+      target = candidates[0];
+      console.log('[Flow Auto] 에셋 아이템 발견: "' + expectedName + '" (' + candidates.length + '개 후보)');
+    }
+    // 폴백: 이름 부분 매치 + 적절한 크기
     if (!target) {
       for (var i = 0; i < allDivs.length; i++) {
         var d2 = allDivs[i];
-        if (d2.onclick && (d2.textContent || '').indexOf(assetName) >= 0) {
+        var txt2 = (d2.textContent || '').trim();
+        var rect2 = d2.getBoundingClientRect();
+        if (txt2.indexOf(assetName) >= 0 && rect2.width > 200 && rect2.height > 30 && rect2.height < 80) {
           target = d2;
+          console.log('[Flow Auto] 에셋 폴백 매치: "' + txt2.slice(0, 30) + '"');
           break;
         }
       }
     }
     if (!target) {
       console.error('[Flow Auto] 에셋 아이템 못 찾음: ' + assetName);
+      // 디버그: 패널 내 모든 아이템 로깅
+      for (var i = 0; i < allDivs.length; i++) {
+        var dd = allDivs[i];
+        var rr = dd.getBoundingClientRect();
+        if (rr.width > 200 && rr.height > 30 && rr.height < 80) {
+          console.log('[Flow Auto]   후보: "' + (dd.textContent || '').trim().slice(0, 40) + '" ' +
+            Math.round(rr.width) + 'x' + Math.round(rr.height));
+        }
+      }
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       await sleep(300);
       return false;
     }
 
-    // 4. 클릭으로 void 삽입
+    // 4. 클릭으로 void 삽입 + 패널 닫기
     target.click();
     await sleep(300);
-
-    // 5. 패널 닫기 (img.click → Escape 폴백)
     var img = target.querySelector('img');
     if (img) {
       img.click();
