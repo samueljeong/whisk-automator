@@ -690,7 +690,7 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
 
 ### 6B-5. Chrome 확장 수정
 
-- [ ] **`popup/popup.js` — upgradeBtn 클릭 → 결제 페이지 열기**
+- [x] **`popup/popup.js` — upgradeBtn 클릭 → 결제 페이지 열기**
   ```js
   const email = await getAuthEmail();
   const userId = await getAuthUserId();
