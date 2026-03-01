@@ -648,7 +648,7 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
   - 성공 시 → Supabase Edge Function 호출 (빌링키 + userId 전달)
   - 결과 표시 (성공/실패)
 
-- [ ] **`payment/success.html`** — 결제 완료 페이지
+- [x] **`payment/success.html`** — 결제 완료 페이지
   - "구독이 시작되었습니다! 확장 프로그램으로 돌아가세요"
   - 자동 탭 닫기 또는 확장 열기 안내
 
