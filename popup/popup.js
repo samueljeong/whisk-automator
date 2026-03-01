@@ -3207,10 +3207,6 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         if (img.src) preGenSrcs.add(img.src);
       });
 
-      // 제출 시점 스냅샷: 각 프롬프트 제출 직후의 이미지 상태를 기록
-      // submitSnapshots[j] = 프롬프트 j 제출 직후의 모든 이미지 src Set
-      var submitSnapshots = [];
-
       // Phase 2: 프롬프트 연속 제출 (생성 완료를 기다리지 않음)
       for (var j = 0; j < totalCount; j++) {
         if (isStopRequested()) {
