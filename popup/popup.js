@@ -1373,7 +1373,7 @@ async function startAutomation() {
   const indexMap = pendingPrompts.map(p => p.originalIndex);
   const delayMs = parseInt(delayInput.value) * 1000;
   const shouldDownload = autoDownload.checked;
-  const savePath = saveLocation.value.trim() || 'flow-images';
+  const savePath = saveLocation.value.replace(/^📁\s*/, '').trim() || 'flow-images';
   promptIndexMap = indexMap; // PROGRESS_UPDATE 핸들러에서 사용
 
   // 프로젝트 스타일 설정 가져오기
@@ -4001,7 +4001,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
         // 폴백: customDirHandle 없거나 저장 실패 시 chrome.downloads로 저장
         try {
-          const savePath = saveLocation.value.trim() || 'flow-images';
+          const savePath = saveLocation.value.replace(/^📁\s*/, '').trim() || 'flow-images';
           const fullPath = savePath.replace(/^[\uD83D\uDCC1]\s*/, '') + '/' + message.filename;
           chrome.runtime.sendMessage({
             action: 'DOWNLOAD_IMAGE',
