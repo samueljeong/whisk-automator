@@ -2517,27 +2517,11 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     window.addEventListener('popstate', blockNav, true);
     window.addEventListener('beforeunload', blockNav, true);
 
-    // ArrowDown → 첫 번째 결과 포커스
+    // Enter → 첫 번째 검색 결과 바로 선택
     searchInput.dispatchEvent(new KeyboardEvent('keydown', {
-      key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, bubbles: true, cancelable: true
-    }));
-    searchInput.dispatchEvent(new KeyboardEvent('keyup', {
-      key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, bubbles: true
-    }));
-    await sleep(300);
-
-    // ArrowDown 후 포커스된 요소 찾기 (Radix는 포커스를 리스트 아이템으로 이동시킴)
-    var focusedEl = document.activeElement;
-    var enterTarget = (focusedEl && focusedEl !== searchInput && focusedEl !== document.body) ? focusedEl : searchInput;
-    console.log('[Flow Auto] Enter 대상: ' + enterTarget.tagName + ' class="' +
-      (enterTarget.className || '').toString().substring(0, 60) + '"' +
-      (enterTarget === searchInput ? ' (searchInput)' : ' (포커스된 요소)'));
-
-    // Enter → 선택 확정
-    enterTarget.dispatchEvent(new KeyboardEvent('keydown', {
       key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true
     }));
-    enterTarget.dispatchEvent(new KeyboardEvent('keyup', {
+    searchInput.dispatchEvent(new KeyboardEvent('keyup', {
       key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true
     }));
     await sleep(800);
