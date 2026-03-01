@@ -148,7 +148,7 @@ async function checkLicense() {
         Authorization: `Bearer ${token}`,
         apikey: SUPABASE_ANON_KEY,
       },
-      body: JSON.stringify({ action: "check", device_hash: deviceHash }),
+      body: JSON.stringify({ p_device_hash: deviceHash }),
     });
 
     if (!res.ok) {
