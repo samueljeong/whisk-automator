@@ -3026,20 +3026,13 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       }
 
       try {
-        var blob = verifiedImages[di].blob;
         console.log('[Flow Auto] DL ' + (di + 1) + '/' + dlCount + ': ' + fullFilename +
-          ' (' + Math.round(blob.size / 1024) + 'KB, 출현순서 #' + (di + 1) + ')');
+          ' (' + Math.round(verifiedImages[di].size / 1024) + 'KB, 출현순서 #' + (di + 1) + ')');
 
-        // blob → data URL 변환 후 background에 전달
-        var reader = new FileReader();
-        var dataUrl = await new Promise(function(resolve, reject) {
-          reader.onload = function() { resolve(reader.result); };
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        });
+        // 원본 이미지 URL을 background에 전달 (cross-context 안전)
         chrome.runtime.sendMessage({
           action: 'DOWNLOAD_IMAGE',
-          url: dataUrl,
+          url: verifiedImages[di].img.src,
           filename: savePath + '/' + fullFilename
         });
       } catch (e) {
