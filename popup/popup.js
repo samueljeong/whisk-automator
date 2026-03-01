@@ -3982,7 +3982,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       // 필터링된 인덱스를 원본 인덱스로 변환
       const origIdx = promptIndexMap.length > 0 ? promptIndexMap[message.promptIndex] : message.promptIndex;
       if (message.status && origIdx !== undefined && prompts[origIdx]) {
-        prompts[origIdx].status = message.status;
+        const testModeCheck = document.getElementById('testModeCheck');
+        if (message.status === 'completed' && testModeCheck && testModeCheck.checked) {
+          console.log('[Popup] 테스트 모드: completed 스킵 (프롬프트 유지)');
+        } else {
+          prompts[origIdx].status = message.status;
+        }
         // Free 사용자: 생성 완료 시 카운트 증가
         if (message.status === 'completed' && currentTier !== 'pro') {
           incrementFreeUsage().then(() => refreshLicenseBar());
