@@ -3119,14 +3119,19 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       var matchMethod = matchedImages.has(di) ? '스냅샷/텍스트매칭' : '순서폴백';
       try {
         var blob = verifiedImages[di].blob;
-        var imgSrc = verifiedImages[di].img.src;
         console.log('[Flow Auto] DL ' + (di + 1) + '/' + dlCount + ': ' + fullFilename +
           ' (' + Math.round(blob.size / 1024) + 'KB, ' + matchMethod + ')');
 
-        // 원본 이미지 URL로 chrome.downloads 요청 (blob URL은 background에서 접근 불가)
+        // blob → data URL 변환 후 background에 전달 (blob URL은 background에서 접근 불가)
+        var reader = new FileReader();
+        var dataUrl = await new Promise(function(resolve, reject) {
+          reader.onload = function() { resolve(reader.result); };
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
         chrome.runtime.sendMessage({
           action: 'DOWNLOAD_IMAGE',
-          url: imgSrc,
+          url: dataUrl,
           filename: savePath + '/' + fullFilename
         });
       } catch (e) {
