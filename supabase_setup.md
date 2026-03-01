@@ -1,8 +1,19 @@
-# Step 4: 라이선스 체크 함수
+# Step 4: DB 마이그레이션 — 결제 컬럼 추가
+
+SQL Editor에서 아래를 실행 (기존 테이블에 컬럼 추가)
+
+```sql
+ALTER TABLE licenses
+  ADD COLUMN IF NOT EXISTS billing_key TEXT,
+  ADD COLUMN IF NOT EXISTS plan_type TEXT CHECK (plan_type IN ('monthly', 'yearly')),
+  ADD COLUMN IF NOT EXISTS cancel_at_period_end BOOLEAN DEFAULT FALSE;
+```
+
+# Step 5: 라이선스 체크 함수 (업데이트)
 
 SQL Editor의 기존 내용 전체 지우고, 아래만 붙여넣고 Run
 
-```
+```sql
 CREATE OR REPLACE FUNCTION check_license(p_device_hash TEXT DEFAULT NULL)
 RETURNS JSON
 LANGUAGE plpgsql
@@ -12,6 +23,7 @@ DECLARE
   v_user_id UUID;
   v_license RECORD;
   v_conflict BOOLEAN := FALSE;
+  v_tier TEXT;
 BEGIN
   v_user_id := auth.uid();
   IF v_user_id IS NULL THEN
@@ -23,7 +35,12 @@ BEGIN
   IF NOT FOUND THEN
     INSERT INTO licenses (user_id, tier, device_hash, last_login_at)
     VALUES (v_user_id, 'free', p_device_hash, now());
-    RETURN json_build_object('tier', 'free', 'expires_at', NULL, 'device_conflict', FALSE);
+    RETURN json_build_object(
+      'tier', 'free',
+      'expires_at', NULL,
+      'device_conflict', FALSE,
+      'cancel_at_period_end', FALSE
+    );
   END IF;
 
   IF v_license.device_hash IS NOT NULL
@@ -38,10 +55,17 @@ BEGIN
       updated_at = now()
   WHERE user_id = v_user_id;
 
+  -- 만료일이 지났으면 free로 전환
+  v_tier := CASE
+    WHEN v_license.expires_at IS NOT NULL AND v_license.expires_at < now() THEN 'free'
+    ELSE COALESCE(v_license.tier, 'free')
+  END;
+
   RETURN json_build_object(
-    'tier', CASE WHEN v_license.expires_at IS NOT NULL AND v_license.expires_at < now() THEN 'free' ELSE COALESCE(v_license.tier, 'free') END,
+    'tier', v_tier,
     'expires_at', v_license.expires_at,
-    'device_conflict', v_conflict
+    'device_conflict', v_conflict,
+    'cancel_at_period_end', COALESCE(v_license.cancel_at_period_end, FALSE)
   );
 END;
 $$;
