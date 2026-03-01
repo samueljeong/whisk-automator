@@ -12,7 +12,7 @@
     - N번째 다운로드 = `promptsWithCharacters[N]`의 파일명
   - 크기 필터 유지: 200KB 미만 = 에셋/썸네일 → 스킵 (downloadedCount 증가 안 함)
 
-- [ ] **2. Phase 4 제거**
+- [x] **2. Phase 4 제거**
   - 위치: 줄 3431~3436
   - `downloadBatch()` 호출 제거 (Phase 3에서 이미 다운로드 완료)
   - `downloadBatch` 함수 자체는 남겨둠 (폴백용)
