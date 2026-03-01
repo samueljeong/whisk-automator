@@ -52,9 +52,9 @@
       flowContainer.hidden = false;
       grokContainer.hidden = true;
     } else {
-      // 라이선스 인증 확인
-      if (!window.licenseValid) {
-        alert('Flow 라이선스 인증 후 사용할 수 있습니다.');
+      // Pro 전용 기능
+      if (typeof currentTier !== 'undefined' && currentTier !== 'pro') {
+        alert('Grok 영상은 Pro 전용 기능입니다.\n이메일 로그인 후 사용할 수 있습니다.');
         return;
       }
       modeTabFlow.classList.remove('active');
