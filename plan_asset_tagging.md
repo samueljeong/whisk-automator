@@ -69,7 +69,7 @@
 ## Phase 2: 프롬프트 입력 방식 변경 (`popup.js`)
 
 ### 2-1. 에셋 삽입 함수 (`insertAssetByAtTag`)
-- [ ] v9 `insertAsset()` 기반으로 정식 함수 작성
+- [x] v9 `insertAsset()` 기반으로 정식 함수 작성
   ```
   1. editor.focus()
   2. typeAt() — KeyboardEvent 풀 시퀀스
