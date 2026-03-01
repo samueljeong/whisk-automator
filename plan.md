@@ -700,7 +700,7 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
   chrome.tabs.create({ url: paymentUrl });
   ```
 
-- [ ] **`popup/popup.js` — manageSubBtn 클릭 → 구독 관리**
+- [x] **`popup/popup.js` — manageSubBtn 클릭 → 구독 관리**
   - 구독 상태 표시 + 취소 버튼
   - 취소 시 `cancel-subscription` Edge Function 호출
   - 취소 후 UI: "Pro · 4월 1일에 만료됩니다" (경고색)
