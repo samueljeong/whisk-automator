@@ -82,6 +82,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 커스텀 폴더 UI 상태 반영
   if (typeof updateCustomDirUI === 'function') updateCustomDirUI();
   if (typeof updateCharFolderHint === 'function') updateCharFolderHint();
+
+  // 테스트 모드 체크 상태 복원 + 변경 시 저장
+  const testModeCheck = document.getElementById('testModeCheck');
+  if (testModeCheck) {
+    chrome.storage.local.get('testMode', (result) => {
+      testModeCheck.checked = !!result.testMode;
+    });
+    testModeCheck.addEventListener('change', () => {
+      chrome.storage.local.set({ testMode: testModeCheck.checked });
+    });
+  }
 });
 
 // License UI functions
