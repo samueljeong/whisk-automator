@@ -1363,24 +1363,8 @@ async function startAutomation() {
   currentPromptEl.textContent = '시작 준비 중...';
   updateUI();
 
-  // 커스텀 폴더 권한 재확인 (확장 리로드 후 'prompt' 상태일 수 있음)
-  if (!customDirHandle) {
-    try {
-      const savedHandle = await loadDirHandle();
-      if (savedHandle) {
-        const perm = await savedHandle.requestPermission({ mode: 'readwrite' });
-        if (perm === 'granted') {
-          customDirHandle = savedHandle;
-          saveLocation.value = '\uD83D\uDCC1 ' + savedHandle.name;
-          saveLocation.readOnly = true;
-          updateCustomDirUI();
-          console.log('[Popup] 커스텀 폴더 권한 재획득:', savedHandle.name);
-        }
-      }
-    } catch (e) {
-      console.log('[Popup] 커스텀 폴더 권한 재요청 실패:', e);
-    }
-  }
+  // customDirHandle은 더 이상 사용하지 않음 → 다운로드 폴더 하위 경로로 통일
+  customDirHandle = null;
 
   const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
   const tab = tabs[0];
