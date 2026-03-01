@@ -3910,6 +3910,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const origIdx = promptIndexMap.length > 0 ? promptIndexMap[message.promptIndex] : message.promptIndex;
       if (message.status && origIdx !== undefined && prompts[origIdx]) {
         prompts[origIdx].status = message.status;
+        // Free 사용자: 생성 완료 시 카운트 증가
+        if (message.status === 'completed' && currentTier !== 'pro') {
+          incrementFreeUsage().then(() => refreshLicenseBar());
+        }
       }
       // 진행 바 + 현재 프롬프트 즉시 업데이트 (offset 보정)
       if (adjustedTotal > 0) {
