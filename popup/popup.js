@@ -964,6 +964,10 @@ function buildCharacterMap() {
     if (data.flowTag) {
       flowTagMap[name] = data.flowTag;
       flowTagMap[name.normalize('NFC')] = data.flowTag;
+      // 역방향 매핑: flowTag → image (@태그 방식에서 영문 태그로 이미지 조회용)
+      var cleanTag = data.flowTag.replace(/^#/, '');
+      map[cleanTag] = data.image;
+      flowTagMap[cleanTag] = data.flowTag;
     }
     if (data.aliases) {
       data.aliases.forEach(alias => {
