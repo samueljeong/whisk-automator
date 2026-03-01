@@ -857,6 +857,11 @@ footer {
   color: #999;
 }
 
+.license-bar-cancel {
+  background: #4a3b15;
+  color: #fbbf24;
+}
+
 .license-bar-warning {
   background: #4a1515;
   color: #f87171;
