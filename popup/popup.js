@@ -1360,9 +1360,10 @@ async function startAutomation() {
     return;
   }
 
-  // Free 한도 체크
+  // Free 한도 체크 (테스트 모드면 건너뜀)
+  const testModeOn = document.getElementById('testModeCheck') && document.getElementById('testModeCheck').checked;
   const genCheck = await canGenerate(pendingPrompts.length);
-  if (!genCheck.allowed) {
+  if (!genCheck.allowed && !testModeOn) {
     alert(genCheck.message + '\n\n이메일 로그인으로 Pro 업그레이드하면 무제한 사용 가능합니다.');
     return;
   }
