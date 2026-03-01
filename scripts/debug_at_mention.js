@@ -3,7 +3,7 @@
   function p(s) { log.push(s); console.log(s); }
   function sleep(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
 
-  p("=== Flow @ asset select debug v3 ===");
+  p("=== Flow @ asset select debug v4 ===");
 
   var editor = document.querySelector('[role="textbox"][contenteditable="true"]');
   if (!editor) { p("ERROR: no editor"); return; }
@@ -34,31 +34,28 @@
     return null;
   }
 
-  function describeEditor() {
-    var nodes = editor.querySelectorAll("*");
-    var desc = [];
-    for (var i = 0; i < nodes.length; i++) {
-      var n = nodes[i];
-      var tag = n.tagName;
-      var ce = n.getAttribute("contenteditable");
-      var dv = n.getAttribute("data-slate-void");
-      var img = n.querySelector("img");
-      var r = n.getBoundingClientRect();
-      if (r.width > 0 && r.height > 0) {
-        var info = tag;
-        if (ce === "false") info += "[ce=false]";
-        if (dv) info += "[void]";
-        if (img) info += "[has-img src=" + img.src.slice(0, 60) + "]";
-        info += " " + Math.round(r.width) + "x" + Math.round(r.height);
-        info += " text=" + (n.textContent || "").slice(0, 40);
-        desc.push(info);
+  function getAssetItems(panel) {
+    var allDivs = panel.querySelectorAll("div");
+    var items = [];
+    for (var i = 0; i < allDivs.length; i++) {
+      var r = allDivs[i].getBoundingClientRect();
+      var t = (allDivs[i].textContent || "").trim();
+      if (r.width > 200 && r.width < 300 && r.height > 40 && r.height < 80 && t.length > 0) {
+        items.push({ el: allDivs[i], text: t });
       }
     }
-    return desc;
+    return items;
   }
 
-  // === STEP 1: type @ and open panel ===
-  p("\n--- STEP 1: type @ ---");
+  function setReactInput(input, value) {
+    var setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+    setter.call(input, value);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  // === STEP 1: open panel ===
+  p("--- STEP 1: open panel ---");
   clearEditor();
   await sleep(200);
   editor.focus();
@@ -67,142 +64,137 @@
 
   var panel = getPanel();
   if (!panel) { p("ERROR: panel not found"); return; }
-  p("panel open: " + Math.round(panel.getBoundingClientRect().width) + "x" + Math.round(panel.getBoundingClientRect().height));
-
-  // === STEP 2: examine panel structure ===
-  p("\n--- STEP 2: panel structure ---");
+  p("panel open OK");
 
   var searchInput = panel.querySelector("input");
-  if (searchInput) {
-    p("search input found: placeholder=" + (searchInput.placeholder || "none") + " type=" + (searchInput.type || "text"));
-  } else {
-    p("no search input in panel");
+  if (!searchInput) { p("ERROR: no search input"); return; }
+  p("search input found");
+
+  var itemsBefore = getAssetItems(panel);
+  p("items before search: " + itemsBefore.length);
+
+  // === STEP 2: React search - Method A ===
+  p("\n--- STEP 2A: React nativeInputValueSetter ---");
+  searchInput.focus();
+  setReactInput(searchInput, "yonga");
+  await sleep(500);
+
+  var itemsA = getAssetItems(panel);
+  p("items after React set: " + itemsA.length);
+  for (var i = 0; i < Math.min(itemsA.length, 5); i++) {
+    p("  [" + i + "] " + itemsA[i].text.slice(0, 50));
   }
 
-  var allDivs = panel.querySelectorAll("div");
-  var assetItems = [];
-  for (var i = 0; i < allDivs.length; i++) {
-    var r = allDivs[i].getBoundingClientRect();
-    var t = (allDivs[i].textContent || "").trim();
-    if (r.width > 200 && r.width < 300 && r.height > 40 && r.height < 80 && t.length > 0) {
-      assetItems.push({ el: allDivs[i], text: t, cls: (allDivs[i].className || "").toString().slice(0, 60) });
-    }
-  }
-  p("asset items found: " + assetItems.length);
-  for (var i = 0; i < Math.min(assetItems.length, 5); i++) {
-    p("  [" + i + "] " + assetItems[i].text.slice(0, 50) + " cls=" + assetItems[i].cls.slice(0, 40));
-  }
-
-  var sections = panel.querySelectorAll("button, [role='tab'], [role='button'], h2, h3, label");
-  p("controls: " + sections.length);
-  for (var i = 0; i < sections.length; i++) {
-    var sr = sections[i].getBoundingClientRect();
-    if (sr.width > 0) {
-      p("  " + sections[i].tagName + " " + Math.round(sr.width) + "x" + Math.round(sr.height) + " text=" + (sections[i].textContent || "").slice(0, 40));
-    }
-  }
-
-  // === STEP 3: try search input ===
-  p("\n--- STEP 3: search for yonga ---");
-  if (searchInput) {
-    p("typing in search input...");
-    searchInput.focus();
-    searchInput.value = "";
-    for (var ci = 0; ci < "yonga".length; ci++) {
-      var ch = "yonga"[ci];
-      searchInput.value += ch;
-      searchInput.dispatchEvent(new Event("input", { bubbles: true }));
-      searchInput.dispatchEvent(new Event("change", { bubbles: true }));
-      await sleep(100);
-    }
-    await sleep(500);
-    p("search value: " + searchInput.value);
-
-    var afterItems = [];
-    var allDivs2 = panel.querySelectorAll("div");
-    for (var i = 0; i < allDivs2.length; i++) {
-      var r2 = allDivs2[i].getBoundingClientRect();
-      var t2 = (allDivs2[i].textContent || "").trim();
-      if (r2.width > 200 && r2.width < 300 && r2.height > 40 && r2.height < 80 && t2.length > 0) {
-        afterItems.push({ el: allDivs2[i], text: t2 });
-      }
-    }
-    p("items after search: " + afterItems.length);
-    for (var i = 0; i < Math.min(afterItems.length, 5); i++) {
-      p("  [" + i + "] " + afterItems[i].text.slice(0, 50));
-    }
-  } else {
-    p("no search input, trying keyboard filter...");
-    var filterChars = "yonga";
-    for (var ci = 0; ci < filterChars.length; ci++) {
-      var ch = filterChars[ci];
-      var ko = { key: ch, code: "Key" + ch.toUpperCase(), bubbles: true, cancelable: true };
-      document.activeElement.dispatchEvent(new KeyboardEvent("keydown", ko));
-      document.activeElement.dispatchEvent(new KeyboardEvent("keypress", ko));
-      document.execCommand("insertText", false, ch);
-      document.activeElement.dispatchEvent(new KeyboardEvent("keyup", ko));
-      await sleep(100);
-    }
-    await sleep(500);
-    p("editor text after filter: " + (editor.textContent || "").slice(0, 50));
-  }
-
-  // === STEP 4: try ArrowDown + Enter to select ===
-  p("\n--- STEP 4: keyboard select ---");
-  var beforeNodes = describeEditor();
-  p("editor nodes before select: " + beforeNodes.length);
-
-  document.activeElement.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }));
-  await sleep(200);
-  document.activeElement.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }));
-  await sleep(200);
-
-  var highlighted = panel.querySelector("[data-highlighted], [aria-selected='true'], [class*='highlight'], [class*='active'], [class*='selected']");
-  if (highlighted) {
-    p("highlighted item: " + (highlighted.textContent || "").slice(0, 50));
-  } else {
-    p("no highlighted item found");
-    var style = document.querySelectorAll("[style*='background']");
-    for (var si = 0; si < style.length; si++) {
-      var sr = style[si].getBoundingClientRect();
-      if (sr.width > 200 && sr.width < 300 && sr.height > 40 && sr.height < 80) {
-        p("  bg-styled item: " + (style[si].textContent || "").slice(0, 50) + " bg=" + style[si].style.background);
-      }
-    }
-  }
-
-  p("pressing Enter...");
-  document.activeElement.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
-  await sleep(800);
-
-  // === STEP 5: check what was inserted ===
-  p("\n--- STEP 5: result after Enter ---");
-  var panelAfter = getPanel();
-  p("panel still open: " + (panelAfter ? "YES " + Math.round(panelAfter.getBoundingClientRect().width) + "x" + Math.round(panelAfter.getBoundingClientRect().height) : "NO (closed)"));
-
-  var afterNodes = describeEditor();
-  p("editor nodes after select: " + afterNodes.length);
-  for (var i = 0; i < afterNodes.length; i++) {
-    p("  " + afterNodes[i]);
-  }
-
-  p("editor innerHTML (first 500): " + editor.innerHTML.slice(0, 500));
-  p("editor textContent: " + (editor.textContent || "").slice(0, 100));
-
-  var voids = editor.querySelectorAll("[data-slate-void], [contenteditable='false']");
-  p("void/non-editable nodes: " + voids.length);
-  for (var vi = 0; vi < voids.length; vi++) {
-    var vr = voids[vi].getBoundingClientRect();
-    var vimg = voids[vi].querySelector("img");
-    p("  void[" + vi + "] " + voids[vi].tagName + " " + Math.round(vr.width) + "x" + Math.round(vr.height) + (vimg ? " img=" + vimg.src.slice(0, 60) : "") + " text=" + (voids[vi].textContent || "").slice(0, 40));
-  }
-
-  // === STEP 6: try typing text after asset ===
-  p("\n--- STEP 6: type text after asset ---");
-  document.execCommand("insertText", false, " test prompt text");
+  // === STEP 2B: clear and try keyboard typing ===
+  p("\n--- STEP 2B: clear + keyboard char by char ---");
+  setReactInput(searchInput, "");
   await sleep(300);
-  p("final editor text: " + (editor.textContent || "").slice(0, 150));
-  p("final editor HTML (500): " + editor.innerHTML.slice(0, 500));
+
+  var itemsCleared = getAssetItems(panel);
+  p("items after clear: " + itemsCleared.length);
+
+  searchInput.focus();
+  var word = "yonga";
+  for (var ci = 0; ci < word.length; ci++) {
+    var ch = word[ci];
+    var ko = { key: ch, code: "Key" + ch.toUpperCase(), keyCode: ch.charCodeAt(0), bubbles: true, cancelable: true };
+    searchInput.dispatchEvent(new KeyboardEvent("keydown", ko));
+    searchInput.dispatchEvent(new KeyboardEvent("keypress", ko));
+    var setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+    setter.call(searchInput, searchInput.value + ch);
+    searchInput.dispatchEvent(new Event("input", { bubbles: true }));
+    searchInput.dispatchEvent(new KeyboardEvent("keyup", ko));
+    await sleep(100);
+  }
+  await sleep(500);
+
+  var itemsB = getAssetItems(panel);
+  p("items after keyboard: " + itemsB.length);
+  for (var i = 0; i < Math.min(itemsB.length, 5); i++) {
+    p("  [" + i + "] " + itemsB[i].text.slice(0, 50));
+  }
+
+  // === STEP 2C: try execCommand on search input ===
+  p("\n--- STEP 2C: execCommand on search input ---");
+  setReactInput(searchInput, "");
+  await sleep(300);
+  searchInput.focus();
+  document.execCommand("insertText", false, "yonga");
+  await sleep(500);
+
+  p("search value: " + searchInput.value);
+  var itemsC = getAssetItems(panel);
+  p("items after execCommand: " + itemsC.length);
+  for (var i = 0; i < Math.min(itemsC.length, 5); i++) {
+    p("  [" + i + "] " + itemsC[i].text.slice(0, 50));
+  }
+
+  // === STEP 3: direct click on first yonga item ===
+  p("\n--- STEP 3: direct click on #yonga item ---");
+  setReactInput(searchInput, "");
+  await sleep(300);
+
+  var allItems = getAssetItems(panel);
+  var yongaItem = null;
+  for (var i = 0; i < allItems.length; i++) {
+    if (allItems[i].text.indexOf("yonga") >= 0) {
+      yongaItem = allItems[i];
+      p("found yonga item: " + allItems[i].text);
+      break;
+    }
+  }
+
+  if (yongaItem) {
+    editor.focus();
+    await sleep(100);
+
+    var voidsBefore = editor.querySelectorAll("[data-slate-void]").length;
+    p("voids before click: " + voidsBefore);
+
+    var rect = yongaItem.el.getBoundingClientRect();
+    var cx = rect.left + rect.width / 2;
+    var cy = rect.top + rect.height / 2;
+    var clickOpts = { bubbles: true, cancelable: true, clientX: cx, clientY: cy, button: 0 };
+
+    yongaItem.el.dispatchEvent(new PointerEvent("pointerdown", clickOpts));
+    yongaItem.el.dispatchEvent(new MouseEvent("mousedown", clickOpts));
+    yongaItem.el.dispatchEvent(new PointerEvent("pointerup", clickOpts));
+    yongaItem.el.dispatchEvent(new MouseEvent("mouseup", clickOpts));
+    yongaItem.el.dispatchEvent(new MouseEvent("click", clickOpts));
+    await sleep(800);
+
+    var voidsAfter = editor.querySelectorAll("[data-slate-void]").length;
+    p("voids after click: " + voidsAfter);
+    p("panel still open: " + (getPanel() ? "YES" : "NO"));
+
+    if (voidsAfter > voidsBefore) {
+      p("SUCCESS: void node added by click!");
+      var lastVoid = editor.querySelectorAll("[data-slate-void]")[voidsAfter - 1];
+      p("inserted: " + (lastVoid.textContent || "").slice(0, 60));
+    } else {
+      p("click did not insert void node");
+
+      // try .click() native
+      p("trying native .click()...");
+      yongaItem.el.click();
+      await sleep(800);
+
+      var voidsNative = editor.querySelectorAll("[data-slate-void]").length;
+      p("voids after native click: " + voidsNative);
+      p("panel still open: " + (getPanel() ? "YES" : "NO"));
+    }
+  } else {
+    p("yonga item not found in panel");
+  }
+
+  // === STEP 4: check final editor state ===
+  p("\n--- STEP 4: final state ---");
+  var finalVoids = editor.querySelectorAll("[data-slate-void]");
+  p("total void nodes: " + finalVoids.length);
+  for (var vi = 0; vi < finalVoids.length; vi++) {
+    p("  void[" + vi + "] " + (finalVoids[vi].textContent || "").slice(0, 60));
+  }
+  p("editor text: " + (editor.textContent || "").slice(0, 150));
 
   clearEditor();
   p("\n=== DONE ===");
