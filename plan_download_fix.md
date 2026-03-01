@@ -17,7 +17,7 @@
   - `downloadBatch()` 호출 제거 (Phase 3에서 이미 다운로드 완료)
   - `downloadBatch` 함수 자체는 남겨둠 (폴백용)
 
-- [ ] **3. 다운로드 경로 통일**
+- [x] **3. 다운로드 경로 통일**
   - `useCustomDir` 분기 제거
   - 항상: blob → FileReader → dataUrl → `DOWNLOAD_IMAGE` → background → `chrome.downloads`
   - blob URL (cross-context 문제) 사용하지 않음
