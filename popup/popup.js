@@ -1471,19 +1471,19 @@ async function startAutomation() {
     // character 필드: 고유 에셋 태그를 콤마로 연결 (Phase 0 업로드용)
     character = assetTags.length > 0 ? [...new Set(assetTags)].join(',') : null;
 
-    // 2-1. 자동 스타일 결정: [style:] 태그 없고 캐릭터 있으면 프로젝트별 매핑에서 결정
-    if (!style && charNames.length > 0) {
+    // 2-1. 자동 스타일 결정: [style:] 태그 없고 에셋 있으면 프로젝트별 매핑에서 결정
+    if (!style && assetTags.length > 0) {
       const charStyleMap = (project && project.characterStyleMap) || {};
       const mixedPreset = (project && project.mixedStylePreset) || '';
       const styleTypes = new Set(
-        charNames.map(n => charStyleMap[n]).filter(Boolean)
+        assetTags.map(n => charStyleMap[n]).filter(Boolean)
       );
       if (styleTypes.size === 1) {
         style = [...styleTypes][0];
-        console.log(`[스타일 자동] ${charNames.join('+')} → ${style}`);
+        console.log(`[스타일 자동] ${assetTags.join('+')} → ${style}`);
       } else if (styleTypes.size > 1 && mixedPreset) {
         style = mixedPreset;
-        console.log(`[스타일 자동] ${charNames.join('+')} → 혼합 → ${style}`);
+        console.log(`[스타일 자동] ${assetTags.join('+')} → 혼합 → ${style}`);
       }
     }
 
