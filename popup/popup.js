@@ -3266,15 +3266,6 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
           }
         });
 
-        // 제출 직후 스냅샷: 현재 모든 이미지 src 기록
-        // 나중에 "이 스냅샷 이후에 나타난 이미지 = 이 프롬프트의 결과"로 매칭
-        var snapshot = new Set();
-        document.querySelectorAll('img').forEach(function(img) {
-          if (img.src) snapshot.add(img.src);
-        });
-        submitSnapshots.push(snapshot);
-        console.log('[Flow Auto] 제출 스냅샷 #' + (j + 1) + ': ' + snapshot.size + '개 이미지');
-
         // 다음 프롬프트 제출까지 최소 딜레이 (UI 안정화)
         if (j < totalCount - 1) {
           await sleep(Math.max(delayMs, 3000));
