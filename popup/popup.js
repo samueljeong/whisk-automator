@@ -736,30 +736,17 @@ async function loadState() {
       saveLocation.value = result.saveLocation;
     }
 
-    // Restore custom directory handle
+    // 커스텀 폴더 handle 복원은 더 이상 사용하지 않음
+    // 다운로드 폴더 하위 경로(saveLocation)로 통일
     if (result.useCustomDir) {
-      try {
-        const savedHandle = await loadDirHandle();
-        if (savedHandle) {
-          let perm = await savedHandle.queryPermission({ mode: 'readwrite' });
-          if (perm === 'granted') {
-            // 권한 유지됨 → 바로 복원
-            customDirHandle = savedHandle;
-            saveLocation.value = '\uD83D\uDCC1 ' + savedHandle.name;
-            saveLocation.readOnly = true;
-            console.log('[Flow] 커스텀 폴더 복원 (granted):', savedHandle.name);
-          } else {
-            // 'prompt' 또는 'denied' → handle은 유지하되 UI에 표시
-            // requestPermission은 사용자 제스처가 필요하므로 시작 버튼 클릭 시 재요청
-            customDirHandle = savedHandle;
-            saveLocation.value = '\uD83D\uDCC1 ' + savedHandle.name + ' (권한 필요)';
-            saveLocation.readOnly = true;
-            console.log('[Flow] 커스텀 폴더 대기 (권한 재요청 필요):', savedHandle.name);
-          }
-        }
-      } catch (e) {
-        console.log('[Flow] Failed to restore directory handle:', e);
-      }
+      // 이전에 커스텀 폴더를 쓰던 경우 → 다운로드 하위 경로로 전환
+      customDirHandle = null;
+      await clearDirHandle();
+      var fallbackName = result.customDirName || 'flow-images';
+      saveLocation.value = fallbackName;
+      saveLocation.readOnly = false;
+      console.log('[Flow] 커스텀 폴더 → 다운로드/' + fallbackName + ' 으로 전환');
+      await saveState(); // useCustomDir=false로 저장
     }
 
     // Character folder: 저장된 데이터가 이미 PROJECTS에 복원됨 (saveState로 저장했으므로)
