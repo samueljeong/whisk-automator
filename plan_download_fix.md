@@ -5,7 +5,7 @@
 
 ## 수정 내용
 
-- [ ] **1. Phase 3 폴링 루프에 즉시 다운로드 추가**
+- [x] **1. Phase 3 폴링 루프에 즉시 다운로드 추가**
   - 위치: `runFlowAutomation` 내 Phase 3 while 루프 (줄 3370~3422)
   - 변경: 새 이미지 감지 시 → 즉시 fetch → blob → dataUrl → `DOWNLOAD_IMAGE`
   - 프롬프트 매칭: `downloadedCount` 카운터로 FIFO 추적
