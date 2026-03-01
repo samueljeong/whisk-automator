@@ -3559,35 +3559,43 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
               });
             } catch(e) {}
 
-            // 에셋 레퍼런스 추가 — 매 프롬프트마다 실행
-            // Flow는 생성 후 프롬프트를 초기화하므로 에셋을 매번 다시 선택해야 함
-            // (업로드는 uploadedAssetNames로 1회만, 선택은 매번)
-            if (charForThisPrompt) {
-              // 에셋 업로드 전 이미지 src 스냅샷 (업로드 후 새로 나타난 것 = 에셋 이미지)
+            // @에셋 태그 방식: 세그먼트 기반으로 에셋+텍스트 통합 입력
+            // segments가 있으면 @태그 방식, 없으면 기존 방식 폴백
+            if (batchItem.segments && batchItem.segments.some(function(s) { return s.type === 'asset'; })) {
+              // 에셋 입력 전 이미지 src 스냅샷
               var preAssetSrcs = new Set();
               document.querySelectorAll('img').forEach(function(img) {
                 if (img.src) preAssetSrcs.add(img.src);
               });
 
-              console.log('[Flow Auto] 레퍼런스 선택: ' + charForThisPrompt);
-              await uploadReferences(charForThisPrompt, characters);
+              console.log('[Flow Auto] @에셋 세그먼트 입력: ' + batchItem.segments.length + '개');
+              await fillPromptWithAssets(batchItem.segments);
               await sleep(500);
 
-              // 에셋 업로드 후 새로 나타난 이미지를 assetSrcs에 등록
+              // 에셋 입력 후 새로 나타난 이미지를 assetSrcs에 등록
               document.querySelectorAll('img').forEach(function(img) {
                 if (img.src && img.src.includes('getMediaUrlRedirect') && !preAssetSrcs.has(img.src)) {
                   assetSrcs.add(img.src);
-                  console.log('[Flow Auto] 에셋 이미지 등록: ' + img.src.substring(0, 80) + '...');
                 }
               });
+            } else {
+              // @태그 없는 프롬프트: 기존 방식 (uploadReferences + fillPrompt)
+              if (charForThisPrompt) {
+                var preAssetSrcs = new Set();
+                document.querySelectorAll('img').forEach(function(img) {
+                  if (img.src) preAssetSrcs.add(img.src);
+                });
+                await uploadReferences(charForThisPrompt, characters);
+                await sleep(500);
+                document.querySelectorAll('img').forEach(function(img) {
+                  if (img.src && img.src.includes('getMediaUrlRedirect') && !preAssetSrcs.has(img.src)) {
+                    assetSrcs.add(img.src);
+                  }
+                });
+              }
+              await fillPrompt(batchItem.prompt);
+              await sleep(500);
             }
-
-            // 에셋 이미지 필터링은 assetSrcs가 담당 (preGenSrcs는 배치 시작 시점 스냅샷 유지)
-            // preGenSrcs를 여기서 갱신하면 이전 프롬프트의 생성 이미지까지 흡수하여
-            // Phase 3에서 감지 못하는 버그 발생
-
-            await fillPrompt(batchItem.prompt);
-            await sleep(500);
             await clickGenerate();
 
             // 배치 내 마지막이 아니면 UI 안정화 대기 (Flow가 프롬프트 처리 후 초기화 시간)
