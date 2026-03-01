@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Whisk Pro 구독</title>
+  <script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f0f1a;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .container {
+      max-width: 480px;
+      width: 100%;
+      padding: 40px 24px;
+    }
+    h1 {
+      font-size: 28px;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #999;
+      margin-bottom: 32px;
+    }
+    .plan-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .plan-card {
+      border: 2px solid #333;
+      border-radius: 12px;
+      padding: 20px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+    }
+    .plan-card:hover { border-color: #555; }
+    .plan-card.selected {
+      border-color: #8b5cf6;
+      background: rgba(139, 92, 246, 0.08);
+    }
+    .plan-card .plan-name {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .plan-card .plan-price {
+      font-size: 24px;
+      font-weight: 700;
+      color: #8b5cf6;
+    }
+    .plan-card .plan-price span {
+      font-size: 14px;
+      font-weight: 400;
+      color: #999;
+    }
+    .plan-card .plan-desc {
+      font-size: 13px;
+      color: #999;
+      margin-top: 4px;
+    }
+    .plan-card .badge {
+      position: absolute;
+      top: -10px;
+      right: 16px;
+      background: linear-gradient(135deg, #f59e0b, #ef4444);
+      color: white;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 10px;
+    }
+    .features {
+      margin-bottom: 24px;
+      padding: 16px;
+      background: #1a1a2e;
+      border-radius: 10px;
+    }
+    .features h3 {
+      font-size: 14px;
+      margin-bottom: 10px;
+      color: #999;
+    }
+    .features ul {
+      list-style: none;
+      font-size: 14px;
+    }
+    .features li {
+      padding: 4px 0;
+    }
+    .features li::before {
+      content: "\2713 ";
+      color: #4ade80;
+      font-weight: bold;
+    }
+    .subscribe-btn {
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #8b5cf6, #6366f1);
+      color: white;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .subscribe-btn:hover { opacity: 0.9; }
+    .subscribe-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .policy {
+      text-align: center;
+      margin-top: 16px;
+      font-size: 12px;
+      color: #666;
+      line-height: 1.6;
+    }
+    .policy a { color: #8b5cf6; text-decoration: none; }
+    .error-msg {
+      text-align: center;
+      color: #f87171;
+      margin-top: 12px;
+      font-size: 14px;
+      display: none;
+    }
+    .loading {
+      text-align: center;
+      color: #999;
+      margin-top: 12px;
+      display: none;
+    }
+    .email-display {
+      text-align: center;
+      color: #8b5cf6;
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Whisk Pro</h1>
+    <p class="subtitle">무제한 이미지 생성 + Grok 영상</p>
+    <p class="email-display" id="emailDisplay"></p>
+
+    <div class="plan-cards">
+      <div class="plan-card selected" data-plan="monthly" onclick="selectPlan('monthly')">
+        <div class="plan-name">월간 구독</div>
+        <div class="plan-price">&#8361;9,900 <span>/월</span></div>
+        <div class="plan-desc">매달 자동 결제, 언제든 취소 가능</div>
+      </div>
+      <div class="plan-card" data-plan="yearly" onclick="selectPlan('yearly')">
+        <div class="badge">16% 할인</div>
+        <div class="plan-name">연간 구독</div>
+        <div class="plan-price">&#8361;100,000 <span>/년</span></div>
+        <div class="plan-desc">월 &#8361;8,333 · 연 &#8361;18,800 절약</div>
+      </div>
+    </div>
+
+    <div class="features">
+      <h3>Pro 포함 기능</h3>
+      <ul>
+        <li>무제한 이미지 생성 (일 5장 제한 없음)</li>
+        <li>Grok 영상 자동화</li>
+        <li>업스케일 기능</li>
+        <li>우선 지원</li>
+      </ul>
+    </div>
+
+    <button class="subscribe-btn" id="subscribeBtn" onclick="startSubscription()">구독하기</button>
+    <p class="loading" id="loadingMsg">결제 처리 중...</p>
+    <p class="error-msg" id="errorMsg"></p>
+
+    <div class="policy">
+      구독은 선택한 주기에 따라 자동 갱신됩니다.<br>
+      취소 시 남은 기간까지 이용 가능하며 환불은 제공되지 않습니다.
+    </div>
+  </div>
+
+  <script>
+    // ─── 설정 ───
+    // TODO: 포트원 가입 후 실제 값으로 교체
+    const PORTONE_STORE_ID = 'YOUR_STORE_ID';
+    const PORTONE_CHANNEL_KEY = 'YOUR_CHANNEL_KEY';
+    const SUPABASE_URL = 'https://cyrbibbosfybylsparfk.supabase.co';
+    const ACTIVATE_URL = `${SUPABASE_URL}/functions/v1/activate-subscription`;
+
+    const PLANS = {
+      monthly: { name: 'Whisk Pro 월간', amount: 9900, period: 'monthly' },
+      yearly: { name: 'Whisk Pro 연간', amount: 100000, period: 'yearly' },
+    };
+
+    // ─── URL 파라미터 파싱 ───
+    const params = new URLSearchParams(window.location.search);
+    const userId = params.get('userId');
+    const email = params.get('email');
+    const token = params.get('token');
+    let selectedPlan = 'monthly';
+
+    if (email) {
+      document.getElementById('emailDisplay').textContent = email;
+    }
+
+    if (!userId || !token) {
+      document.getElementById('errorMsg').textContent = '잘못된 접근입니다. 확장 프로그램에서 다시 시도해주세요.';
+      document.getElementById('errorMsg').style.display = 'block';
+      document.getElementById('subscribeBtn').disabled = true;
+    }
+
+    // ─── 플랜 선택 ───
+    function selectPlan(plan) {
+      selectedPlan = plan;
+      document.querySelectorAll('.plan-card').forEach(card => {
+        card.classList.toggle('selected', card.dataset.plan === plan);
+      });
+    }
+
+    // ─── 구독 시작 ───
+    async function startSubscription() {
+      const btn = document.getElementById('subscribeBtn');
+      const loading = document.getElementById('loadingMsg');
+      const errorEl = document.getElementById('errorMsg');
+
+      btn.disabled = true;
+      loading.style.display = 'block';
+      errorEl.style.display = 'none';
+
+      try {
+        // 1. 포트원 빌링키 발급 (카드 등록)
+        const plan = PLANS[selectedPlan];
+        const issueResponse = await PortOne.requestIssueBillingKey({
+          storeId: PORTONE_STORE_ID,
+          channelKey: PORTONE_CHANNEL_KEY,
+          billingKeyMethod: 'CARD',
+          issueNameInput: { name: plan.name },
+          customer: {
+            email: email,
+          },
+        });
+
+        // 에러 체크
+        if (issueResponse.code !== undefined) {
+          throw new Error(issueResponse.message || '카드 등록에 실패했습니다');
+        }
+
+        const billingKey = issueResponse.billingKey;
+
+        // 2. 서버에 구독 활성화 요청
+        const res = await fetch(ACTIVATE_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            billingKey,
+            planType: selectedPlan,
+          }),
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || '구독 활성화에 실패했습니다');
+        }
+
+        const result = await res.json();
+
+        // 3. 성공 → 완료 페이지
+        window.location.href = `success.html?plan=${selectedPlan}&expires=${result.expiresAt || ''}`;
+
+      } catch (err) {
+        console.error('Subscription error:', err);
+        errorEl.textContent = err.message || '결제 처리 중 오류가 발생했습니다';
+        errorEl.style.display = 'block';
+        btn.disabled = false;
+      } finally {
+        loading.style.display = 'none';
+      }
+    }
+  </script>
+</body>
+</html>
