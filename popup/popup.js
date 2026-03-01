@@ -3355,9 +3355,9 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         }
       }
 
-      console.log('[Flow Auto] === 제출 완료: ' + totalCount + '개 — 생성 대기 시작 ===');
+      console.log('[Flow Auto] === 제출 완료: ' + totalCount + '개 — 생성 대기 + 즉시 다운로드 시작 ===');
 
-      // Phase 3: 전체 생성 대기
+      // Phase 3: 폴링 + 즉시 다운로드 (이미지가 나타나는 대로 1개씩)
       await sleep(2000);
 
       var maxWait = selectedOutputType === 'video'
@@ -3365,12 +3365,11 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         : Math.min(totalCount * 60000, 600000);     // 이미지: 프롬프트당 1분, 최대 10분
       var pollInterval = 3000;
       var waited = 0;
-      var detectedNewImages = [];
-      var lastDetectedCount = 0;
+      var downloadedCount = 0;  // FIFO 카운터: N번째 다운로드 = N번째 프롬프트
       var lastChangeTime = Date.now();
-      var STALL_TIMEOUT = 60000; // 파이프라인 모드: 60초 대기
+      var STALL_TIMEOUT = 60000;
 
-      while (waited < maxWait && detectedNewImages.length < totalCount) {
+      while (waited < maxWait && downloadedCount < totalCount) {
         if (isStopRequested()) {
           try { chrome.runtime.sendMessage({ action: 'AUTOMATION_STOPPED' }); } catch(e) {}
           return;
@@ -3379,75 +3378,111 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         await sleep(pollInterval);
         waited += pollInterval;
 
-        // 새 이미지 수집
-        detectedNewImages = [];
+        // DOM에서 새 이미지 탐색 (아직 다운로드/등록 안 된 것)
+        var newImages = [];
         document.querySelectorAll('img').forEach(function(img) {
           if (img.src && img.src.includes('getMediaUrlRedirect') &&
               !preGenSrcs.has(img.src) && !downloadedSrcs.has(img.src) &&
               !assetSrcs.has(img.src)) {
-            detectedNewImages.push(img);
+            newImages.push(img);
           }
         });
 
-        // 진전 감지
-        if (detectedNewImages.length > lastDetectedCount) {
-          console.log('[Flow Auto] 생성 진행: ' + detectedNewImages.length + '/' + totalCount +
-            ' (+' + (detectedNewImages.length - lastDetectedCount) + ')');
-          lastDetectedCount = detectedNewImages.length;
-          lastChangeTime = Date.now();
+        // 새 이미지가 있으면 즉시 1개씩 다운로드
+        for (var ni = 0; ni < newImages.length && downloadedCount < totalCount; ni++) {
+          var newImg = newImages[ni];
 
-          // 진행 상황 업데이트
+          // 크기 필터: fetch → blob → 200KB 미만이면 에셋으로 분류
           try {
-            chrome.runtime.sendMessage({
-              action: 'PROGRESS_UPDATE',
-              currentIndex: detectedNewImages.length,
-              totalCount: totalCount,
-              status: 'processing',
-              currentPrompt: '생성 중 ' + detectedNewImages.length + '/' + totalCount
+            var imgResp = await fetch(newImg.src);
+            var imgBlob = await imgResp.blob();
+
+            if (imgBlob.size < MIN_GENERATED_IMAGE_SIZE) {
+              console.log('[Flow Auto] 에셋/썸네일 스킵: ' + Math.round(imgBlob.size / 1024) + 'KB');
+              assetSrcs.add(newImg.src);
+              continue;
+            }
+
+            // FIFO 매칭: downloadedCount번째 프롬프트
+            var pItem = promptsWithCharacters[downloadedCount];
+            var fullFilename;
+            if (pItem.filename) {
+              var safeName = pItem.filename.replace(/[<>:"|?*]/g, '_').replace(/_+/g, '_');
+              fullFilename = safeName.includes('.') ? safeName : safeName + '.png';
+            } else {
+              var autoName = pItem.prompt.substring(0, 30)
+                .replace(/[^a-zA-Z0-9가-힣]/g, '_').replace(/_+/g, '_');
+              fullFilename = 'flow_' + (pItem.index + 1) + '_' + autoName + '.png';
+            }
+
+            // blob → dataUrl 변환 → background에 전달
+            var reader = new FileReader();
+            var dataUrl = await new Promise(function(resolve, reject) {
+              reader.onload = function() { resolve(reader.result); };
+              reader.onerror = reject;
+              reader.readAsDataURL(imgBlob);
             });
-          } catch(e) {}
+            chrome.runtime.sendMessage({
+              action: 'DOWNLOAD_IMAGE',
+              url: dataUrl,
+              filename: savePath + '/' + fullFilename
+            });
+
+            downloadedSrcs.add(newImg.src);
+            downloadedCount++;
+            lastChangeTime = Date.now();
+
+            console.log('[Flow Auto] DL ' + downloadedCount + '/' + totalCount + ': ' + fullFilename +
+              ' (' + Math.round(imgBlob.size / 1024) + 'KB)');
+
+            // 진행 상황 업데이트
+            try {
+              chrome.runtime.sendMessage({
+                action: 'PROGRESS_UPDATE',
+                currentIndex: downloadedCount,
+                totalCount: totalCount,
+                promptIndex: pItem.index,
+                status: autoDownload ? 'completed' : 'processing',
+                currentPrompt: 'DL ' + downloadedCount + '/' + totalCount + ' ' + fullFilename
+              });
+            } catch(e) {}
+          } catch (e) {
+            console.warn('[Flow Auto] 이미지 처리 실패, 스킵:', e.message);
+            downloadedSrcs.add(newImg.src);
+          }
         }
 
-        // 조기 종료: 1개 이상 감지 + N-1개 이상 완료 + 60초 정체
-        var almostDone = detectedNewImages.length >= Math.max(1, totalCount - 1);
+        // 조기 종료: N-1개 이상 완료 + 60초 정체
+        var almostDone = downloadedCount >= Math.max(1, totalCount - 1);
         if (almostDone && Date.now() - lastChangeTime > STALL_TIMEOUT) {
           console.log('[Flow Auto] ' + (STALL_TIMEOUT / 1000) + '초간 새 이미지 없음 — 조기 종료 (' +
-            detectedNewImages.length + '/' + totalCount + ')');
+            downloadedCount + '/' + totalCount + ')');
           break;
         }
 
         if (waited % 15000 === 0) {
-          console.log('[Flow Auto] 대기 중... ' + detectedNewImages.length + '/' + totalCount + ' (' + (waited / 1000) + '초)');
+          console.log('[Flow Auto] 대기 중... ' + downloadedCount + '/' + totalCount + ' (' + (waited / 1000) + '초)');
         }
       }
 
-      console.log('[Flow Auto] === 생성 완료: ' + detectedNewImages.length + '/' + totalCount +
-        ' (' + (waited / 1000) + '초) ===');
+      console.log('[Flow Auto] === 완료: ' + downloadedCount + '/' + totalCount +
+        ' 다운로드 (' + (waited / 1000) + '초) ===');
 
-      if (detectedNewImages.length === 0) {
+      if (downloadedCount === 0) {
         throw new Error('생성 실패 — 새 이미지 0개 (전체 ' + totalCount + '개 제출)');
       }
 
-      // Phase 4: 전체 다운로드
-      if (autoDownload) {
-        console.log('[Flow Auto] === 다운로드 시작: ' + detectedNewImages.length + '개 ===');
-        await sleep(1000);
-        await downloadBatch(0, totalCount, preGenSrcs, detectedNewImages);
-      }
-
-      // 진행 상황: 전체 완료
-      for (var pi = 0; pi < totalCount; pi++) {
-        try {
-          chrome.runtime.sendMessage({
-            action: 'PROGRESS_UPDATE',
-            currentIndex: pi + 1,
-            totalCount: totalCount,
-            promptIndex: promptsWithCharacters[pi].index,
-            status: 'completed',
-            currentPrompt: (pi === totalCount - 1) ? '전체 완료' : ''
-          });
-        } catch(e) {}
-      }
+      // 진행 상황: 전체 완료 표시
+      try {
+        chrome.runtime.sendMessage({
+          action: 'PROGRESS_UPDATE',
+          currentIndex: totalCount,
+          totalCount: totalCount,
+          promptIndex: promptsWithCharacters[totalCount - 1].index,
+          status: 'completed',
+          currentPrompt: '전체 완료 (' + downloadedCount + '/' + totalCount + ')'
+        });
+      } catch(e) {}
 
     } catch (error) {
       if (error.message === '__STOPPED__' || isStopRequested()) {
