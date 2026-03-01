@@ -269,3 +269,261 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
 | popup.js fileInputs[fi].click() | input[type=file] 네이티브 |
 | popup.js a.click() (다운로드) | createElement('a') 네이티브 |
 | grok.js links[].click() | `<a download>` 네이티브 |
+
+---
+
+# Supabase OTP 인증 + 라이선스 마이그레이션 계획
+
+## 개요
+
+현재 `WHISK-XXXX-XXXX` 키 입력 방식 → **이메일 OTP 인증 + Freemium 모델**로 전환
+
+| 구분 | Free (비로그인) | Pro (OTP 로그인) |
+|------|---------------|-----------------|
+| 인증 | 없음 | 이메일 OTP |
+| 일일 한도 | **5장/일** | 무제한 |
+| 기능 | Flow 생성만 | Flow + Grok 전체 |
+| 추적 | 로컬 (`chrome.storage`) | 서버 (Supabase) |
+| 동시 접속 | - | **1대 제한** |
+
+오프라인 유예: 없음 (인터넷 필수 프로그램)
+
+---
+
+## Phase 1: Supabase 인프라 설정 (수동, 1회)
+
+- [ ] **1a. Supabase 프로젝트 생성**
+  - supabase.com에서 새 프로젝트 생성
+  - Project URL + anon key 확보
+
+- [ ] **1b. Email OTP 활성화**
+  - Authentication → Providers → Email 활성화
+  - OTP 방식 선택 (Magic Link 아닌 6자리 코드)
+  - 이메일 템플릿 한글화 (선택)
+
+- [ ] **1c. licenses 테이블 생성**
+  ```sql
+  CREATE TABLE licenses (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) NOT NULL UNIQUE,
+    tier TEXT DEFAULT 'free' CHECK (tier IN ('free', 'pro')),
+    expires_at TIMESTAMPTZ,
+    device_hash TEXT,          -- 동시 접속 1대 제한용
+    last_login_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+  );
+
+  ALTER TABLE licenses ENABLE ROW LEVEL SECURITY;
+  CREATE POLICY "Users can view own license"
+    ON licenses FOR SELECT
+    USING (auth.uid() = user_id);
+  ```
+
+- [ ] **1d. Edge Function `check-license` 배포**
+  ```
+  기능:
+  1. JWT에서 user_id 추출
+  2. licenses 테이블 조회 → tier, expires_at 반환
+  3. device_hash 비교 → 불일치 시 기존 세션 무효화 (동시 접속 1대)
+  4. device_hash 업데이트
+
+  응답: { tier, email, expires_at, device_conflict: bool }
+  ```
+
+---
+
+## Phase 2: license.js 재작성
+
+현재 106줄 → 예상 ~250줄
+
+- [ ] **2a. Supabase 설정값 추가**
+  ```js
+  const SUPABASE_URL = "https://[프로젝트].supabase.co";
+  const SUPABASE_ANON_KEY = "eyJ...";
+  const CHECK_LICENSE_URL = `${SUPABASE_URL}/functions/v1/check-license`;
+
+  // Storage 키
+  const AUTH_TOKEN_KEY = "whisk_auth_token";
+  const LICENSE_CACHE_KEY = "whisk_license_cache";
+  const FREE_USAGE_KEY = "whisk_free_usage";
+  const CACHE_TTL_MS = 5 * 60 * 1000; // 5분
+
+  // Free 한도
+  const FREE_DAILY_LIMIT = 5;
+  ```
+
+- [ ] **2b. OTP 인증 함수**
+  ```
+  sendOtp(email)       — POST /auth/v1/otp → 6자리 코드 이메일 발송
+  verifyOtp(email, code) — POST /auth/v1/verify → access_token + refresh_token 발급
+  signOut()            — 토큰 삭제 + 캐시 삭제
+  ```
+
+- [ ] **2c. 토큰 관리 함수**
+  ```
+  getAccessToken()     — 캐시된 토큰 반환, 만료 1분 전이면 자동 갱신
+  refreshToken()       — POST /auth/v1/token?grant_type=refresh_token
+  ```
+
+- [ ] **2d. 라이선스 체크 함수**
+  ```
+  checkLicense()       — 메인 진입점 (기존과 동일한 인터페이스)
+    - 로그인 상태: Edge Function 호출 → { tier, expires_at } 반환
+    - 비로그인: { tier: 'free', daily_remaining: N } 반환
+
+  반환 형식 (기존 호환):
+    { valid: true, tier: 'pro', expires: '2026-12-31', email: '...' }
+    { valid: true, tier: 'free', daily_remaining: 3 }
+    { valid: false } — 사실상 발생 안 함 (Free 항상 유효)
+  ```
+
+- [ ] **2e. Free 일일 카운트 관리**
+  ```
+  getFreeUsageToday()  — chrome.storage에서 오늘 사용량 조회
+  incrementFreeUsage() — 카운트 +1, 날짜 바뀌면 리셋
+  canGenerate()        — Free면 5장 한도 체크, Pro면 항상 true
+  ```
+
+- [ ] **2f. 디바이스 핑거프린트 (동시 접속 1대)**
+  ```
+  getDeviceHash()      — chrome.runtime.id + userAgent + 화면 해상도 → SHA-256
+  ```
+
+- [ ] **2g. 기존 함수 호환 레이어**
+  ```
+  기존 popup.js가 호출하는 함수:
+  - checkLicense()     → 유지 (내부 로직만 변경)
+  - submitLicenseKey() → 제거
+  - clearLicenseCache() → signOut()으로 대체
+  - formatExpiry()     → 유지
+
+  새로 추가:
+  - sendOtp()
+  - verifyOtp()
+  - canGenerate()
+  - incrementFreeUsage()
+  ```
+
+---
+
+## Phase 3: popup.html UI 변경
+
+- [ ] **3a. 라이선스 잠금 화면 → OTP 로그인 화면으로 교체**
+  ```
+  현재:
+    [WHISK-XXXX-XXXX 입력] [확인]
+
+  변경:
+    Step 1: [이메일 입력] [인증코드 발송]
+    Step 2: [6자리 코드 입력] [확인]  (발송 후 표시)
+    + "무료로 계속 사용" 링크 (Free 모드 진입)
+  ```
+
+- [ ] **3b. 라이선스 바 변경**
+  ```
+  현재:
+    [만료: 2026. 3. 1.] [키 변경]
+
+  변경 (Pro):
+    [Pro · user@email.com · 만료: 2026. 3. 1.] [로그아웃]
+  변경 (Free):
+    [무료 · 오늘 2/5장 사용] [Pro 업그레이드 →]
+  ```
+
+- [ ] **3c. Free 한도 초과 시 업그레이드 유도 UI**
+  ```
+  "오늘 무료 한도(5장)를 모두 사용했습니다."
+  [이메일로 Pro 업그레이드] 버튼
+  ```
+
+---
+
+## Phase 4: popup.js 수정
+
+- [ ] **4a. 초기화 흐름 변경**
+  ```
+  현재:
+    DOMContentLoaded → checkLicense() → showMainUI() or showLicenseScreen()
+
+  변경:
+    DOMContentLoaded → checkLicense()
+      → tier='pro' → showMainUI(pro)   — 전체 기능
+      → tier='free' → showMainUI(free)  — 제한 기능 (Grok 탭 숨김)
+      → 미인증+Free → showMainUI(free)  — 로그인 안 해도 진입 가능
+  ```
+
+- [ ] **4b. OTP 로그인 이벤트 핸들러**
+  ```
+  #sendOtpBtn 클릭 → sendOtp(email) → OTP 입력 필드 표시
+  #verifyOtpBtn 클릭 → verifyOtp(email, code) → checkLicense() → showMainUI()
+  #skipLoginBtn 클릭 → showMainUI({ tier: 'free' })
+  #logoutBtn 클릭 → signOut() → showMainUI({ tier: 'free' })
+  ```
+
+- [ ] **4c. 생성 시 한도 체크 삽입**
+  ```
+  startAutomation() 시작 부분:
+    const allowed = await canGenerate(promptCount);
+    if (!allowed) { showUpgradeDialog(); return; }
+
+  각 프롬프트 생성 완료 시:
+    if (tier === 'free') await incrementFreeUsage();
+    updateLicenseBar(); // 남은 횟수 갱신
+  ```
+
+- [ ] **4d. Grok 탭 Free 제한**
+  ```
+  Free 사용자: Grok 탭 클릭 시 "Pro 전용 기능입니다" 안내
+  Pro 사용자: 기존과 동일
+  ```
+
+---
+
+## Phase 5: manifest.json + 마무리
+
+- [ ] **5a. host_permissions 변경**
+  ```json
+  "host_permissions": [
+    "https://labs.google/*",
+    "https://[프로젝트].supabase.co/*",   // 추가
+    "https://grok.com/*"
+    // "https://drama-s2ns.onrender.com/*" ← 제거
+  ]
+  ```
+
+- [ ] **5b. popup.css — OTP UI 스타일 추가**
+  - 이메일 입력, OTP 코드 입력, 로딩 스피너
+  - Pro/Free 상태 배지 스타일
+  - 한도 초과 다이얼로그
+
+- [ ] **5c. 기존 라이선스 서버 정리**
+  - Render.com 서버 중지 (즉시 or Pro 전환 기간 후)
+  - `whisk-license-server` 레포 아카이브
+
+---
+
+## 수정 파일 요약
+
+| 파일 | 변경 | 규모 |
+|------|------|------|
+| `popup/license.js` | 전면 재작성 (OTP + 토큰 + 라이선스 + Free 카운트) | 대 |
+| `popup/popup.html` | 라이선스 화면 → OTP UI, 라이선스 바 변경 | 중 |
+| `popup/popup.js` | 초기화 흐름 + 이벤트 핸들러 + 한도 체크 | 중 |
+| `popup/popup.css` | OTP UI + 상태 배지 + 업그레이드 다이얼로그 | 소 |
+| `manifest.json` | host_permissions 변경 | 소 |
+
+## 변경하지 않는 파일
+- `popup/grok.js` — 탭 숨김은 popup.js에서 처리
+- `popup/prompt_helper.js`, `prompt_safety.js` — 무관
+- `content/` 전체, `background/background.js` — 무관
+- `characters.json` — 무관
+
+## 트레이드오프
+
+| 결정 | 선택 | 이유 |
+|------|------|------|
+| Free 카운트 위치 | 로컬 (`chrome.storage`) | 서버 비용 0, 우회 가능하지만 5장이라 큰 손해 아님 |
+| 동시 접속 제한 | Edge Function에서 device_hash 비교 | 단순하고 효과적 |
+| 기존 키 방식 | 완전 제거 | 유지보수 단순화, 사용자 소수 |
+| 오프라인 유예 | 없음 | 인터넷 필수 프로그램 |
