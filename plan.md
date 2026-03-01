@@ -585,7 +585,7 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
     upgradeBtn visible ("로그인"), logoutBtn hidden
   ```
 
-- [ ] **6A-2. `popup/popup.html` — "구독 관리" 버튼 추가**
+- [x] **6A-2. `popup/popup.html` — "구독 관리" 버튼 추가**
   ```html
   <button id="manageSubBtn" class="btn btn-small btn-secondary" hidden>구독 관리</button>
   ```
