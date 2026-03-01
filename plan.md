@@ -709,7 +709,7 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
   - `checkLicense()` 응답에 `cancel_at_period_end` 포함
   - `check_license` RPC 수정: `cancel_at_period_end` 반환
 
-- [ ] **`popup/popup.js` — updateLicenseBar() 취소 예정 상태 추가**
+- [x] **`popup/popup.js` — updateLicenseBar() 취소 예정 상태 추가**
   ```
   Pro (활성): "Pro · user@email.com · 4월 1일까지" (초록)
   Pro (취소 예정): "Pro · 4월 1일에 만료됩니다" (노란색/경고)
