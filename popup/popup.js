@@ -3999,8 +3999,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         } else {
           prompts[origIdx].status = message.status;
         }
-        // Free 사용자: 생성 완료 시 카운트 증가 (테스트 모드면 건너뜀)
-        if (message.status === 'completed' && currentTier !== 'pro' && !(testModeCheck && testModeCheck.checked)) {
+        // Free 사용자: 생성 완료 시 카운트 증가
+        if (message.status === 'completed' && currentTier !== 'pro') {
           incrementFreeUsage().then(() => refreshLicenseBar());
         }
       }
