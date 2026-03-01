@@ -25,6 +25,7 @@ const totalCountEl = document.getElementById('totalCount');
 const currentPromptEl = document.getElementById('currentPrompt');
 const startBtn = document.getElementById('startBtn');
 const stopBtn = document.getElementById('stopBtn');
+const testModeCheck = document.getElementById('testModeCheck');
 const modelSelect = document.getElementById('modelSelect');
 const outputType = document.getElementById('outputType');
 const characterList = document.getElementById('characterList');
