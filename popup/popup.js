@@ -3381,6 +3381,23 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
           }
 
           // Phase 3: 배치 전체 완료 대기
+          // 생성 전 안전장치: 현재 페이지의 모든 getMediaUrlRedirect 이미지를 assetSrcs에 등록
+          // clickGenerate() 직후이므로 아직 생성된 이미지는 없음 — 이 시점의 이미지는 전부 에셋/기존 이미지
+          // 이전 assetSrcs 등록에서 누락된 에셋 이미지가 Phase 3에서 "새 이미지"로 오인되는 버그 방지
+          var prePhase3Count = 0;
+          document.querySelectorAll('img').forEach(function(img) {
+            if (img.src && img.src.includes('getMediaUrlRedirect') &&
+                !preGenSrcs.has(img.src) && !downloadedSrcs.has(img.src) &&
+                !assetSrcs.has(img.src)) {
+              assetSrcs.add(img.src);
+              prePhase3Count++;
+              console.log('[Flow Auto] Phase 3 전 에셋 보정 등록: ' + img.src.substring(0, 80) + '...');
+            }
+          });
+          if (prePhase3Count > 0) {
+            console.log('[Flow Auto] Phase 3 전 에셋 보정: ' + prePhase3Count + '개 추가 등록');
+          }
+
           console.log('[Flow Auto] 배치 ' + batchNum + ': ' + batchCount + '개 생성 대기...');
           await sleep(2000);
 
