@@ -1,22 +1,48 @@
-# Supabase 설정 SQL
+# Step 4: 라이선스 체크 함수
 
-아래를 복사해서 Supabase SQL Editor에 붙여넣고 Run 클릭
+SQL Editor의 기존 내용 전체 지우고, 아래만 붙여넣고 Run
 
-```sql
-CREATE TABLE licenses (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES auth.users(id) NOT NULL UNIQUE,
-  tier TEXT DEFAULT 'free' CHECK (tier IN ('free', 'pro')),
-  expires_at TIMESTAMPTZ,
-  device_hash TEXT,
-  last_login_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
+```
+CREATE OR REPLACE FUNCTION check_license(p_device_hash TEXT DEFAULT NULL)
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_user_id UUID;
+  v_license RECORD;
+  v_conflict BOOLEAN := FALSE;
+BEGIN
+  v_user_id := auth.uid();
+  IF v_user_id IS NULL THEN
+    RETURN json_build_object('error', 'unauthorized');
+  END IF;
 
-ALTER TABLE licenses ENABLE ROW LEVEL SECURITY;
+  SELECT * INTO v_license FROM licenses WHERE user_id = v_user_id;
 
-CREATE POLICY "Users can view own license"
-  ON licenses FOR SELECT
-  USING (auth.uid() = user_id);
+  IF NOT FOUND THEN
+    INSERT INTO licenses (user_id, tier, device_hash, last_login_at)
+    VALUES (v_user_id, 'free', p_device_hash, now());
+    RETURN json_build_object('tier', 'free', 'expires_at', NULL, 'device_conflict', FALSE);
+  END IF;
+
+  IF v_license.device_hash IS NOT NULL
+     AND p_device_hash IS NOT NULL
+     AND v_license.device_hash != p_device_hash THEN
+    v_conflict := TRUE;
+  END IF;
+
+  UPDATE licenses
+  SET device_hash = COALESCE(p_device_hash, device_hash),
+      last_login_at = now(),
+      updated_at = now()
+  WHERE user_id = v_user_id;
+
+  RETURN json_build_object(
+    'tier', CASE WHEN v_license.expires_at IS NOT NULL AND v_license.expires_at < now() THEN 'free' ELSE COALESCE(v_license.tier, 'free') END,
+    'expires_at', v_license.expires_at,
+    'device_conflict', v_conflict
+  );
+END;
+$$;
 ```
