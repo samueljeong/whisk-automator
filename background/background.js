@@ -27,17 +27,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ success: true });
       break;
 
-    case 'SAVE_IMAGE_DATA':
-      // Background 폴백: popup의 File System Access API가 처리 못 했을 때
-      // chrome.downloads로 저장 (다운로드 폴더 하위)
-      {
-        const savePath = message.savePath || 'flow-images';
-        const fullPath = savePath + '/' + message.filename;
-        downloadImage(message.dataUrl, fullPath);
-        console.log('[Flow Automator Background] SAVE_IMAGE_DATA 폴백:', fullPath);
-      }
-      sendResponse({ success: true });
-      break;
 
     case 'INJECT_INTERCEPTOR':
       injectFileInterceptor(sender.tab?.id || message.tabId)
