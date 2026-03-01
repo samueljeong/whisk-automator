@@ -606,59 +606,124 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
 
 ---
 
-## Phase 6B: Stripe 결제 연동 (Stripe 대시보드 + Edge Function + 확장)
+## Phase 6B: 포트원 결제 연동
 
-### 6B-1. Stripe 대시보드 설정 (수동, 사무엘님 작업)
+### 전체 아키텍처
+```
+[크롬 확장] "구독" 클릭
+  → chrome.tabs.create() → 결제 웹페이지 (정적 HTML)
+  → 포트원 SDK로 빌링키 발급 (카드 등록)
+  → fetch → Supabase Edge Function: activate-subscription
+  → 첫 결제 + 다음달 스케줄 등록
+  → 매달: 포트원 자동 결제 → webhook → Edge Function → DB 업데이트
+  → 크롬 확장이 checkLicense()로 Pro 확인
+```
 
-- [ ] **Stripe 계정 생성/로그인** (stripe.com)
-- [ ] **Product 생성**: "Whisk Pro", 월간 구독
-- [ ] **Price 설정**: ₩X,000/월 (가격 결정 필요)
-- [ ] **Payment Link 생성**: recurring mode, `client_reference_id` 파라미터 허용
-- [ ] **Webhook endpoint 설정**: Supabase Edge Function URL 등록
-- [ ] **Customer Portal 활성화**: 구독 관리 페이지
+### 6B-1. 포트원 대시보드 설정 (사무엘님 — 사업자등록 후)
 
-### 6B-2. Supabase DB 마이그레이션 (수동, SQL Editor)
+- [ ] **포트원 가입** (admin.portone.io)
+- [ ] **PG사 연결**: 나이스페이 포스타트 (초기 비용 0원)
+- [ ] **채널 생성**: 테스트 채널 + 실결제 채널
+- [ ] **웹훅 URL 등록**: Supabase Edge Function URL
+- [ ] **API Secret 확보**: 관리자 콘솔 → API Keys
 
-- [ ] **licenses 테이블에 Stripe 컬럼 추가**
+### 6B-2. Supabase DB 마이그레이션 (SQL Editor)
+
+- [ ] **licenses 테이블에 포트원 컬럼 추가**
   ```sql
-  ALTER TABLE licenses ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT;
-  ALTER TABLE licenses ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT;
+  ALTER TABLE licenses
+    ADD COLUMN IF NOT EXISTS billing_key TEXT,
+    ADD COLUMN IF NOT EXISTS subscription_id TEXT,
+    ADD COLUMN IF NOT EXISTS plan_type TEXT CHECK (plan_type IN ('monthly', 'yearly')),
+    ADD COLUMN IF NOT EXISTS cancel_at_period_end BOOLEAN DEFAULT FALSE;
   ```
 
-### 6B-3. Supabase Edge Function 배포 (코드)
+### 6B-3. 결제 웹페이지 생성 (정적 HTML — Vercel 무료 호스팅)
 
-- [ ] **`stripe-webhook` Edge Function 생성**
-  - `checkout.session.completed` → tier='pro', stripe IDs 저장, expires_at 설정
-  - `invoice.payment_succeeded` → expires_at 갱신 (매달)
-  - `customer.subscription.deleted` → tier='free' 다운그레이드
-  - Stripe 서명 검증 필수
-  - 환경변수: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SIGNING_SECRET
+- [ ] **`payment/index.html`** — 결제 전용 페이지
+  - 포트원 SDK 로드 (`https://cdn.portone.io/v2/browser-sdk.js`)
+  - URL 파라미터: `?plan=monthly&userId=xxx&email=xxx&token=xxx`
+  - 월간/연간 선택 UI (₩9,900/월 vs ₩100,000/년)
+  - `PortOne.requestIssueBillingKey()` 호출 → 빌링키 발급
+  - 성공 시 → Supabase Edge Function 호출 (빌링키 + userId 전달)
+  - 결과 표시 (성공/실패)
 
-### 6B-4. Chrome 확장 수정 (코드)
+- [ ] **`payment/success.html`** — 결제 완료 페이지
+  - "구독이 시작되었습니다! 확장 프로그램으로 돌아가세요"
+  - 자동 탭 닫기 또는 확장 열기 안내
 
-- [ ] **`popup/popup.js` — upgradeBtn 클릭 → Payment Link 열기**
+### 6B-4. Supabase Edge Function 3개
+
+- [ ] **`activate-subscription`** — 구독 활성화 (결제 페이지에서 호출)
+  ```
+  입력: { userId, billingKey, planType }
+  처리:
+    1. 포트원 REST API로 첫 결제 실행
+       POST /payments/{paymentId}/billing-key
+       금액: monthly=9900, yearly=100000
+    2. 성공 시 → 다음 결제 스케줄 등록
+       POST /payments/{paymentId}/schedule
+       timeToPay: +30일(월간) 또는 +365일(연간)
+    3. DB 업데이트: tier='pro', billing_key, plan_type, expires_at
+  응답: { success, expiresAt }
+  ```
+
+- [ ] **`portone-webhook`** — 포트원 웹훅 수신
+  ```
+  이벤트 처리:
+    Transaction.Paid → 결제 성공
+      → expires_at 갱신
+      → 다음 결제 스케줄 등록 (체이닝)
+    Transaction.Failed → 결제 실패
+      → 재시도 or tier='free' 다운그레이드
+  서명 검증: webhook-id, webhook-signature, webhook-timestamp
+  ```
+
+- [ ] **`cancel-subscription`** — 구독 취소 (구독 관리에서 호출)
+  ```
+  입력: { userId } (JWT 인증)
+  처리:
+    1. 예약된 스케줄 취소 (포트원 API)
+    2. DB: cancel_at_period_end = true
+    3. expires_at은 유지 (기간 만료까지 Pro)
+  ```
+
+### 6B-5. Chrome 확장 수정
+
+- [ ] **`popup/popup.js` — upgradeBtn 클릭 → 결제 페이지 열기**
   ```js
   const email = await getAuthEmail();
-  const userId = /* Supabase user id from token */;
-  const paymentUrl = `https://buy.stripe.com/${PAYMENT_LINK_ID}`
-    + `?prefilled_email=${encodeURIComponent(email)}`
-    + `&client_reference_id=${userId}`;
+  const userId = await getAuthUserId();
+  const token = await getAccessToken();
+  const paymentUrl = `https://whisk-payment.vercel.app`
+    + `?userId=${userId}&email=${encodeURIComponent(email)}&token=${token}`;
   chrome.tabs.create({ url: paymentUrl });
   ```
 
-- [ ] **`popup/popup.js` — manageSubBtn 클릭 → Customer Portal**
-  - Edge Function `create-portal-session` 호출 → URL 받아서 새 탭 열기
-  - 또는 Stripe Customer Portal 직접 URL 사용
+- [ ] **`popup/popup.js` — manageSubBtn 클릭 → 구독 관리**
+  - 구독 상태 표시 + 취소 버튼
+  - 취소 시 `cancel-subscription` Edge Function 호출
+  - 취소 후 UI: "Pro · 4월 1일에 만료됩니다" (경고색)
 
-- [ ] **`popup/license.js` — check_license 만료 방어 로직**
-  - 서버 check_license에서 이미 처리하지만, 클라이언트에서도 expires_at 체크
-  - `expires_at < now()` → tier='free' 강제
+- [ ] **`popup/license.js` — 취소 예정 상태 반영**
+  - `checkLicense()` 응답에 `cancel_at_period_end` 포함
+  - `check_license` RPC 수정: `cancel_at_period_end` 반환
 
-- [ ] **`popup/popup.js` — 결제 완료 후 즉시 갱신**
-  - 성공 탭 감지 또는 popup 열 때마다 캐시 무시 강제 체크
+- [ ] **`popup/popup.js` — updateLicenseBar() 취소 예정 상태 추가**
+  ```
+  Pro (활성): "Pro · user@email.com · 4월 1일까지" (초록)
+  Pro (취소 예정): "Pro · 4월 1일에 만료됩니다" (노란색/경고)
+  ```
 
-### 6B-5. 테스트
+### 6B-6. 호스팅
 
-- [ ] **Stripe 테스트 모드로 결제 → webhook → DB 확인**
-- [ ] **구독 취소 → tier 다운그레이드 확인**
-- [ ] **만료일 갱신 확인 (매달 결제 시뮬레이션)**
+- [ ] **결제 페이지 배포**: Vercel 무료 호스팅 (정적 HTML)
+  - `payment/index.html` + `payment/success.html`
+  - 도메인: `whisk-payment.vercel.app` 또는 커스텀 도메인
+
+### 6B-7. 테스트
+
+- [ ] **포트원 테스트 모드로 빌링키 발급 → 첫 결제 확인**
+- [ ] **웹훅 수신 → DB 업데이트 확인**
+- [ ] **구독 취소 → cancel_at_period_end 확인**
+- [ ] **스케줄 결제 → 자동 갱신 확인**
