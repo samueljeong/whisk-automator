@@ -3026,13 +3026,20 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       }
 
       try {
+        var blob = verifiedImages[di].blob;
         console.log('[Flow Auto] DL ' + (di + 1) + '/' + dlCount + ': ' + fullFilename +
-          ' (' + Math.round(verifiedImages[di].size / 1024) + 'KB, 출현순서 #' + (di + 1) + ')');
+          ' (' + Math.round(blob.size / 1024) + 'KB, 출현순서 #' + (di + 1) + ')');
 
-        // 원본 이미지 URL을 background에 전달 (cross-context 안전)
+        // blob → data URL 변환 후 background에 전달
+        var reader = new FileReader();
+        var dataUrl = await new Promise(function(resolve, reject) {
+          reader.onload = function() { resolve(reader.result); };
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
         chrome.runtime.sendMessage({
           action: 'DOWNLOAD_IMAGE',
-          url: verifiedImages[di].img.src,
+          url: dataUrl,
           filename: savePath + '/' + fullFilename
         });
       } catch (e) {
@@ -3275,8 +3282,8 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         : Math.min(totalCount * 60000, 600000);     // 이미지: 프롬프트당 1분, 최대 10분
       var pollInterval = 3000;
       var waited = 0;
-      var detectedNewImages = [];
-      var lastDetectedCount = 0;
+      var detectedNewImages = [];  // 출현 순서 유지! (먼저 나타난 이미지 = 먼저 제출한 프롬프트)
+      var seenNewSrcs = new Set(); // 이미 감지한 이미지 src (중복 방지)
       var lastChangeTime = Date.now();
       var STALL_TIMEOUT = 60000;
 
@@ -3289,20 +3296,21 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         await sleep(pollInterval);
         waited += pollInterval;
 
-        // 매 사이클 fresh DOM scan (stale 참조 방지)
-        detectedNewImages = [];
+        // 새 이미지만 추가 (기존 배열에 append → 출현 순서 보존)
+        var newThisCycle = 0;
         document.querySelectorAll('img').forEach(function(img) {
           if (img.src && img.src.includes('getMediaUrlRedirect') &&
               !preGenSrcs.has(img.src) && !downloadedSrcs.has(img.src) &&
-              !assetSrcs.has(img.src)) {
+              !assetSrcs.has(img.src) && !seenNewSrcs.has(img.src)) {
             detectedNewImages.push(img);
+            seenNewSrcs.add(img.src);
+            newThisCycle++;
           }
         });
 
-        if (detectedNewImages.length > lastDetectedCount) {
+        if (newThisCycle > 0) {
           console.log('[Flow Auto] 생성 진행: ' + detectedNewImages.length + '/' + totalCount +
-            ' (+' + (detectedNewImages.length - lastDetectedCount) + ')');
-          lastDetectedCount = detectedNewImages.length;
+            ' (+' + newThisCycle + ')');
           lastChangeTime = Date.now();
 
           try {
