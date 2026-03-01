@@ -3370,7 +3370,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
       console.log('[Flow Auto] === 제출 완료: ' + totalCount + '개 — 생성 대기 시작 ===');
 
-      // Phase 3: 전체 생성 대기
+      // Phase 3: 전체 생성 대기 (출현 순서 추적)
       await sleep(2000);
 
       var maxWait = selectedOutputType === 'video'
@@ -3378,10 +3378,10 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         : Math.min(totalCount * 60000, 600000);     // 이미지: 프롬프트당 1분, 최대 10분
       var pollInterval = 3000;
       var waited = 0;
-      var detectedNewImages = [];
-      var lastDetectedCount = 0;
+      var detectedNewImages = [];  // 출현 순서 유지! (먼저 나타난 이미지 = 먼저 제출한 프롬프트)
+      var seenNewSrcs = new Set(); // 이미 감지한 이미지 src (중복 방지)
       var lastChangeTime = Date.now();
-      var STALL_TIMEOUT = 60000; // 파이프라인 모드: 60초 대기
+      var STALL_TIMEOUT = 60000;
 
       while (waited < maxWait && detectedNewImages.length < totalCount) {
         if (isStopRequested()) {
@@ -3392,24 +3392,23 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         await sleep(pollInterval);
         waited += pollInterval;
 
-        // 새 이미지 수집
-        detectedNewImages = [];
+        // 새 이미지만 추가 (기존 배열에 append → 출현 순서 보존)
+        var newThisCycle = 0;
         document.querySelectorAll('img').forEach(function(img) {
           if (img.src && img.src.includes('getMediaUrlRedirect') &&
               !preGenSrcs.has(img.src) && !downloadedSrcs.has(img.src) &&
-              !assetSrcs.has(img.src)) {
+              !assetSrcs.has(img.src) && !seenNewSrcs.has(img.src)) {
             detectedNewImages.push(img);
+            seenNewSrcs.add(img.src);
+            newThisCycle++;
           }
         });
 
-        // 진전 감지
-        if (detectedNewImages.length > lastDetectedCount) {
+        if (newThisCycle > 0) {
           console.log('[Flow Auto] 생성 진행: ' + detectedNewImages.length + '/' + totalCount +
-            ' (+' + (detectedNewImages.length - lastDetectedCount) + ')');
-          lastDetectedCount = detectedNewImages.length;
+            ' (+' + newThisCycle + ')');
           lastChangeTime = Date.now();
 
-          // 진행 상황 업데이트
           try {
             chrome.runtime.sendMessage({
               action: 'PROGRESS_UPDATE',
@@ -3421,7 +3420,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
           } catch(e) {}
         }
 
-        // 조기 종료: 1개 이상 감지 + N-1개 이상 완료 + 60초 정체
+        // 조기 종료: N-1개 이상 완료 + 60초 정체
         var almostDone = detectedNewImages.length >= Math.max(1, totalCount - 1);
         if (almostDone && Date.now() - lastChangeTime > STALL_TIMEOUT) {
           console.log('[Flow Auto] ' + (STALL_TIMEOUT / 1000) + '초간 새 이미지 없음 — 조기 종료 (' +
