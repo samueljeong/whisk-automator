@@ -106,7 +106,7 @@
 - [ ] 에셋 삽입 → 잔여 @ 제거 → 커서 배치 → 텍스트 입력 순서 보장
 
 ### 2-4. 통합 입력 함수 (`fillPromptWithAssets`)
-- [ ] 기존 `fillPrompt()` + `uploadReferences()` 대체
+- [x] 기존 `fillPrompt()` + `uploadReferences()` 대체
 - [ ] 세그먼트 배열을 순서대로 처리:
   ```
   for each segment:
