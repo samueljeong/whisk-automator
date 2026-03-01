@@ -22,7 +22,7 @@
   - 항상: blob → FileReader → dataUrl → `DOWNLOAD_IMAGE` → background → `chrome.downloads`
   - blob URL (cross-context 문제) 사용하지 않음
 
-- [ ] **4. 불필요한 코드 정리**
+- [x] **4. 불필요한 코드 정리**
   - `findPromptForImage` — 사용하지 않지만 삭제는 보류 (나중에 필요할 수 있음)
   - 위치 정렬 코드 — downloadBatch 안에 남겨둠 (함수 자체를 폴백으로 유지)
 
