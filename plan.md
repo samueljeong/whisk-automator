@@ -640,7 +640,7 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
 
 ### 6B-3. 결제 웹페이지 생성 (정적 HTML — Vercel 무료 호스팅)
 
-- [ ] **`payment/index.html`** — 결제 전용 페이지
+- [x] **`payment/index.html`** — 결제 전용 페이지
   - 포트원 SDK 로드 (`https://cdn.portone.io/v2/browser-sdk.js`)
   - URL 파라미터: `?plan=monthly&userId=xxx&email=xxx&token=xxx`
   - 월간/연간 선택 UI (₩9,900/월 vs ₩100,000/년)
