@@ -45,7 +45,7 @@
 
 ## Phase 1: 프롬프트 파서 수정 (`popup.js`)
 
-- [ ] **1-1. 새 프롬프트 형식 파싱 함수 작성 (`parsePromptSegments`)**
+- [x] **1-1. 새 프롬프트 형식 파싱 함수 작성 (`parsePromptSegments`)**
   - `@태그명` 패턴 인식: `/@(\w+)/g`
   - 프롬프트를 세그먼트로 분할:
     ```js
