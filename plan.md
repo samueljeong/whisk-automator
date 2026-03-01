@@ -566,7 +566,7 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
 > 현재 로그인 후 "무료 · 오늘 0/5장 사용" 표시 → Pro 시 올바른 UI 보여야 함
 > 또한, 로그인한 Free 사용자에게도 업그레이드 버튼이 보여야 함
 
-- [ ] **6A-1. `popup/popup.js` — `updateLicenseBar()` 수정**
+- [x] **6A-1. `popup/popup.js` — `updateLicenseBar()` 수정**
 
   현재 문제: `upgradeBtn`이 로그인 시 숨겨짐 (`upgradeBtn.hidden = !!licenseResult.email`)
 
