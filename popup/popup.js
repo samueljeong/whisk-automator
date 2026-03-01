@@ -87,71 +87,187 @@ document.addEventListener('DOMContentLoaded', async () => {
 // License UI functions
 function showMainUI(licenseResult) {
   window.licenseValid = true;
-  document.getElementById('licenseScreen').hidden = true;
+  currentTier = licenseResult.tier || 'free';
+
+  document.getElementById('loginScreen').hidden = true;
   document.getElementById('mainContainer').hidden = false;
+
+  updateLicenseBar(licenseResult);
+  updateGrokAccess();
+}
+
+function updateLicenseBar(licenseResult) {
   const statusEl = document.getElementById('licenseStatus');
-  if (licenseResult.expires) {
-    statusEl.textContent = `만료: ${formatExpiry(licenseResult.expires)}`;
+  const logoutBtn = document.getElementById('logoutBtn');
+  const upgradeBtn = document.getElementById('upgradeBtn');
+
+  if (licenseResult.tier === 'pro') {
+    const email = licenseResult.email || '';
+    const expiry = licenseResult.expires ? formatExpiry(licenseResult.expires) : '';
+    statusEl.textContent = `Pro · ${email}${expiry ? ' · 만료: ' + expiry : ''}`;
+    document.getElementById('licenseBar').className = 'license-bar license-bar-pro';
+    logoutBtn.hidden = false;
+    upgradeBtn.hidden = true;
+  } else {
+    const remaining = licenseResult.daily_remaining != null
+      ? licenseResult.daily_remaining
+      : FREE_DAILY_LIMIT;
+    const used = FREE_DAILY_LIMIT - remaining;
+    statusEl.textContent = `무료 · 오늘 ${used}/${FREE_DAILY_LIMIT}장 사용`;
+    document.getElementById('licenseBar').className = 'license-bar license-bar-free';
+    logoutBtn.hidden = !licenseResult.email;
+    upgradeBtn.hidden = !!licenseResult.email;
   }
-  if (licenseResult.offline) {
-    statusEl.textContent += ' (오프라인)';
+
+  if (licenseResult.device_conflict) {
+    statusEl.textContent = '다른 기기에서 로그인되어 로그아웃됨';
+    document.getElementById('licenseBar').className = 'license-bar license-bar-warning';
   }
 }
 
-function showLicenseScreen() {
-  window.licenseValid = false;
-  document.getElementById('licenseScreen').hidden = false;
+function updateGrokAccess() {
+  const grokTab = document.getElementById('modeTabGrok');
+  if (currentTier !== 'pro') {
+    grokTab.classList.add('tab-locked');
+    grokTab.title = 'Pro 전용 기능';
+  } else {
+    grokTab.classList.remove('tab-locked');
+    grokTab.title = '';
+  }
+}
+
+async function refreshLicenseBar() {
+  const licenseResult = await checkLicense();
+  currentTier = licenseResult.tier || 'free';
+  updateLicenseBar(licenseResult);
+  updateGrokAccess();
+}
+
+function showLoginScreen() {
+  document.getElementById('loginScreen').hidden = false;
   document.getElementById('mainContainer').hidden = true;
+  setupLoginHandlers();
+}
 
-  const keyInput = document.getElementById('licenseKeyInput');
-  const submitBtn = document.getElementById('licenseSubmitBtn');
-  const errorEl = document.getElementById('licenseError');
+// OTP 로그인 핸들러 (1회만 등록)
+let loginHandlersSetup = false;
+function setupLoginHandlers() {
+  if (loginHandlersSetup) return;
+  loginHandlersSetup = true;
 
-  // Auto-format input
-  keyInput.addEventListener('input', () => {
-    let val = keyInput.value.toUpperCase().replace(/[^A-Z0-9-]/g, '');
-    // Auto-insert dashes
-    const raw = val.replace(/-/g, '');
-    if (raw.length > 5) {
-      val = raw.slice(0, 5) + '-' + raw.slice(5);
+  const emailInput = document.getElementById('otpEmailInput');
+  const sendBtn = document.getElementById('sendOtpBtn');
+  const codeInput = document.getElementById('otpCodeInput');
+  const verifyBtn = document.getElementById('verifyOtpBtn');
+  const backBtn = document.getElementById('otpBackBtn');
+  const skipBtn = document.getElementById('skipLoginBtn');
+  const errorEl = document.getElementById('otpError');
+  const step1 = document.getElementById('otpStep1');
+  const step2 = document.getElementById('otpStep2');
+  const sentMsg = document.getElementById('otpSentMsg');
+
+  // Step 1: 인증코드 발송
+  sendBtn.addEventListener('click', async () => {
+    const email = emailInput.value.trim();
+    if (!email || !email.includes('@')) {
+      errorEl.textContent = '올바른 이메일 주소를 입력해주세요';
+      errorEl.hidden = false;
+      return;
     }
-    if (raw.length > 9) {
-      val = raw.slice(0, 5) + '-' + raw.slice(5, 9) + '-' + raw.slice(9, 13);
-    }
-    keyInput.value = val.slice(0, 15);
+    sendBtn.disabled = true;
+    sendBtn.textContent = '발송 중...';
     errorEl.hidden = true;
+
+    try {
+      await sendOtp(email);
+      step1.hidden = true;
+      step2.hidden = false;
+      sentMsg.textContent = `${email}로 인증 코드를 보냈습니다`;
+      codeInput.focus();
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.hidden = false;
+    } finally {
+      sendBtn.disabled = false;
+      sendBtn.textContent = '인증코드 발송';
+    }
   });
 
-  submitBtn.addEventListener('click', async () => {
-    submitBtn.disabled = true;
-    submitBtn.textContent = '확인 중...';
+  emailInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') sendBtn.click();
+  });
+
+  // Step 2: OTP 검증
+  verifyBtn.addEventListener('click', async () => {
+    const email = emailInput.value.trim();
+    const code = codeInput.value.trim();
+    if (!code || code.length !== 6) {
+      errorEl.textContent = '6자리 인증 코드를 입력해주세요';
+      errorEl.hidden = false;
+      return;
+    }
+    verifyBtn.disabled = true;
+    verifyBtn.textContent = '확인 중...';
     errorEl.hidden = true;
 
-    const result = await submitLicenseKey(keyInput.value);
-
-    if (result.valid) {
-      showMainUI(result);
+    try {
+      await verifyOtp(email, code);
+      const licenseResult = await checkLicense();
+      showMainUI(licenseResult);
       await checkConnection();
       updateUI();
       if (typeof updateCustomDirUI === 'function') updateCustomDirUI();
       if (typeof updateCharFolderHint === 'function') updateCharFolderHint();
-    } else {
-      errorEl.textContent = result.error;
+    } catch (err) {
+      errorEl.textContent = err.message;
       errorEl.hidden = false;
-      submitBtn.disabled = false;
-      submitBtn.textContent = '확인';
+    } finally {
+      verifyBtn.disabled = false;
+      verifyBtn.textContent = '확인';
     }
   });
 
-  keyInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') submitBtn.click();
+  codeInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') verifyBtn.click();
+  });
+
+  // 숫자만 입력
+  codeInput.addEventListener('input', () => {
+    codeInput.value = codeInput.value.replace(/[^0-9]/g, '').slice(0, 6);
+    errorEl.hidden = true;
+  });
+
+  // 뒤로가기
+  backBtn.addEventListener('click', () => {
+    step1.hidden = false;
+    step2.hidden = true;
+    codeInput.value = '';
+    errorEl.hidden = true;
+  });
+
+  // 무료 계속 사용
+  skipBtn.addEventListener('click', async () => {
+    const licenseResult = await checkLicense();
+    showMainUI(licenseResult);
+    await checkConnection();
+    updateUI();
+    if (typeof updateCustomDirUI === 'function') updateCustomDirUI();
+    if (typeof updateCharFolderHint === 'function') updateCharFolderHint();
   });
 }
 
-// License change button
-document.getElementById('licenseChangeBtn')?.addEventListener('click', async () => {
-  await clearLicenseCache();
-  showLicenseScreen();
+// 로그아웃 버튼
+document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+  await signOut();
+  currentTier = 'free';
+  const licenseResult = await checkLicense();
+  updateLicenseBar(licenseResult);
+  updateGrokAccess();
+});
+
+// Pro 업그레이드 버튼
+document.getElementById('upgradeBtn')?.addEventListener('click', () => {
+  showLoginScreen();
 });
 
 // Check connection to Flow page
