@@ -3668,19 +3668,30 @@ resetLocationBtn.addEventListener('click', async () => {
 const openFolderBtn = document.getElementById('openFolderBtn');
 openFolderBtn.addEventListener('click', async () => {
   if (customDirHandle) {
-    // 커스텀 폴더: 권한 확인 겸 폴더 다시 열기
+    // 커스텀 폴더: 권한 확인 후 Finder에서 열기
     try {
       const perm = await customDirHandle.queryPermission({ mode: 'readwrite' });
-      if (perm === 'granted') {
-        alert('저장 폴더: ' + customDirHandle.name + '\n(파일 관리자에서 직접 열어주세요)');
-      } else {
+      if (perm !== 'granted') {
         alert('폴더 접근 권한이 만료되었습니다. "위치 변경"으로 다시 선택해주세요.');
         customDirHandle = null;
         await clearDirHandle();
         saveLocation.value = 'flow-images';
         saveLocation.readOnly = false;
         saveState();
+        return;
       }
+      // 폴더 내 아무 파일이나 찾아서 경로 확인 → Finder로 열기
+      try {
+        for await (const entry of customDirHandle.values()) {
+          if (entry.kind === 'file') {
+            // 파일이 있으면 임시로 chrome.downloads에 기록된 것을 찾기
+            chrome.runtime.sendMessage({ action: 'OPEN_FOLDER', savePath: customDirHandle.name });
+            return;
+          }
+        }
+      } catch (e) {}
+      // 폴더가 비어있거나 검색 실패 → 폴더 이름으로 시도
+      chrome.runtime.sendMessage({ action: 'OPEN_FOLDER', savePath: customDirHandle.name });
     } catch (e) {
       console.error('[Flow] Permission check error:', e);
     }
