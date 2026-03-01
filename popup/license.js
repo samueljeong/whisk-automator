@@ -1,7 +1,6 @@
 // Supabase OTP 인증 + 라이선스 모듈
-// ⚠️ Phase 1 완료 후 아래 값을 실제 Supabase 프로젝트 값으로 교체
-const SUPABASE_URL = "https://YOUR_PROJECT.supabase.co"; // TODO: 교체 필요
-const SUPABASE_ANON_KEY = "YOUR_ANON_KEY"; // TODO: 교체 필요
+const SUPABASE_URL = "https://cyrbibbosfybylsparfk.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_YPB5wFe6t2ij6dVzdlQYrA_fQf5Sqqm";
 const CHECK_LICENSE_URL = `${SUPABASE_URL}/functions/v1/check-license`;
 
 // Storage 키
