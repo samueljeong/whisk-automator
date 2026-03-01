@@ -2048,11 +2048,8 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       if (seg.type === 'asset') {
         var ok = await insertAssetByAtTag(promptEl, seg.tag);
         if (!ok) {
-          console.warn('[Flow Auto] 에셋 삽입 실패: @' + seg.tag + ', 텍스트로 대체');
-          // 폴백: @태그를 일반 텍스트로 입력
-          promptEl.focus();
-          document.execCommand('insertText', false, '@' + seg.tag + ' ');
-          await sleep(200);
+          console.error('[Flow Auto] 에셋 삽입 실패: @' + seg.tag + ' — 에셋이 존재하지 않습니다. 중단합니다.');
+          return false;
         }
       } else if (seg.type === 'text' && seg.content.length > 0) {
         // 커서를 에디터 끝으로 이동 후 텍스트 입력
