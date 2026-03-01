@@ -3668,7 +3668,8 @@ resetLocationBtn.addEventListener('click', async () => {
 const openFolderBtn = document.getElementById('openFolderBtn');
 openFolderBtn.addEventListener('click', async () => {
   if (customDirHandle) {
-    // 커스텀 폴더: 권한 확인 후 Finder에서 열기
+    // 커스텀 폴더: File System Access API는 전체 경로를 노출하지 않으므로
+    // Finder에서 직접 열 수 없음 → 폴더 이름 안내
     try {
       const perm = await customDirHandle.queryPermission({ mode: 'readwrite' });
       if (perm !== 'granted') {
@@ -3680,18 +3681,14 @@ openFolderBtn.addEventListener('click', async () => {
         saveState();
         return;
       }
-      // 폴더 내 아무 파일이나 찾아서 경로 확인 → Finder로 열기
+      // 파일 개수 확인
+      let fileCount = 0;
       try {
         for await (const entry of customDirHandle.values()) {
-          if (entry.kind === 'file') {
-            // 파일이 있으면 임시로 chrome.downloads에 기록된 것을 찾기
-            chrome.runtime.sendMessage({ action: 'OPEN_FOLDER', savePath: customDirHandle.name });
-            return;
-          }
+          if (entry.kind === 'file') fileCount++;
         }
       } catch (e) {}
-      // 폴더가 비어있거나 검색 실패 → 폴더 이름으로 시도
-      chrome.runtime.sendMessage({ action: 'OPEN_FOLDER', savePath: customDirHandle.name });
+      alert(`📁 저장 폴더: ${customDirHandle.name}\n💾 저장된 파일: ${fileCount}개\n\nFinder에서 "${customDirHandle.name}" 폴더를 직접 열어주세요.\n(크롬 확장 보안 제한으로 자동 열기 불가)`);
     } catch (e) {
       console.error('[Flow] Permission check error:', e);
     }
