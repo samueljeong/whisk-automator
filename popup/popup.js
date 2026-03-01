@@ -100,28 +100,49 @@ function updateLicenseBar(licenseResult) {
   const statusEl = document.getElementById('licenseStatus');
   const logoutBtn = document.getElementById('logoutBtn');
   const upgradeBtn = document.getElementById('upgradeBtn');
+  const manageSubBtn = document.getElementById('manageSubBtn');
+  const licenseBar = document.getElementById('licenseBar');
+
+  if (licenseResult.device_conflict) {
+    statusEl.textContent = '다른 기기에서 로그인되어 로그아웃됨';
+    licenseBar.className = 'license-bar license-bar-warning';
+    logoutBtn.hidden = true;
+    upgradeBtn.hidden = true;
+    manageSubBtn.hidden = true;
+    return;
+  }
 
   if (licenseResult.tier === 'pro') {
+    // Pro 사용자
     const email = licenseResult.email || '';
-    const expiry = licenseResult.expires ? formatExpiry(licenseResult.expires) : '';
-    statusEl.textContent = `Pro · ${email}${expiry ? ' · 만료: ' + expiry : ''}`;
-    document.getElementById('licenseBar').className = 'license-bar license-bar-pro';
+    const expiry = licenseResult.expires ? formatExpiryShort(licenseResult.expires) : '';
+    statusEl.textContent = `Pro · ${email}${expiry ? ' · ' + expiry + '까지' : ''}`;
+    licenseBar.className = 'license-bar license-bar-pro';
     logoutBtn.hidden = false;
     upgradeBtn.hidden = true;
+    manageSubBtn.hidden = false;
+  } else if (licenseResult.email) {
+    // 로그인한 Free 사용자
+    const remaining = licenseResult.daily_remaining != null
+      ? licenseResult.daily_remaining
+      : FREE_DAILY_LIMIT;
+    const used = FREE_DAILY_LIMIT - remaining;
+    statusEl.textContent = `무료 · ${licenseResult.email} · 오늘 ${used}/${FREE_DAILY_LIMIT}장`;
+    licenseBar.className = 'license-bar license-bar-free';
+    logoutBtn.hidden = false;
+    upgradeBtn.hidden = false;
+    manageSubBtn.hidden = true;
   } else {
+    // 비로그인 Free 사용자
     const remaining = licenseResult.daily_remaining != null
       ? licenseResult.daily_remaining
       : FREE_DAILY_LIMIT;
     const used = FREE_DAILY_LIMIT - remaining;
     statusEl.textContent = `무료 · 오늘 ${used}/${FREE_DAILY_LIMIT}장 사용`;
-    document.getElementById('licenseBar').className = 'license-bar license-bar-free';
-    logoutBtn.hidden = !licenseResult.email;
-    upgradeBtn.hidden = !!licenseResult.email;
-  }
-
-  if (licenseResult.device_conflict) {
-    statusEl.textContent = '다른 기기에서 로그인되어 로그아웃됨';
-    document.getElementById('licenseBar').className = 'license-bar license-bar-warning';
+    licenseBar.className = 'license-bar license-bar-free';
+    logoutBtn.hidden = true;
+    upgradeBtn.hidden = false;
+    manageSubBtn.hidden = true;
   }
 }
 
