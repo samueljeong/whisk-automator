@@ -3282,8 +3282,8 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         : Math.min(totalCount * 60000, 600000);     // 이미지: 프롬프트당 1분, 최대 10분
       var pollInterval = 3000;
       var waited = 0;
-      var detectedNewImages = [];  // 출현 순서 유지! (먼저 나타난 이미지 = 먼저 제출한 프롬프트)
-      var seenNewSrcs = new Set(); // 이미 감지한 이미지 src (중복 방지)
+      var detectedNewImages = [];
+      var lastDetectedCount = 0;
       var lastChangeTime = Date.now();
       var STALL_TIMEOUT = 60000;
 
@@ -3296,21 +3296,20 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         await sleep(pollInterval);
         waited += pollInterval;
 
-        // 새 이미지만 추가 (기존 배열에 append → 출현 순서 보존)
-        var newThisCycle = 0;
+        // 매 사이클 fresh DOM scan (stale 참조 방지)
+        detectedNewImages = [];
         document.querySelectorAll('img').forEach(function(img) {
           if (img.src && img.src.includes('getMediaUrlRedirect') &&
               !preGenSrcs.has(img.src) && !downloadedSrcs.has(img.src) &&
-              !assetSrcs.has(img.src) && !seenNewSrcs.has(img.src)) {
+              !assetSrcs.has(img.src)) {
             detectedNewImages.push(img);
-            seenNewSrcs.add(img.src);
-            newThisCycle++;
           }
         });
 
-        if (newThisCycle > 0) {
+        if (detectedNewImages.length > lastDetectedCount) {
           console.log('[Flow Auto] 생성 진행: ' + detectedNewImages.length + '/' + totalCount +
-            ' (+' + newThisCycle + ')');
+            ' (+' + (detectedNewImages.length - lastDetectedCount) + ')');
+          lastDetectedCount = detectedNewImages.length;
           lastChangeTime = Date.now();
 
           try {
