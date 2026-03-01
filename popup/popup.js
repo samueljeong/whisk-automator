@@ -3124,7 +3124,8 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
           chrome.runtime.sendMessage({
             action: 'SAVE_IMAGE_DATA',
             dataUrl: dataUrl,
-            filename: fullFilename
+            filename: fullFilename,
+            savePath: savePath
           });
         } else {
           var blobUrl = URL.createObjectURL(blob);
