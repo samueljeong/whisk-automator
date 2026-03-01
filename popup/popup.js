@@ -286,6 +286,11 @@ document.getElementById('logoutBtn')?.addEventListener('click', async () => {
   updateGrokAccess();
 });
 
+// 결제 페이지 URL (Vercel 배포 후 실제 URL로 교체)
+// TODO: 배포 후 실제 URL로 교체
+const PAYMENT_PAGE_URL = 'https://whisk-payment.vercel.app';
+const CANCEL_SUB_URL = `${SUPABASE_URL}/functions/v1/cancel-subscription`;
+
 // Pro 업그레이드 버튼
 document.getElementById('upgradeBtn')?.addEventListener('click', async () => {
   const email = await getAuthEmail();
@@ -294,22 +299,40 @@ document.getElementById('upgradeBtn')?.addEventListener('click', async () => {
     showLoginScreen();
     return;
   }
-  // 로그인 Free → Stripe Payment Link로 이동
-  // TODO: Stripe Payment Link URL 설정 후 활성화
+  // 로그인 Free → 결제 페이지로 이동
   const userId = await getAuthUserId();
-  const PAYMENT_LINK_URL = null; // Phase 6B에서 설정
-  if (!PAYMENT_LINK_URL) {
-    alert('결제 시스템 준비 중입니다. 곧 이용 가능합니다!');
-    return;
-  }
-  const paymentUrl = `${PAYMENT_LINK_URL}?prefilled_email=${encodeURIComponent(email)}&client_reference_id=${userId}`;
+  const token = await getAccessToken();
+  const paymentUrl = `${PAYMENT_PAGE_URL}?userId=${userId}&email=${encodeURIComponent(email)}&token=${token}`;
   chrome.tabs.create({ url: paymentUrl });
 });
 
-// 구독 관리 버튼 (Stripe Customer Portal)
+// 구독 관리 버튼
 document.getElementById('manageSubBtn')?.addEventListener('click', async () => {
-  // TODO: Stripe Customer Portal URL 설정 후 활성화
-  alert('구독 관리 페이지 준비 중입니다.');
+  if (!confirm('구독을 취소하시겠습니까?\n\n취소 후에도 현재 구독 기간이 끝날 때까지 Pro를 이용할 수 있습니다.')) {
+    return;
+  }
+  try {
+    const token = await getAccessToken();
+    const res = await fetch(CANCEL_SUB_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('구독이 취소되었습니다.\n기간 만료까지 Pro를 이용할 수 있습니다.');
+      // 캐시 무시하고 라이선스 새로 체크
+      await chrome.storage.local.remove(LICENSE_CACHE_KEY);
+      await refreshLicenseBar();
+    } else {
+      alert(data.error || '구독 취소에 실패했습니다.');
+    }
+  } catch (err) {
+    alert('구독 취소 중 오류가 발생했습니다.');
+    console.error('[Subscription] Cancel error:', err);
+  }
 });
 
 // Check connection to Flow page
