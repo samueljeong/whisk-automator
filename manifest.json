@@ -14,7 +14,7 @@
   ],
   "host_permissions": [
     "https://labs.google/*",
-    "https://drama-s2ns.onrender.com/*",
+    "https://*.supabase.co/*",
     "https://grok.com/*"
   ],
   "action": {
