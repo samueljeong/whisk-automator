@@ -736,17 +736,32 @@ async function loadState() {
       saveLocation.value = result.saveLocation;
     }
 
-    // 커스텀 폴더 handle 복원은 더 이상 사용하지 않음
-    // 다운로드 폴더 하위 경로(saveLocation)로 통일
+    // Restore custom directory handle
     if (result.useCustomDir) {
-      // 이전에 커스텀 폴더를 쓰던 경우 → 다운로드 하위 경로로 전환
-      customDirHandle = null;
-      await clearDirHandle();
-      var fallbackName = result.customDirName || 'flow-images';
-      saveLocation.value = fallbackName;
-      saveLocation.readOnly = false;
-      console.log('[Flow] 커스텀 폴더 → 다운로드/' + fallbackName + ' 으로 전환');
-      await saveState(); // useCustomDir=false로 저장
+      try {
+        const savedHandle = await loadDirHandle();
+        if (savedHandle) {
+          let perm = await savedHandle.queryPermission({ mode: 'readwrite' });
+          if (perm === 'prompt') {
+            // 사이드 패널 로드 시 권한 재요청 시도
+            perm = await savedHandle.requestPermission({ mode: 'readwrite' });
+          }
+          if (perm === 'granted') {
+            customDirHandle = savedHandle;
+            saveLocation.value = '\uD83D\uDCC1 ' + savedHandle.name;
+            saveLocation.readOnly = true;
+          } else {
+            // Permission lost — 폴더 이름을 다운로드 하위 경로로 폴백
+            await clearDirHandle();
+            var fallbackName = result.customDirName || 'flow-images';
+            saveLocation.value = fallbackName;
+            saveLocation.readOnly = false;
+            console.log('[Flow] 커스텀 폴더 권한 만료 → 다운로드/' + fallbackName + ' 으로 폴백');
+          }
+        }
+      } catch (e) {
+        console.log('[Flow] Failed to restore directory handle:', e);
+      }
     }
 
     // Character folder: 저장된 데이터가 이미 PROJECTS에 복원됨 (saveState로 저장했으므로)
@@ -1363,8 +1378,24 @@ async function startAutomation() {
   currentPromptEl.textContent = '시작 준비 중...';
   updateUI();
 
-  // customDirHandle은 더 이상 사용하지 않음 → 다운로드 폴더 하위 경로로 통일
-  customDirHandle = null;
+  // 커스텀 폴더 권한 재확인 (확장 리로드 후 'prompt' 상태일 수 있음)
+  if (!customDirHandle) {
+    try {
+      const savedHandle = await loadDirHandle();
+      if (savedHandle) {
+        const perm = await savedHandle.requestPermission({ mode: 'readwrite' });
+        if (perm === 'granted') {
+          customDirHandle = savedHandle;
+          saveLocation.value = '\uD83D\uDCC1 ' + savedHandle.name;
+          saveLocation.readOnly = true;
+          updateCustomDirUI();
+          console.log('[Popup] 커스텀 폴더 권한 재획득:', savedHandle.name);
+        }
+      }
+    } catch (e) {
+      console.log('[Popup] 커스텀 폴더 권한 재요청 실패:', e);
+    }
+  }
 
   const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
   const tab = tabs[0];
@@ -1373,7 +1404,7 @@ async function startAutomation() {
   const indexMap = pendingPrompts.map(p => p.originalIndex);
   const delayMs = parseInt(delayInput.value) * 1000;
   const shouldDownload = autoDownload.checked;
-  const savePath = saveLocation.value.replace(/^📁\s*/, '').trim() || 'flow-images';
+  const savePath = saveLocation.value.trim() || 'flow-images';
   promptIndexMap = indexMap; // PROGRESS_UPDATE 핸들러에서 사용
 
   // 프로젝트 스타일 설정 가져오기
@@ -2974,8 +3005,16 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       console.log('[Flow Auto] 배치 다운로드: DOM 탐색 이미지 ' + candidateImages.length + '개 (폴백)');
     }
 
-    // 정렬 없음: detectedImages가 이미 출현 순서대로 들어있음 (Phase 3에서 FIFO 추적)
-    console.log('[Flow Auto] 배치 다운로드: 후보 이미지 ' + candidateImages.length + '개 (출현순서), 크기 필터 적용...');
+    // 위치순 정렬 (아래→위 = 제출 순서)
+    // Flow는 최신 생성물을 위에 표시 (역순) → 아래가 먼저 제출된 프롬프트
+    candidateImages.sort(function(a, b) {
+      var ar = a.getBoundingClientRect();
+      var br = b.getBoundingClientRect();
+      if (Math.abs(ar.top - br.top) < 20) return ar.left - br.left;
+      return br.top - ar.top; // 아래→위 (제출 순서 = 프롬프트 순서)
+    });
+
+    console.log('[Flow Auto] 배치 다운로드: 후보 이미지 ' + candidateImages.length + '개, 크기 필터 적용...');
 
     // 후보 이미지를 fetch해서 실제 크기로 필터링 (에셋 이미지 제외)
     var verifiedImages = [];
@@ -3001,14 +3040,58 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     var dlCount = Math.min(verifiedImages.length, batchCount);
     console.log('[Flow Auto] 크기 필터 후: 생성 이미지 ' + verifiedImages.length + '개, 다운로드 ' + dlCount + '개');
 
-    // === 출현 순서 매칭 ===
-    // detectedImages는 Phase 3에서 출현 순서대로 수집됨
-    // Flow는 FIFO이므로: 먼저 나타난 이미지 = 먼저 제출한 프롬프트
-    // verifiedImages도 같은 순서 (candidateImages = detectedImages 순서 유지, 크기 필터만 적용)
-    console.log('[Flow Auto] 출현 순서 매칭: 이미지 ' + dlCount + '개 → 프롬프트 ' + batchCount + '개');
+    // === 프롬프트-이미지 1:1 매칭 (카드 텍스트 기반) ===
+    var batchPrompts = [];
+    for (var bp = batchStart; bp < batchEnd; bp++) {
+      batchPrompts.push(promptsWithCharacters[bp]);
+    }
+
+    var imageToPromptMap = []; // verifiedImages 인덱스 → batchPrompts 인덱스
+    var matchedPrompts = new Set();
+    var matchCount = 0;
+
+    for (var mi = 0; mi < verifiedImages.length; mi++) {
+      var matchIdx = findPromptForImage(verifiedImages[mi].img, batchPrompts, matchedPrompts);
+      if (matchIdx >= 0) {
+        imageToPromptMap[mi] = matchIdx;
+        matchedPrompts.add(matchIdx);
+        matchCount++;
+      } else {
+        imageToPromptMap[mi] = -1;
+      }
+    }
+
+    // 매칭 안 된 이미지 → 매칭 안 된 프롬프트에 순서대로 배정 (위치 기반 폴백)
+    if (matchCount < verifiedImages.length) {
+      var unmatchedPromptIndices = [];
+      for (var upi = 0; upi < batchCount; upi++) {
+        if (!matchedPrompts.has(upi)) unmatchedPromptIndices.push(upi);
+      }
+      var unmatchedIdx = 0;
+      for (var fi = 0; fi < verifiedImages.length; fi++) {
+        if (imageToPromptMap[fi] === -1 && unmatchedIdx < unmatchedPromptIndices.length) {
+          imageToPromptMap[fi] = unmatchedPromptIndices[unmatchedIdx++];
+        }
+      }
+    }
+
+    console.log('[Flow Auto] 프롬프트 매칭: ' + matchCount + '/' + verifiedImages.length + ' 텍스트 매칭, ' +
+      (verifiedImages.length - matchCount) + '개 위치 폴백');
+
+    // 매칭 안 된 프롬프트 = 생성 실패
+    if (matchCount > 0 && matchedPrompts.size < batchCount) {
+      for (var fpi = 0; fpi < batchCount; fpi++) {
+        if (!matchedPrompts.has(fpi)) {
+          var failedItem = batchPrompts[fpi];
+          console.warn('[Flow Auto] ⚠ 프롬프트 #' + (failedItem.index + 1) + ' 생성 실패 (이미지 미감지): ' +
+            (failedItem.filename || failedItem.originalPrompt.substring(0, 30)));
+        }
+      }
+    }
 
     for (var di = 0; di < dlCount; di++) {
-      var pIdx = batchStart + di;
+      var promptBatchIdx = imageToPromptMap[di];
+      var pIdx = (promptBatchIdx >= 0) ? (batchStart + promptBatchIdx) : (batchStart + di);
       if (pIdx >= promptsWithCharacters.length) break;
 
       var pItem = promptsWithCharacters[pIdx];
@@ -3025,38 +3108,38 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         fullFilename = 'flow_' + (pItem.index + 1) + '_' + autoName + '.png';
       }
 
+      var matchMethod = (imageToPromptMap[di] >= 0 && matchCount > 0) ? '텍스트매칭' : '위치폴백';
       try {
         var blob = verifiedImages[di].blob;
         console.log('[Flow Auto] DL ' + (di + 1) + '/' + dlCount + ': ' + fullFilename +
-          ' (' + Math.round(blob.size / 1024) + 'KB, 출현순서 #' + (di + 1) + ')');
+          ' (' + Math.round(blob.size / 1024) + 'KB, ' + matchMethod + ')');
 
-        // blob → data URL 변환 후 background에 전달
-        var reader = new FileReader();
-        var dataUrl = await new Promise(function(resolve, reject) {
-          reader.onload = function() { resolve(reader.result); };
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        });
-        chrome.runtime.sendMessage({
-          action: 'DOWNLOAD_IMAGE',
-          url: dataUrl,
-          filename: savePath + '/' + fullFilename
-        });
+        if (useCustomDir) {
+          var reader = new FileReader();
+          var dataUrl = await new Promise(function(resolve, reject) {
+            reader.onload = function() { resolve(reader.result); };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+          chrome.runtime.sendMessage({
+            action: 'SAVE_IMAGE_DATA',
+            dataUrl: dataUrl,
+            filename: fullFilename
+          });
+        } else {
+          var blobUrl = URL.createObjectURL(blob);
+          chrome.runtime.sendMessage({
+            action: 'DOWNLOAD_IMAGE',
+            url: blobUrl,
+            filename: savePath + '/' + fullFilename
+          });
+        }
       } catch (e) {
         console.error('[Flow Auto] 다운로드 실패: ' + fullFilename, e.message);
       }
     }
 
-    // 미매칭 프롬프트 로그
-    if (dlCount < batchCount) {
-      for (var fpi = dlCount; fpi < batchCount; fpi++) {
-        var failedItem = promptsWithCharacters[batchStart + fpi];
-        console.warn('[Flow Auto] ⚠ 프롬프트 #' + (failedItem.index + 1) + ' 이미지 미감지: ' +
-          (failedItem.filename || failedItem.originalPrompt.substring(0, 30)));
-      }
-    }
-
-    // 남은 이미지도 downloadedSrcs에 등록
+    // 남은 이미지도 downloadedSrcs에 등록 (다음 배치 오염 방지)
     for (var ri = dlCount; ri < verifiedImages.length; ri++) {
       downloadedSrcs.add(verifiedImages[ri].img.src);
     }
@@ -3274,7 +3357,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
       console.log('[Flow Auto] === 제출 완료: ' + totalCount + '개 — 생성 대기 시작 ===');
 
-      // Phase 3: 전체 생성 대기 (출현 순서 추적)
+      // Phase 3: 전체 생성 대기
       await sleep(2000);
 
       var maxWait = selectedOutputType === 'video'
@@ -3282,10 +3365,10 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         : Math.min(totalCount * 60000, 600000);     // 이미지: 프롬프트당 1분, 최대 10분
       var pollInterval = 3000;
       var waited = 0;
-      var detectedNewImages = [];  // 출현 순서 유지! (먼저 나타난 이미지 = 먼저 제출한 프롬프트)
-      var seenNewSrcs = new Set(); // 이미 감지한 이미지 src (중복 방지)
+      var detectedNewImages = [];
+      var lastDetectedCount = 0;
       var lastChangeTime = Date.now();
-      var STALL_TIMEOUT = 60000;
+      var STALL_TIMEOUT = 60000; // 파이프라인 모드: 60초 대기
 
       while (waited < maxWait && detectedNewImages.length < totalCount) {
         if (isStopRequested()) {
@@ -3296,23 +3379,24 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         await sleep(pollInterval);
         waited += pollInterval;
 
-        // 새 이미지만 추가 (기존 배열에 append → 출현 순서 보존)
-        var newThisCycle = 0;
+        // 새 이미지 수집
+        detectedNewImages = [];
         document.querySelectorAll('img').forEach(function(img) {
           if (img.src && img.src.includes('getMediaUrlRedirect') &&
               !preGenSrcs.has(img.src) && !downloadedSrcs.has(img.src) &&
-              !assetSrcs.has(img.src) && !seenNewSrcs.has(img.src)) {
+              !assetSrcs.has(img.src)) {
             detectedNewImages.push(img);
-            seenNewSrcs.add(img.src);
-            newThisCycle++;
           }
         });
 
-        if (newThisCycle > 0) {
+        // 진전 감지
+        if (detectedNewImages.length > lastDetectedCount) {
           console.log('[Flow Auto] 생성 진행: ' + detectedNewImages.length + '/' + totalCount +
-            ' (+' + newThisCycle + ')');
+            ' (+' + (detectedNewImages.length - lastDetectedCount) + ')');
+          lastDetectedCount = detectedNewImages.length;
           lastChangeTime = Date.now();
 
+          // 진행 상황 업데이트
           try {
             chrome.runtime.sendMessage({
               action: 'PROGRESS_UPDATE',
@@ -3324,7 +3408,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
           } catch(e) {}
         }
 
-        // 조기 종료: N-1개 이상 완료 + 60초 정체
+        // 조기 종료: 1개 이상 감지 + N-1개 이상 완료 + 60초 정체
         var almostDone = detectedNewImages.length >= Math.max(1, totalCount - 1);
         if (almostDone && Date.now() - lastChangeTime > STALL_TIMEOUT) {
           console.log('[Flow Auto] ' + (STALL_TIMEOUT / 1000) + '초간 새 이미지 없음 — 조기 종료 (' +
@@ -3552,28 +3636,95 @@ delayInput.addEventListener('change', saveState);
 saveLocation.addEventListener('change', saveState);
 saveLocation.addEventListener('input', saveState);
 resetLocationBtn.addEventListener('click', async () => {
-  // 다운로드 폴더 기준 하위 경로 입력
-  const current = saveLocation.value.replace(/^📁\s*/, '').trim() || 'flow-images';
-  const newPath = prompt('저장 위치 (다운로드 폴더 기준 하위 경로)', current);
-  if (newPath !== null) {
-    customDirHandle = null;
-    saveLocation.value = newPath.trim() || 'flow-images';
-    saveLocation.readOnly = false;
+  if (!window.showDirectoryPicker) {
+    // Fallback: 텍스트 입력
+    const current = saveLocation.value.trim() || 'flow-images';
+    const newPath = prompt('저장 위치 (다운로드 폴더 기준 하위 경로)', current);
+    if (newPath !== null) {
+      saveLocation.value = newPath.trim() || 'flow-images';
+      saveState();
+    }
+    return;
+  }
+
+  try {
+    const handle = await window.showDirectoryPicker({
+      mode: 'readwrite',
+      startIn: 'downloads'
+    });
+    customDirHandle = handle;
+    saveLocation.value = '\uD83D\uDCC1 ' + handle.name;
+    saveLocation.readOnly = true;
+    await saveDirHandle(handle);
+    updateCustomDirUI();
     saveState();
+  } catch (e) {
+    if (e.name !== 'AbortError') {
+      console.error('[Flow] Folder selection error:', e);
+    }
   }
 });
 
 const openFolderBtn = document.getElementById('openFolderBtn');
 openFolderBtn.addEventListener('click', async () => {
-  const savePath = saveLocation.value.replace(/^📁\s*/, '').trim() || 'flow-images';
+  if (customDirHandle) {
+    // 커스텀 폴더: 권한 확인 후 Finder에서 열기
+    try {
+      const perm = await customDirHandle.queryPermission({ mode: 'readwrite' });
+      if (perm !== 'granted') {
+        alert('폴더 접근 권한이 만료되었습니다. "위치 변경"으로 다시 선택해주세요.');
+        customDirHandle = null;
+        await clearDirHandle();
+        saveLocation.value = 'flow-images';
+        saveLocation.readOnly = false;
+        saveState();
+        return;
+      }
+      // 폴더 내 아무 파일이나 찾아서 경로 확인 → Finder로 열기
+      try {
+        for await (const entry of customDirHandle.values()) {
+          if (entry.kind === 'file') {
+            // 파일이 있으면 임시로 chrome.downloads에 기록된 것을 찾기
+            chrome.runtime.sendMessage({ action: 'OPEN_FOLDER', savePath: customDirHandle.name });
+            return;
+          }
+        }
+      } catch (e) {}
+      // 폴더가 비어있거나 검색 실패 → 폴더 이름으로 시도
+      chrome.runtime.sendMessage({ action: 'OPEN_FOLDER', savePath: customDirHandle.name });
+    } catch (e) {
+      console.error('[Flow] Permission check error:', e);
+    }
+    return;
+  }
+  const savePath = saveLocation.value.trim() || 'flow-images';
   chrome.runtime.sendMessage({ action: 'OPEN_FOLDER', savePath });
 });
 
-// 초기화 버튼
+// 초기화 버튼 (커스텀 폴더 → 다운로드 폴더로 복귀)
 const resetToDefaultBtn = document.getElementById('resetToDefaultBtn');
 const saveLocationHint = document.getElementById('saveLocationHint');
-if (resetToDefaultBtn) resetToDefaultBtn.hidden = true;
-if (saveLocationHint) saveLocationHint.textContent = '다운로드 폴더 기준 하위 경로 (예: flow-images)';
+resetToDefaultBtn.addEventListener('click', async () => {
+  customDirHandle = null;
+  await clearDirHandle();
+  saveLocation.value = 'flow-images';
+  saveLocation.readOnly = false;
+  resetToDefaultBtn.hidden = true;
+  saveLocationHint.textContent = '다운로드 폴더 기준 하위 경로 (예: flow-images)';
+  saveState();
+});
+
+// 커스텀 폴더 활성화 시 UI 업데이트
+function updateCustomDirUI() {
+  if (customDirHandle) {
+    resetToDefaultBtn.hidden = false;
+    saveLocationHint.textContent = '선택된 폴더에 직접 저장됩니다';
+  } else {
+    resetToDefaultBtn.hidden = true;
+    saveLocationHint.textContent = '다운로드 폴더 기준 하위 경로 (예: flow-images)';
+  }
+}
+updateCustomDirUI();
 
 // 스타일 설정 변경 시 저장
 stylePrefix.addEventListener('change', saveStyleSettings);
@@ -3895,7 +4046,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
         // 폴백: customDirHandle 없거나 저장 실패 시 chrome.downloads로 저장
         try {
-          const savePath = saveLocation.value.replace(/^📁\s*/, '').trim() || 'flow-images';
+          const savePath = saveLocation.value.trim() || 'flow-images';
           const fullPath = savePath.replace(/^[\uD83D\uDCC1]\s*/, '') + '/' + message.filename;
           chrome.runtime.sendMessage({
             action: 'DOWNLOAD_IMAGE',
