@@ -1276,6 +1276,13 @@ async function startAutomation() {
     return;
   }
 
+  // Free 한도 체크
+  const genCheck = await canGenerate(pendingPrompts.length);
+  if (!genCheck.allowed) {
+    alert(genCheck.message + '\n\n이메일 로그인으로 Pro 업그레이드하면 무제한 사용 가능합니다.');
+    return;
+  }
+
   isRunning = true;
   currentIndex = 0;
   // 미완료 프롬프트만 상태 초기화 (에러 상태도 재시도 가능)
