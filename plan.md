@@ -337,7 +337,7 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
 
 현재 106줄 → 예상 ~250줄
 
-- [ ] **2a. Supabase 설정값 추가**
+- [x] **2a. Supabase 설정값 추가**
   ```js
   const SUPABASE_URL = "https://[프로젝트].supabase.co";
   const SUPABASE_ANON_KEY = "eyJ...";
