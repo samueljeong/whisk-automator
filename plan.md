@@ -668,7 +668,7 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
   응답: { success, expiresAt }
   ```
 
-- [ ] **`portone-webhook`** — 포트원 웹훅 수신
+- [x] **`portone-webhook`** — 포트원 웹훅 수신
   ```
   이벤트 처리:
     Transaction.Paid → 결제 성공
