@@ -629,7 +629,7 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
 
 ### 6B-2. Supabase DB 마이그레이션 (SQL Editor)
 
-- [ ] **licenses 테이블에 포트원 컬럼 추가**
+- [x] **licenses 테이블에 포트원 컬럼 추가** (supabase_setup.md Step 4에 SQL 작성됨)
   ```sql
   ALTER TABLE licenses
     ADD COLUMN IF NOT EXISTS billing_key TEXT,
