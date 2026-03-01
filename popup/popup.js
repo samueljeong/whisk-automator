@@ -3434,9 +3434,9 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
               lastChangeTime = Date.now();
             }
 
-            // 조기 종료: 대부분 완료됐는데 마지막 1개만 안 나올 때만 작동
-            // (2/5에서 조기 종료하면 안 됨 — 나머지 3개가 아직 생성 중일 수 있음)
-            var almostDone = detectedNewImages.length >= batchCount - 1; // N-1개 이상
+            // 조기 종료: 1개 이상 감지됐고 나머지가 안 나올 때만 작동
+            // detectedNewImages.length가 0이면 절대 조기 종료하지 않음 (maxWait까지 대기)
+            var almostDone = detectedNewImages.length >= Math.max(1, batchCount - 1);
             if (almostDone && Date.now() - lastChangeTime > STALL_TIMEOUT) {
               console.log('[Flow Auto] ' + (STALL_TIMEOUT / 1000) + '초간 새 이미지 없음 — 조기 종료 (' +
                 detectedNewImages.length + '/' + batchCount + ')');
