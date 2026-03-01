@@ -679,7 +679,7 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
   서명 검증: webhook-id, webhook-signature, webhook-timestamp
   ```
 
-- [ ] **`cancel-subscription`** — 구독 취소 (구독 관리에서 호출)
+- [x] **`cancel-subscription`** — 구독 취소 (구독 관리에서 호출)
   ```
   입력: { userId } (JWT 인증)
   처리:
