@@ -63,18 +63,19 @@ const DEFAULT_PROJECTS = {
 let PROJECTS = { ...DEFAULT_PROJECTS };
 let currentProject = "common";
 
+// 현재 사용자 tier (전역)
+let currentTier = 'free';
+
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
   await loadState();
 
   // License check
   const licenseResult = await checkLicense();
-  if (licenseResult.valid) {
-    showMainUI(licenseResult);
-  } else {
-    showLicenseScreen();
-    return; // Don't initialize main UI
-  }
+  currentTier = licenseResult.tier || 'free';
+
+  // 항상 메인 UI 진입 (Free든 Pro든)
+  showMainUI(licenseResult);
 
   await checkConnection();
   updateUI();
