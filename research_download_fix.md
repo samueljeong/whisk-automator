@@ -1,50 +1,56 @@
-# 다운로드 깨짐 리서치
+# 다운로드 깨짐 리서치 (v2)
 
-## 문제
-"다운로드 폴더 논의 이후부터 다운로드가 안 된다"
+## 기준점
+- **성공 시점**: 261765b (3/1 23:24) — 사무엘님 "11시쯤 성공"
+- **현재**: 7e00388 (방금 revert 커밋)
+- **차이**: 410줄 (20개 커밋 분량)
 
-## 원인: 커밋 146d175 (이번 세션에서 내가 만든 변경)
+## 261765b → 현재(7e00388) 변경 목록
 
-### 깨진 코드 (현재)
-```js
-// downloadBatch 함수 안 (줄 ~3028)
-chrome.runtime.sendMessage({
-  action: 'DOWNLOAD_IMAGE',
-  url: verifiedImages[di].img.src,  // ← 원본 페이지의 img.src (blob: URL)
-  filename: savePath + '/' + fullFilename
-});
+### A. 다운로드 폴더 관련 (UI/설정)
+1. **loadState()** — File System Access API 복원 로직 제거, `customDirHandle = null` 강제
+2. **startAutomation()** — 커스텀 폴더 권한 재확인 제거, `customDirHandle = null` 강제
+3. **savePath** — `.trim()` → `.replace(/^📁\s*/, '').trim()` (이모지 prefix 제거)
+4. **resetLocationBtn** — `showDirectoryPicker()` → `prompt()` (텍스트 입력)
+5. **openFolderBtn** — customDirHandle 분기 제거, 직접 `OPEN_FOLDER` 메시지
+6. **resetToDefaultBtn / updateCustomDirUI** — 전체 제거, hidden=true 고정
+
+### B. downloadBatch 핵심 로직 변경
+7. **위치 정렬 제거** — `candidateImages.sort()` (아래→위) 삭제
+8. **매칭 로직 전면 교체** — 텍스트매칭+위치폴백 → FIFO 출현순서
+9. **다운로드 경로 변경** — `useCustomDir` 분기(SAVE_IMAGE_DATA/blobUrl) → 무조건 dataUrl+DOWNLOAD_IMAGE
+   - 이건 정상 동작 (방금 revert한 img.src 문제와 별개)
+
+### C. Phase 3 폴링 변경
+10. **출현 순서 추적** — `detectedNewImages = []` 리셋 → `seenNewSrcs` Set 누적
+    - 이전: 매 사이클 전체 재스캔 (항상 최신 DOM)
+    - 현재: 한번 push한 img 요소를 배열에 유지 (stale 참조 가능성)
+
+### D. SAVE_IMAGE_DATA 핸들러
+11. **savePath 이모지 제거** 추가 — `.replace(/^📁\s*/, '')`
+
+## 다운로드가 깨진 핵심 원인
+
+### 확정: 146d175 (이미 revert 완료)
+- `blob → dataUrl` → `img.src` 변경이 다운로드를 완전히 깨뜨림
+
+### 미확정: 다운로드 경로 변경 (B.9)
+이전(성공):
 ```
-
-### 동작하던 코드 (146d175 직전 = cfcc9ac)
-```js
-var blob = verifiedImages[di].blob;
-var reader = new FileReader();
-var dataUrl = await new Promise(function(resolve, reject) {
-  reader.onload = function() { resolve(reader.result); };
-  reader.onerror = reject;
-  reader.readAsDataURL(blob);
-});
-chrome.runtime.sendMessage({
-  action: 'DOWNLOAD_IMAGE',
-  url: dataUrl,  // ← data:image/png;base64,... (어디서든 접근 가능)
-  filename: savePath + '/' + fullFilename
-});
+useCustomDir=true → dataUrl → SAVE_IMAGE_DATA → customDirHandle.write()
 ```
+현재:
+```
+useCustomDir 분기 없음 → dataUrl → DOWNLOAD_IMAGE → background → chrome.downloads
+```
+dataUrl → chrome.downloads는 동작해야 하지만, **테스트 미완료**.
 
-### 왜 깨졌나
-1. `verifiedImages[di].img.src`는 Flow 페이지 안의 이미지 URL
-2. 이 URL은 `getMediaUrlRedirect` 패턴인데, **content script에서 fetch한 blob은 이미 있음**
-3. 원본 URL을 background에 넘기면 `chrome.downloads.download()`이 받지만,
-   이 URL이 인증 필요한 경우나 리다이렉트 문제로 실패할 수 있음
-4. **data URL**은 이미지 데이터 자체가 base64로 인코딩되어 있어 어디서든 동작함
+### 미확정: 매칭 로직 변경 (B.7, B.8)
+이전: 텍스트매칭 + 위치 정렬 + 위치 폴백
+현재: FIFO 출현 순서만
+→ 다운로드 자체는 되지만, **파일명이 안 맞을 수 있음** (이전에도 문제 있었음)
 
-### 동시에 바뀐 것 (커밋 cfcc9ac)
-Phase 3 폴링 방식도 변경됨:
-- 이전: `seenNewSrcs` Set으로 중복 방지, 배열에 누적
-- 변경: `detectedNewImages = []` 매 사이클 리셋, fresh DOM scan
-
-이 변경은 심각한 문제는 아니지만, 이전 동작 상태로 함께 되돌리는 게 안전.
-
-## 결론
-**커밋 2개를 되돌리면 됨**: cfcc9ac, 146d175
-이 2개가 이번 세션에서 내가 추가한 변경. 그 이전 상태(e856585)가 "다운로드 잘 되던" 상태.
+## 테스트 필요 사항
+1. 현재 상태(7e00388)에서 다운로드가 되는지 먼저 확인
+2. 되면 → 파일명이 맞는지 확인
+3. 안 되면 → 261765b로 완전 복귀 후 하나씩 변경 적용
