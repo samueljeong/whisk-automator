@@ -1890,15 +1890,36 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       return false;
     }
 
-    // 2. 검색 input에 에셋명 입력 → 필터링
-    var searchInput = panel.querySelector('input');
+    // 2. 검색 input에 에셋명 입력 → 필터링 (selectAssetByName과 동일한 방식)
+    var searchInput = null;
+    var inputs = panel.querySelectorAll('input[type="text"], input[type="search"], input:not([type])');
+    for (var si = 0; si < inputs.length; si++) {
+      var ph = (inputs[si].placeholder || '').toLowerCase();
+      var sRect = inputs[si].getBoundingClientRect();
+      if (sRect.width > 0 && (ph.includes('에셋') || ph.includes('검색') || ph.includes('search') || ph.includes('asset'))) {
+        searchInput = inputs[si];
+        break;
+      }
+    }
+    if (!searchInput) {
+      // 폴백: 패널 내 첫 번째 보이는 input
+      searchInput = panel.querySelector('input');
+    }
     if (!searchInput) {
       console.error('[Flow Auto] @패널 검색 input 없음');
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await sleep(300);
       return false;
     }
     searchInput.focus();
-    setReactInputValue(searchInput, assetName);
-    await sleep(800);
+    await sleep(200);
+    searchInput.value = '';
+    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+    await sleep(200);
+    searchInput.value = assetName;
+    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+    searchInput.dispatchEvent(new Event('change', { bubbles: true }));
+    await sleep(1000);
 
     // 3. "일치하는 결과 없음" 체크
     var searchRect = searchInput.getBoundingClientRect();
