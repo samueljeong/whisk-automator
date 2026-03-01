@@ -1851,6 +1851,190 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     return true;
   }
 
+  // 2-A. @에셋 태그 삽입 — Slate 에디터에 @ 입력 → 패널 → 검색 → 선택
+  var AT_PANEL_SELECTOR = '[data-radix-popper-content-wrapper]';
+
+  function typeAtChar(editor) {
+    editor.focus();
+    var o = { key: '@', code: 'Digit2', keyCode: 50, which: 50, shiftKey: true, bubbles: true, cancelable: true };
+    editor.dispatchEvent(new KeyboardEvent('keydown', o));
+    editor.dispatchEvent(new KeyboardEvent('keypress', o));
+    editor.dispatchEvent(new InputEvent('beforeinput', { inputType: 'insertText', data: '@', bubbles: true, cancelable: true, composed: true }));
+    document.execCommand('insertText', false, '@');
+    editor.dispatchEvent(new KeyboardEvent('keyup', o));
+  }
+
+  function setReactInputValue(input, value) {
+    var setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    setter.call(input, value);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  async function insertAssetByAtTag(editor, assetName) {
+    console.log('[Flow Auto] @에셋 삽입: ' + assetName);
+
+    // 1. @ 입력으로 패널 열기
+    typeAtChar(editor);
+    await sleep(800);
+
+    var panel = document.querySelector(AT_PANEL_SELECTOR);
+    if (!panel) {
+      console.warn('[Flow Auto] @패널 안 열림, 재시도...');
+      typeAtChar(editor);
+      await sleep(1200);
+      panel = document.querySelector(AT_PANEL_SELECTOR);
+    }
+    if (!panel) {
+      console.error('[Flow Auto] @패널 열기 실패: ' + assetName);
+      return false;
+    }
+
+    // 2. 검색 input에 에셋명 입력 → 필터링
+    var searchInput = panel.querySelector('input');
+    if (!searchInput) {
+      console.error('[Flow Auto] @패널 검색 input 없음');
+      return false;
+    }
+    searchInput.focus();
+    setReactInputValue(searchInput, assetName);
+    await sleep(800);
+
+    // 3. onclick 핸들러가 있는 에셋 아이템 찾기
+    var target = null;
+    var allDivs = panel.querySelectorAll('div');
+    for (var i = 0; i < allDivs.length; i++) {
+      var d = allDivs[i];
+      var txt = (d.textContent || '').trim();
+      if (txt === '#' + assetName + '.png' && d.onclick) {
+        target = d;
+        break;
+      }
+    }
+    // 폴백: 이름 부분 매치
+    if (!target) {
+      for (var i = 0; i < allDivs.length; i++) {
+        var d2 = allDivs[i];
+        if (d2.onclick && (d2.textContent || '').indexOf(assetName) >= 0) {
+          target = d2;
+          break;
+        }
+      }
+    }
+    if (!target) {
+      console.error('[Flow Auto] 에셋 아이템 못 찾음: ' + assetName);
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await sleep(300);
+      return false;
+    }
+
+    // 4. 클릭으로 void 삽입
+    target.click();
+    await sleep(300);
+
+    // 5. 패널 닫기 (img.click → Escape 폴백)
+    var img = target.querySelector('img');
+    if (img) {
+      img.click();
+      await sleep(300);
+    }
+    if (document.querySelector(AT_PANEL_SELECTOR)) {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await sleep(300);
+    }
+
+    // 6. 잔여 @ 문자 제거 — void 직전의 @ 텍스트 노드 삭제
+    var textSpans = editor.querySelectorAll('[data-slate-string="true"]');
+    for (var i = 0; i < textSpans.length; i++) {
+      var span = textSpans[i];
+      var tn = span.firstChild;
+      if (tn && tn.nodeType === 3) {
+        var val = tn.nodeValue;
+        // "@" 하나만 있거나 끝이 "@"로 끝나는 경우
+        if (val === '@' || val === ' @') {
+          // Slate에게 삭제 알리기: 선택 후 deleteContentBackward
+          var sel = window.getSelection();
+          var range = document.createRange();
+          if (val === '@') {
+            range.selectNodeContents(tn);
+          } else {
+            // " @" → 마지막 @ 만 삭제
+            range.setStart(tn, val.length - 1);
+            range.setEnd(tn, val.length);
+          }
+          sel.removeAllRanges();
+          sel.addRange(range);
+          editor.dispatchEvent(new InputEvent('beforeinput', {
+            inputType: 'deleteContentBackward',
+            bubbles: true, cancelable: true, composed: true
+          }));
+          await sleep(100);
+          break;
+        }
+      }
+    }
+
+    var voidCount = editor.querySelectorAll('[data-slate-void]').length;
+    console.log('[Flow Auto] @에셋 삽입 완료: ' + assetName + ' (voids=' + voidCount + ')');
+    return true;
+  }
+
+  // 2-B. 세그먼트 기반 프롬프트 입력 (에셋 + 텍스트 통합)
+  async function fillPromptWithAssets(segments) {
+    var promptEl = findPromptInput();
+    if (!promptEl) {
+      console.error('[Flow Auto] 프롬프트 에디터 없음');
+      return false;
+    }
+
+    // 에디터 초기화 (기존 내용 제거)
+    promptEl.focus();
+    await sleep(200);
+    var sel = window.getSelection();
+    var range = document.createRange();
+    range.selectNodeContents(promptEl);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    promptEl.dispatchEvent(new InputEvent('beforeinput', {
+      inputType: 'deleteContentBackward',
+      bubbles: true, cancelable: true, composed: true
+    }));
+    await sleep(300);
+
+    console.log('[Flow Auto] 세그먼트 입력 시작: ' + segments.length + '개');
+
+    for (var i = 0; i < segments.length; i++) {
+      var seg = segments[i];
+
+      if (seg.type === 'asset') {
+        var ok = await insertAssetByAtTag(promptEl, seg.tag);
+        if (!ok) {
+          console.warn('[Flow Auto] 에셋 삽입 실패: @' + seg.tag + ', 텍스트로 대체');
+          // 폴백: @태그를 일반 텍스트로 입력
+          promptEl.focus();
+          document.execCommand('insertText', false, '@' + seg.tag + ' ');
+          await sleep(200);
+        }
+      } else if (seg.type === 'text' && seg.content.length > 0) {
+        // 커서를 에디터 끝으로 이동 후 텍스트 입력
+        promptEl.focus();
+        sel = window.getSelection();
+        range = document.createRange();
+        range.selectNodeContents(promptEl);
+        range.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(range);
+        document.execCommand('insertText', false, seg.content);
+        await sleep(200);
+        console.log('[Flow Auto] 텍스트 입력: "' + seg.content.substring(0, 40) + (seg.content.length > 40 ? '...' : '') + '"');
+      }
+    }
+
+    var finalVoids = promptEl.querySelectorAll('[data-slate-void]').length;
+    var finalText = (promptEl.textContent || '').replace(/\u200B/g, '').replace(/\uFEFF/g, '').trim();
+    console.log('[Flow Auto] fillPromptWithAssets 완료: voids=' + finalVoids + ' text="' + finalText.substring(0, 60) + '..."');
+    return true;
+  }
+
   // 3. 모델 메뉴 트리거 버튼 찾기 (하단 영역에서 "Banana"/"Imagen"/"Nano" 텍스트)
   function findModelButton() {
     var buttons = document.querySelectorAll('button, [role="button"]');
