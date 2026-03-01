@@ -170,6 +170,7 @@ async function checkLicense() {
       expires: data.expires_at,
       email: email,
       device_conflict: data.device_conflict || false,
+      cancel_at_period_end: data.cancel_at_period_end || false,
     };
 
     // 디바이스 충돌 → 강제 로그아웃
