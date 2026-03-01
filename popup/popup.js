@@ -3281,7 +3281,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
     // 이미지/비디오 모두 1개씩 순차 처리
     // 1개 제출 → 1개 생성 대기 → 다운로드 → 다음 (파일명 100% 정확)
-    var BATCH_SIZE = 1;
+    var BATCH_SIZE = 5;
     var batchNum = 0;
 
     console.log('[Flow Auto] 배치 모드: 최대 ' + BATCH_SIZE + '개씩 (총 ' + promptsWithCharacters.length + '개)');
