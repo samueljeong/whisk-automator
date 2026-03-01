@@ -532,6 +532,35 @@ async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
 
 # Phase 6: Pro UI 개선 + Stripe 결제 연동
 
+## 가격 정책
+
+| 플랜 | 가격 | 비고 |
+|------|------|------|
+| Free | ₩0 | 일 5장, 로그인 불필요 |
+| Pro 월구독 | ₩9,900/월 | 무제한 + Grok 영상 |
+| Pro 연구독 | ₩100,000/년 | 월 ₩8,333 (16% 할인) |
+
+## 환불/취소 정책
+
+### 월구독 취소
+- 취소 즉시 다음 결제일에 갱신 안 됨
+- **남은 기간까지 Pro 유지** (결제 기간 만료 시 Free 전환)
+- 환불 없음
+
+### 연구독 취소
+- 취소 즉시 다음 해 갱신 안 됨
+- **남은 기간까지 Pro 유지** (예: 3월 결제 → 6월 취소 → 다음 해 3월까지 Pro)
+- 환불 없음 (이미 결제된 기간은 사용 가능)
+
+### Stripe 설정
+- `cancel_at_period_end = true` (즉시 해지가 아닌 기간 만료 시 해지)
+- 결제 실패: Stripe 자동 재시도 3회 → 최종 실패 시 구독 취소
+- webhook `customer.subscription.updated`에서 `cancel_at_period_end` 상태 반영
+
+### UI 표시
+- 취소 예정 사용자: `"Pro · 4월 1일에 만료됩니다"` (경고색)
+- 활성 구독: `"Pro · user@email.com · 4월 1일까지"`
+
 ## Phase 6A: Pro UI 즉시 수정 (확장 코드만, Stripe 불필요)
 
 > 현재 로그인 후 "무료 · 오늘 0/5장 사용" 표시 → Pro 시 올바른 UI 보여야 함
