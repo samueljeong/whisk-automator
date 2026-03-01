@@ -1487,24 +1487,46 @@ async function startAutomation() {
       }
     }
 
-    // 3. 스타일 접두어/접미어 적용 (이미 포함되어 있지 않으면)
-    let finalPrompt = cleanPrompt;
-    if (projectStylePrefix && !cleanPrompt.toLowerCase().startsWith(projectStylePrefix.toLowerCase().trim())) {
-      finalPrompt = projectStylePrefix + finalPrompt;
-    }
-    if (projectStyleSuffix && !cleanPrompt.toLowerCase().endsWith(projectStyleSuffix.toLowerCase().trim())) {
-      finalPrompt = finalPrompt + projectStyleSuffix;
-    }
-
-    // 4. 안전 치환 (위험 표현 → 안전 표현)
-    // 긴 패턴 먼저 매칭되도록 길이 역순 정렬 후 적용
-    if (typeof PROMPT_REPLACEMENTS !== 'undefined') {
-      const sorted = [...PROMPT_REPLACEMENTS].sort((a, b) => b[0].length - a[0].length);
-      for (const [risky, safe] of sorted) {
-        const escaped = risky.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        finalPrompt = finalPrompt.replace(new RegExp(`\\b${escaped}\\b`, 'gi'), safe);
+    // 3. 스타일 접두어/접미어를 세그먼트에 적용
+    // 첫 텍스트 세그먼트 앞에 prefix, 마지막 텍스트 세그먼트 뒤에 suffix
+    if (projectStylePrefix || projectStyleSuffix) {
+      var firstTextIdx = segments.findIndex(function(s) { return s.type === 'text'; });
+      var lastTextIdx = -1;
+      for (var si = segments.length - 1; si >= 0; si--) {
+        if (segments[si].type === 'text') { lastTextIdx = si; break; }
+      }
+      if (firstTextIdx >= 0 && projectStylePrefix) {
+        var ft = segments[firstTextIdx].content;
+        if (!ft.toLowerCase().startsWith(projectStylePrefix.toLowerCase().trim())) {
+          segments[firstTextIdx].content = projectStylePrefix + ft;
+        }
+      }
+      if (lastTextIdx >= 0 && projectStyleSuffix) {
+        var lt = segments[lastTextIdx].content;
+        if (!lt.toLowerCase().endsWith(projectStyleSuffix.toLowerCase().trim())) {
+          segments[lastTextIdx].content = lt + projectStyleSuffix;
+        }
       }
     }
+
+    // 4. 안전 치환 (위험 표현 → 안전 표현) — 텍스트 세그먼트에만 적용
+    if (typeof PROMPT_REPLACEMENTS !== 'undefined') {
+      const sorted = [...PROMPT_REPLACEMENTS].sort((a, b) => b[0].length - a[0].length);
+      for (var si = 0; si < segments.length; si++) {
+        if (segments[si].type !== 'text') continue;
+        var segText = segments[si].content;
+        for (const [risky, safe] of sorted) {
+          const escaped = risky.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          segText = segText.replace(new RegExp(`\\b${escaped}\\b`, 'gi'), safe);
+        }
+        segments[si].content = segText;
+      }
+    }
+
+    // finalPrompt: 텍스트 세그먼트만 합친 것 (하위호환 + 로깅용)
+    let finalPrompt = segments.map(function(s) {
+      return s.type === 'text' ? s.content : '@' + s.tag;
+    }).join('');
 
     // 캐릭터 그룹키: "용아,소연" → 정렬해서 "소연,용아" (그룹핑/비교용)
     let characterGroup = '';
