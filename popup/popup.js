@@ -3442,11 +3442,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       while (waited < maxWait && downloadedCount < totalCount) {
         if (isStopRequested()) {
           // 줌 복원 후 종료
-          try {
-            await new Promise(function(resolve) {
-              chrome.runtime.sendMessage({ action: 'SET_ZOOM', zoom: originalZoom }, resolve);
-            });
-          } catch(e) {}
+          document.documentElement.style.zoom = originalCssZoom;
           try { chrome.runtime.sendMessage({ action: 'AUTOMATION_STOPPED' }); } catch(e) {}
           return;
         }
