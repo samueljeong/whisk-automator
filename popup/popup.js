@@ -2620,33 +2620,54 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
   // 12. 기존 레퍼런스 제거 (프롬프트 영역 초기화)
   async function clearReferences() {
-    // selectAll(void 포함 전체 선택) + deleteContentBackward(Slate가 처리하는 InputEvent)
-    // 주의: KeyboardEvent는 isTrusted:false라 Slate가 무시함 → 반드시 InputEvent 사용
+    // Whisk은 에셋(ingredient)을 Slate 밖의 자체 UI로 관리함.
+    // Slate 텍스트를 아무리 지워도 에셋 썸네일은 남아있으므로,
+    // Whisk 네이티브 "프롬프트 지우기" 버튼 또는 개별 cancel 버튼을 사용해야 함.
+
+    // 방법 1: "프롬프트 지우기" 버튼 클릭 (텍스트 + 에셋 모두 초기화)
+    var allBtns = document.querySelectorAll('button');
+    var clearBtn = null;
+    for (var i = 0; i < allBtns.length; i++) {
+      if (allBtns[i].textContent.indexOf('프롬프트 지우기') >= 0) {
+        clearBtn = allBtns[i];
+        break;
+      }
+    }
+    if (clearBtn) {
+      simulateRealClick(clearBtn);
+      await sleep(500);
+      console.log('[Flow Auto] "프롬프트 지우기" 버튼으로 초기화');
+      return;
+    }
+
+    // 방법 2: 프롬프트 영역 내 개별 에셋 cancel(X) 버튼 모두 클릭
     var promptEl = findPromptInput();
+    var promptArea = promptEl.closest('[role="form"]') || promptEl.parentElement.parentElement || promptEl.parentElement;
+    var cancelBtns = [];
+    var areaBtns = promptArea.querySelectorAll('button');
+    for (var j = 0; j < areaBtns.length; j++) {
+      var btnText = areaBtns[j].textContent.trim();
+      // "cancel" = Material Icon 이름 (에셋 썸네일의 X 버튼)
+      if (btnText === 'cancel') {
+        cancelBtns.push(areaBtns[j]);
+      }
+    }
+    if (cancelBtns.length > 0) {
+      console.log('[Flow Auto] 에셋 cancel 버튼 ' + cancelBtns.length + '개 클릭');
+      for (var k = 0; k < cancelBtns.length; k++) {
+        simulateRealClick(cancelBtns[k]);
+        await sleep(200);
+      }
+      await sleep(300);
+    }
+
+    // 방법 3: Slate 텍스트 초기화 (에셋 없이 텍스트만 남은 경우)
     promptEl.focus();
     await sleep(100);
-
-    // 전체 선택 (브라우저 네이티브 — void 노드 포함)
     document.execCommand('selectAll');
     await sleep(100);
-
-    // 삭제 (Slate가 처리하는 InputEvent)
-    promptEl.dispatchEvent(new InputEvent('beforeinput', {
-      inputType: 'deleteContentBackward',
-      bubbles: true, cancelable: true, composed: true
-    }));
+    document.execCommand('delete');
     await sleep(200);
-
-    // 잔여 내용 확인 후 재시도
-    if ((promptEl.textContent || '').trim().length > 0 || promptEl.querySelectorAll('img').length > 0) {
-      document.execCommand('selectAll');
-      await sleep(100);
-      promptEl.dispatchEvent(new InputEvent('beforeinput', {
-        inputType: 'deleteContentBackward',
-        bubbles: true, cancelable: true, composed: true
-      }));
-      await sleep(200);
-    }
 
     console.log('[Flow Auto] 레퍼런스 및 프롬프트 초기화');
   }
