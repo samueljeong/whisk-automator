@@ -3426,12 +3426,14 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       // Phase 3: 줌 축소로 모든 이미지 뷰포트에 노출 → 폴링 + 텍스트 매칭 다운로드
       var originalZoom = 1.0;
       try {
-        var zoomTabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-        if (zoomTabs[0]) {
-          originalZoom = await chrome.tabs.getZoom(zoomTabs[0].id);
-          await chrome.tabs.setZoom(zoomTabs[0].id, 0.25);
-          console.log('[Flow Auto] 줌 25%로 축소 (원래: ' + Math.round(originalZoom * 100) + '%)');
-        }
+        var zoomResult = await new Promise(function(resolve) {
+          chrome.runtime.sendMessage({ action: 'GET_ZOOM' }, resolve);
+        });
+        if (zoomResult && zoomResult.success) originalZoom = zoomResult.zoom;
+        await new Promise(function(resolve) {
+          chrome.runtime.sendMessage({ action: 'SET_ZOOM', zoom: 0.25 }, resolve);
+        });
+        console.log('[Flow Auto] 줌 25%로 축소 (원래: ' + Math.round(originalZoom * 100) + '%)');
       } catch(e) {
         console.warn('[Flow Auto] 줌 변경 실패:', e.message);
       }
