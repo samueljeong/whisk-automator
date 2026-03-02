@@ -3346,12 +3346,11 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         await sleep(pollInterval);
         waited += pollInterval;
 
-        // DOM에서 새 이미지 탐색
+        // DOM에서 새 이미지 탐색 (갤러리 내 getMediaUrlRedirect 이미지)
         var newImages = [];
         document.querySelectorAll('img').forEach(function(img) {
           if (img.src && img.src.includes('getMediaUrlRedirect') &&
-              !preGenSrcs.has(img.src) && !downloadedSrcs.has(img.src) &&
-              !assetSrcs.has(img.src)) {
+              !preGenSrcs.has(img.src) && !downloadedSrcs.has(img.src)) {
             newImages.push(img);
           }
         });
@@ -3359,54 +3358,36 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         for (var ni = 0; ni < newImages.length && downloadedCount < totalCount; ni++) {
           var newImg = newImages[ni];
 
-          // 크기 필터
+          // 크기 필터: 200KB 미만은 에셋/썸네일
           try {
             var imgResp = await fetch(newImg.src);
             var imgBlob = await imgResp.blob();
 
             if (imgBlob.size < MIN_GENERATED_IMAGE_SIZE) {
-              console.log('[Flow Auto] 에셋/썸네일 스킵: ' + Math.round(imgBlob.size / 1024) + 'KB');
-              assetSrcs.add(newImg.src);
+              preGenSrcs.add(newImg.src);  // 다음 폴링에서 다시 안 잡히게
               continue;
             }
 
-            // editId 매칭: 이미지의 부모 <a> 태그에서 editId 추출
-            var matchIdx = -1;
+            // 1순위: 텍스트 매칭
+            var matchIdx = findPromptForImage(newImg, promptsWithCharacters, matchedPromptIndices);
             var matchMethod = '';
-            var imgLink = newImg.closest('a');
-            if (imgLink && imgLink.href && imgLink.href.includes('/edit/')) {
-              var eid = imgLink.href.split('/edit/')[1];
-              if (eid && editIdMap.hasOwnProperty(eid)) {
-                matchIdx = editIdMap[eid];
-                matchMethod = 'editId';
-                console.log('[Flow Auto] editId 매칭: ' + eid.substring(0, 12) + '... → 프롬프트 ' + (matchIdx + 1));
+            if (matchIdx >= 0) {
+              matchMethod = '텍스트매칭';
+            }
+
+            // 2순위: 순서 폴백 (미매칭 프롬프트 중 첫 번째)
+            if (matchIdx < 0) {
+              for (var fi = 0; fi < totalCount; fi++) {
+                if (!matchedPromptIndices.has(fi)) {
+                  matchIdx = fi;
+                  matchMethod = '순서폴백';
+                  console.log('[Flow Auto] 순서 폴백: 프롬프트 ' + (fi + 1));
+                  break;
+                }
               }
-            }
-
-            // editId 실패 → 텍스트 매칭 폴백
-            if (matchIdx < 0) {
-              matchIdx = findPromptForImage(newImg, promptsWithCharacters, matchedPromptIndices);
-              if (matchIdx >= 0) matchMethod = '텍스트매칭';
-            }
-
-            // 둘 다 실패 → 위치 폴백
-            if (matchIdx < 0) {
-              unmatchedRetries[newImg.src] = (unmatchedRetries[newImg.src] || 0) + 1;
-              if (unmatchedRetries[newImg.src] >= 3) {
-                for (var fi = 0; fi < totalCount; fi++) {
-                  if (!matchedPromptIndices.has(fi)) {
-                    matchIdx = fi;
-                    matchMethod = '위치폴백';
-                    console.log('[Flow Auto] 위치 폴백: 프롬프트 ' + (fi + 1));
-                    break;
-                  }
-                }
-                if (matchIdx < 0) {
-                  console.log('[Flow Auto] 여분 이미지 스킵 (모든 프롬프트 매칭 완료)');
-                  downloadedSrcs.add(newImg.src);
-                  continue;
-                }
-              } else {
+              if (matchIdx < 0) {
+                console.log('[Flow Auto] 여분 이미지 스킵 (모든 프롬프트 매칭 완료)');
+                downloadedSrcs.add(newImg.src);
                 continue;
               }
             }
