@@ -3423,7 +3423,19 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
       console.log('[Flow Auto] === 제출 완료: ' + totalCount + '개 — 텍스트 매칭 다운로드 시작 ===');
 
-      // Phase 3: 폴링 + 텍스트 매칭 즉시 다운로드
+      // Phase 3: 줌 축소로 모든 이미지 뷰포트에 노출 → 폴링 + 텍스트 매칭 다운로드
+      var originalZoom = 1.0;
+      try {
+        var zoomTabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+        if (zoomTabs[0]) {
+          originalZoom = await chrome.tabs.getZoom(zoomTabs[0].id);
+          await chrome.tabs.setZoom(zoomTabs[0].id, 0.25);
+          console.log('[Flow Auto] 줌 25%로 축소 (원래: ' + Math.round(originalZoom * 100) + '%)');
+        }
+      } catch(e) {
+        console.warn('[Flow Auto] 줌 변경 실패:', e.message);
+      }
+
       await sleep(2000);
 
       var downloadedCount = 0;
