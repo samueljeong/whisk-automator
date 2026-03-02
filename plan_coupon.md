@@ -219,7 +219,7 @@ async function redeemCoupon(code) {
 
 ## 단계 5: UI — `popup.css` 스타일 추가
 
-- [ ] 쿠폰 버튼 + 결과 메시지 스타일
+- [x] 쿠폰 버튼 + 결과 메시지 스타일
 
 ```css
 /* 쿠폰 버튼 */
