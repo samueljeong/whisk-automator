@@ -359,6 +359,54 @@ document.getElementById('manageSubBtn')?.addEventListener('click', async () => {
   }
 });
 
+// 쿠폰 등록 버튼
+document.getElementById('couponBtn')?.addEventListener('click', async () => {
+  const email = await getAuthEmail();
+  if (!email) {
+    showLoginScreen();
+    return;
+  }
+  document.getElementById('couponModal').hidden = false;
+  document.getElementById('couponCodeInput').value = '';
+  document.getElementById('couponResult').hidden = true;
+  document.getElementById('submitCouponBtn').disabled = false;
+  document.getElementById('submitCouponBtn').textContent = '등록';
+  document.getElementById('couponCodeInput').focus();
+});
+
+// 쿠폰 등록 확인
+document.getElementById('submitCouponBtn')?.addEventListener('click', async () => {
+  const code = document.getElementById('couponCodeInput').value.trim();
+  if (!code) return;
+
+  const btn = document.getElementById('submitCouponBtn');
+  btn.disabled = true;
+  btn.textContent = '확인 중...';
+
+  const result = await redeemCoupon(code);
+  const resultEl = document.getElementById('couponResult');
+  resultEl.hidden = false;
+
+  if (result.success) {
+    resultEl.textContent = result.message;
+    resultEl.className = 'coupon-result success';
+    await refreshLicenseBar();
+    setTimeout(() => {
+      document.getElementById('couponModal').hidden = true;
+    }, 1500);
+  } else {
+    resultEl.textContent = result.message || '쿠폰 등록에 실패했습니다';
+    resultEl.className = 'coupon-result error';
+    btn.disabled = false;
+    btn.textContent = '등록';
+  }
+});
+
+// 쿠폰 모달 취소
+document.getElementById('cancelCouponBtn')?.addEventListener('click', () => {
+  document.getElementById('couponModal').hidden = true;
+});
+
 // Check connection to Flow page
 async function checkConnection() {
   try {
