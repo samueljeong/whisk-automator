@@ -3321,14 +3321,44 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
         await fillPrompt(item.prompt);
         await sleep(500);
+
+        // editId 캡처: 생성 클릭 전 스냅샷
+        var preClickEditIds = new Set();
+        document.querySelectorAll('a').forEach(function(a) {
+          if (a.href && a.href.includes('/edit/')) preClickEditIds.add(a.href);
+        });
+
         await clickGenerate();
 
+        // 새 editId 감지 (최대 10초)
+        var editIdFound = false;
+        for (var ew = 0; ew < 20; ew++) {
+          await sleep(500);
+          var foundNew = false;
+          document.querySelectorAll('a').forEach(function(a) {
+            if (a.href && a.href.includes('/edit/') && !preClickEditIds.has(a.href)) {
+              var eid = a.href.split('/edit/')[1];
+              if (eid && !editIdMap.hasOwnProperty(eid)) {
+                editIdMap[eid] = j;
+                editIdFound = true;
+                foundNew = true;
+                console.log('[Flow Auto] editId 캡처: ' + eid.substring(0, 12) + '... → 프롬프트 ' + (j + 1));
+              }
+            }
+          });
+          if (foundNew) break;
+        }
+        if (!editIdFound) {
+          console.warn('[Flow Auto] editId 캡처 실패: 프롬프트 ' + (j + 1));
+        }
+
         if (j < totalCount - 1) {
-          await sleep(Math.max(delayMs, 3000));
+          await sleep(Math.max(delayMs, 2000));
         }
       }
 
-      console.log('[Flow Auto] === 제출 완료: ' + totalCount + '개 — 텍스트 매칭 다운로드 시작 ===');
+      console.log('[Flow Auto] === 제출 완료: ' + totalCount + '개 — editId 매칭 다운로드 시작 ===');
+      console.log('[Flow Auto] editId 맵: ' + Object.keys(editIdMap).length + '개 캡처됨');
 
       // Phase 3: 폴링 + 텍스트 매칭 즉시 다운로드
       await sleep(2000);
