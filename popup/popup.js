@@ -2640,21 +2640,25 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       return;
     }
 
-    // 방법 2: 프롬프트 영역 내 개별 에셋 cancel(X) 버튼 모두 클릭
+    // 방법 2: 프롬프트 근처 에셋 cancel(X) 버튼 위치 기반 검색 후 클릭
     var promptEl = findPromptInput();
-    var promptArea = promptEl.closest('[role="form"]') || promptEl.parentElement.parentElement || promptEl.parentElement;
+    var promptRect = promptEl.getBoundingClientRect();
     var cancelBtns = [];
-    var areaBtns = promptArea.querySelectorAll('button');
-    for (var j = 0; j < areaBtns.length; j++) {
-      var btnText = areaBtns[j].textContent.trim();
-      // "cancel" = Material Icon 이름 (에셋 썸네일의 X 버튼)
+    var allBtns2 = document.querySelectorAll('button');
+    for (var j = 0; j < allBtns2.length; j++) {
+      var btnText = allBtns2[j].textContent.trim();
       if (btnText === 'cancel') {
-        cancelBtns.push(areaBtns[j]);
+        var btnRect = allBtns2[j].getBoundingClientRect();
+        // 프롬프트 입력창 위 200px 이내, 좌우 범위 안에 있는 cancel 버튼만
+        if (btnRect.bottom > promptRect.top - 200 && btnRect.bottom <= promptRect.top + 10 &&
+            btnRect.left >= promptRect.left - 50) {
+          cancelBtns.push(allBtns2[j]);
+        }
       }
     }
     if (cancelBtns.length > 0) {
       console.log('[Flow Auto] 에셋 cancel 버튼 ' + cancelBtns.length + '개 클릭');
-      for (var k = 0; k < cancelBtns.length; k++) {
+      for (var k = cancelBtns.length - 1; k >= 0; k--) {
         simulateRealClick(cancelBtns[k]);
         await sleep(200);
       }
