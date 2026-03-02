@@ -324,7 +324,7 @@ document.getElementById('cancelCouponBtn')?.addEventListener('click', () => {
 
 ## 단계 7: 관리자 쿠폰 생성 가이드
 
-- [ ] SQL 예시를 research_coupon.md에 추가
+- [x] SQL 예시를 `supabase_coupon.sql`로 별도 파일 생성
 
 관리자(사무엘)가 Supabase SQL Editor에서 직접 생성:
 ```sql
