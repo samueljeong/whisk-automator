@@ -3351,13 +3351,9 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
           await uploadReferences(charForThisPrompt, characters);
           await sleep(500);
 
-          // 에셋 이미지 등록
-          document.querySelectorAll('img').forEach(function(img) {
-            if (img.src && img.src.includes('getMediaUrlRedirect') && !preGenSrcs.has(img.src)) {
-              assetSrcs.add(img.src);
-              preGenSrcs.add(img.src);
-            }
-          });
+          // 에셋 이미지 등록 제거: 여기서 페이지 전체 이미지를 스캔하면
+          // 이전 프롬프트의 생성 이미지가 preGenSrcs에 들어가서 Phase 3에서 감지 불가.
+          // Phase 3의 200KB 크기 필터로 에셋/썸네일 구분 충분.
         }
 
         await fillPrompt(item.prompt);
