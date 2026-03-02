@@ -3468,7 +3468,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
             lastChangeTime = Date.now();
 
             console.log('[Flow Auto] DL ' + downloadedCount + '/' + totalCount + ': ' + fullFilename +
-              ' (' + Math.round(imgBlob.size / 1024) + 'KB, 순서매칭)');
+              ' (' + Math.round(imgBlob.size / 1024) + 'KB, 프롬프트#' + matchIdx + ')');
 
             try {
               chrome.runtime.sendMessage({
