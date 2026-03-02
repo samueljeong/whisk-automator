@@ -2621,22 +2621,51 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
   // 12. 기존 레퍼런스 제거 (프롬프트 영역 초기화)
   async function clearReferences() {
     // 프롬프트 입력 영역의 레퍼런스 썸네일 + 텍스트 모두 제거
-    // 전체 선택 + 삭제 방식
     var promptEl = findPromptInput();
     promptEl.focus();
     await sleep(100);
-    var sel = window.getSelection();
-    var range = document.createRange();
-    range.selectNodeContents(promptEl);
-    sel.removeAllRanges();
-    sel.addRange(range);
-    await sleep(100);
-    promptEl.dispatchEvent(new InputEvent('beforeinput', {
-      inputType: 'deleteContentBackward',
-      bubbles: true, cancelable: true, composed: true
-    }));
-    await sleep(300);
-    console.log('[Flow Auto] 레퍼런스 및 프롬프트 초기화');
+
+    // 반복 삭제: 전체 선택 + deleteContentBackward를 void 노드가 없을 때까지 반복
+    for (var attempt = 0; attempt < 5; attempt++) {
+      var remaining = countRefImages(promptEl);
+      var hasText = (promptEl.textContent || '').trim().length > 0;
+      if (remaining === 0 && !hasText) break;
+
+      var sel = window.getSelection();
+      var range = document.createRange();
+      range.selectNodeContents(promptEl);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      await sleep(100);
+
+      // deleteContentBackward로 전체 삭제 시도
+      promptEl.dispatchEvent(new InputEvent('beforeinput', {
+        inputType: 'deleteContentBackward',
+        bubbles: true, cancelable: true, composed: true
+      }));
+      await sleep(200);
+
+      // void 노드가 남아있으면 개별 Backspace로 제거
+      var voids = promptEl.querySelectorAll('[contenteditable="false"], [data-slate-void]');
+      if (voids.length > 0) {
+        // 커서를 맨 앞으로 이동 후 전체 선택 + 삭제
+        range = document.createRange();
+        range.selectNodeContents(promptEl);
+        sel.removeAllRanges();
+        sel.addRange(range);
+        await sleep(50);
+        promptEl.dispatchEvent(new InputEvent('beforeinput', {
+          inputType: 'deleteByCut',
+          bubbles: true, cancelable: true, composed: true
+        }));
+        await sleep(200);
+      }
+
+      console.log('[Flow Auto] clearReferences 시도 ' + (attempt + 1) +
+        ': ref=' + countRefImages(promptEl) + ' text=' + (promptEl.textContent || '').trim().length);
+    }
+
+    console.log('[Flow Auto] 레퍼런스 및 프롬프트 초기화 완료');
   }
 
   // 13. 생성 버튼 찾기 ("arrow_forward" + "만들기" 텍스트, 하단)
