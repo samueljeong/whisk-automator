@@ -112,6 +112,7 @@ function updateLicenseBar(licenseResult) {
   const logoutBtn = document.getElementById('logoutBtn');
   const upgradeBtn = document.getElementById('upgradeBtn');
   const manageSubBtn = document.getElementById('manageSubBtn');
+  const couponBtn = document.getElementById('couponBtn');
   const licenseBar = document.getElementById('licenseBar');
 
   if (licenseResult.device_conflict) {
@@ -119,9 +120,13 @@ function updateLicenseBar(licenseResult) {
     licenseBar.className = 'license-bar license-bar-warning';
     logoutBtn.hidden = true;
     upgradeBtn.hidden = true;
+    couponBtn.hidden = true;
     manageSubBtn.hidden = true;
     return;
   }
+
+  // 쿠폰 버튼: 모든 상태에서 표시 (Pro도 기간 연장 가능)
+  couponBtn.hidden = false;
 
   if (licenseResult.tier === 'pro' && licenseResult.cancel_at_period_end) {
     // Pro 사용자 (취소 예정)
