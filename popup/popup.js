@@ -2620,8 +2620,8 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
   // 12. 기존 레퍼런스 제거 (프롬프트 영역 초기화)
   async function clearReferences() {
-    // Ctrl+A → Backspace 방식: 브라우저 네이티브 전체 선택 + Slate 키보드 삭제
-    // (기존 selectNodeContents + deleteContentBackward는 Flow 에셋 void를 못 지울 수 있음)
+    // selectAll(void 포함 전체 선택) + deleteContentBackward(Slate가 처리하는 InputEvent)
+    // 주의: KeyboardEvent는 isTrusted:false라 Slate가 무시함 → 반드시 InputEvent 사용
     var promptEl = findPromptInput();
     promptEl.focus();
     await sleep(100);
@@ -2630,10 +2630,10 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     document.execCommand('selectAll');
     await sleep(100);
 
-    // Backspace 키 이벤트 (Slate가 직접 처리 → void도 삭제)
-    promptEl.dispatchEvent(new KeyboardEvent('keydown', {
-      key: 'Backspace', code: 'Backspace', keyCode: 8,
-      bubbles: true, cancelable: true
+    // 삭제 (Slate가 처리하는 InputEvent)
+    promptEl.dispatchEvent(new InputEvent('beforeinput', {
+      inputType: 'deleteContentBackward',
+      bubbles: true, cancelable: true, composed: true
     }));
     await sleep(200);
 
@@ -2641,9 +2641,9 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     if ((promptEl.textContent || '').trim().length > 0 || promptEl.querySelectorAll('img').length > 0) {
       document.execCommand('selectAll');
       await sleep(100);
-      promptEl.dispatchEvent(new KeyboardEvent('keydown', {
-        key: 'Backspace', code: 'Backspace', keyCode: 8,
-        bubbles: true, cancelable: true
+      promptEl.dispatchEvent(new InputEvent('beforeinput', {
+        inputType: 'deleteContentBackward',
+        bubbles: true, cancelable: true, composed: true
       }));
       await sleep(200);
     }
