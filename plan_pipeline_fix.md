@@ -168,7 +168,7 @@ if (Date.now() - lastChangeTime > 120000) {
 }
 ```
 
-- [ ] 4-1. 조기 종료 조건 완화 (almostDone 제거, stall 120초)
+- [x] 4-1. 조기 종료 조건 완화 (almostDone 제거, stall 120초)
 
 ### 5단계: 테스트
 - 5개 프롬프트, 에셋 캐릭터 포함
