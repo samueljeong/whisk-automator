@@ -3449,6 +3449,11 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
       while (waited < maxWait && downloadedCount < totalCount) {
         if (isStopRequested()) {
+          // 줌 복원 후 종료
+          try {
+            var stopTabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+            if (stopTabs[0]) await chrome.tabs.setZoom(stopTabs[0].id, originalZoom);
+          } catch(e) {}
           try { chrome.runtime.sendMessage({ action: 'AUTOMATION_STOPPED' }); } catch(e) {}
           return;
         }
