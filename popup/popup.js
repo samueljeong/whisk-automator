@@ -3558,12 +3558,8 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       }
 
       // 줌 복원
-      try {
-        await new Promise(function(resolve) {
-          chrome.runtime.sendMessage({ action: 'SET_ZOOM', zoom: originalZoom }, resolve);
-        });
-        console.log('[Flow Auto] 줌 복원: ' + Math.round(originalZoom * 100) + '%');
-      } catch(e) {}
+      document.documentElement.style.zoom = originalCssZoom;
+      console.log('[Flow Auto] CSS 줌 복원');
 
       console.log('[Flow Auto] === 완료: ' + downloadedCount + '/' + totalCount +
         ' 다운로드 (' + (waited / 1000) + '초) ===');
