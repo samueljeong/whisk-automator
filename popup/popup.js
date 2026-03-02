@@ -3268,9 +3268,8 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       console.log('[Flow Auto] === Phase 0 완료: ' + uniqueChars.length + '명 에셋 준비됨 ===');
     }
 
-    // === 파이프라인 모드: 전체 제출 → editId 매칭 다운로드 ===
+    // === 파이프라인 모드: 전체 제출 → 순서 매칭 다운로드 ===
     var totalCount = promptsWithCharacters.length;
-    var editIdMap = {};  // editId → promptIndex 매핑
     console.log('[Flow Auto] 파이프라인 모드: ' + totalCount + '개 프롬프트');
 
     try {
