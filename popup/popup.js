@@ -3323,15 +3323,6 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         await sleep(500);
         await clickGenerate();
 
-        // 에셋 보정: clickGenerate 직후
-        document.querySelectorAll('img').forEach(function(img) {
-          if (img.src && img.src.includes('getMediaUrlRedirect') &&
-              !preGenSrcs.has(img.src) && !downloadedSrcs.has(img.src) &&
-              !assetSrcs.has(img.src)) {
-            assetSrcs.add(img.src);
-          }
-        });
-
         if (j < totalCount - 1) {
           await sleep(Math.max(delayMs, 3000));
         }
