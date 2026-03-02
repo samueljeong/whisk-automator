@@ -63,33 +63,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       chrome.runtime.sendMessage(message).catch(() => {});
       break;
 
-    case 'SET_ZOOM': {
-      const zoomTabId = sender.tab?.id || message.tabId;
-      if (zoomTabId) {
-        chrome.tabs.setZoom(zoomTabId, message.zoom).then(() => {
-          sendResponse({ success: true });
-        }).catch(e => {
-          sendResponse({ success: false, error: e.message });
-        });
-      } else {
-        sendResponse({ success: false, error: 'No tab found' });
-      }
-      return true;
-    }
-
-    case 'GET_ZOOM': {
-      const getZoomTabId = sender.tab?.id || message.tabId;
-      if (getZoomTabId) {
-        chrome.tabs.getZoom(getZoomTabId).then((zoom) => {
-          sendResponse({ success: true, zoom: zoom });
-        }).catch(e => {
-          sendResponse({ success: false, zoom: 1.0 });
-        });
-      } else {
-        sendResponse({ success: false, zoom: 1.0 });
-      }
-      return true;
-    }
   }
 
   return true;
