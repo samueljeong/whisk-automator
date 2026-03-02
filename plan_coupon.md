@@ -35,7 +35,7 @@ CREATE POLICY "Authenticated users can read coupons"
   ON coupons FOR SELECT TO authenticated USING (true);
 ```
 
-- [ ] `coupon_redemptions` 테이블 (중복 사용 방지)
+- [x] `coupon_redemptions` 테이블 (중복 사용 방지)
 
 ```sql
 CREATE TABLE coupon_redemptions (
