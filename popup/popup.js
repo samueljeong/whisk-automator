@@ -3462,10 +3462,9 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
           }
         }
 
-        // 조기 종료
-        var almostDone = downloadedCount >= Math.max(1, totalCount - 1);
-        if (almostDone && Date.now() - lastChangeTime > STALL_TIMEOUT) {
-          console.log('[Flow Auto] ' + (STALL_TIMEOUT / 1000) + '초간 새 이미지 없음 — 조기 종료 (' +
+        // 종료 조건: 120초간 변화 없으면 종료 (전체 완료 전 조기 종료 방지)
+        if (Date.now() - lastChangeTime > 120000) {
+          console.log('[Flow Auto] 120초간 새 이미지 없음 — 종료 (' +
             downloadedCount + '/' + totalCount + ')');
           break;
         }
