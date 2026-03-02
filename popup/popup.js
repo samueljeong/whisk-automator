@@ -3415,13 +3415,19 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
               continue;
             }
 
-            // 순서 기반 매칭: 아직 매칭 안 된 가장 작은 인덱스에 할당
-            // (그리드 뷰에서 텍스트 매칭 불가 + 동일 스타일 프리픽스로 텍스트 매칭 무의미)
-            var matchIdx = -1;
-            for (var fi = 0; fi < totalCount; fi++) {
-              if (!matchedPromptIndices.has(fi)) {
-                matchIdx = fi;
-                break;
+            // 텍스트 매칭: 이미지 카드의 프롬프트 텍스트로 원본 프롬프트 식별
+            var matchIdx = findPromptForImage(newImg, promptsWithCharacters, matchedPromptIndices);
+
+            // 텍스트 매칭 실패 시 순서 기반 폴백
+            if (matchIdx < 0) {
+              for (var fi = 0; fi < totalCount; fi++) {
+                if (!matchedPromptIndices.has(fi)) {
+                  matchIdx = fi;
+                  break;
+                }
+              }
+              if (matchIdx >= 0) {
+                console.log('[Flow Auto] 텍스트매칭 실패 → 순서폴백: #' + matchIdx);
               }
             }
             if (matchIdx < 0) {
