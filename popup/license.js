@@ -306,3 +306,39 @@ async function getAuthUserId() {
     return null;
   }
 }
+
+// ─── 쿠폰 등록 ───
+
+async function redeemCoupon(code) {
+  const token = await getAccessToken();
+  if (!token) {
+    return { error: "unauthorized", message: "로그인이 필요합니다" };
+  }
+
+  try {
+    const res = await fetch(REDEEM_COUPON_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        apikey: SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({ p_code: code }),
+    });
+
+    if (!res.ok) {
+      return { error: "network", message: "서버 연결에 실패했습니다" };
+    }
+
+    const data = await res.json();
+
+    // 성공 시 라이선스 캐시 무효화
+    if (data.success) {
+      await chrome.storage.local.remove(LICENSE_CACHE_KEY);
+    }
+
+    return data;
+  } catch {
+    return { error: "network", message: "서버 연결에 실패했습니다" };
+  }
+}
