@@ -3356,51 +3356,14 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         console.log('[Flow Auto] edit 링크 재확인: ' + newEditLinks.length + '개');
       }
 
-      // edit 링크 → 프롬프트 매칭: 각 edit 페이지에서 프롬프트 텍스트 읽기
+      // edit 링크 → 프롬프트 매칭 (DOM 위치 = 제출 역순)
+      // newEditLinks[0] = 마지막 제출, [1] = 그 전, ... [N-1] = 첫 제출
       var editLinkToPrompt = {};
-      var matchedInMapping = new Set();
-      console.log('[Flow Auto] 상세 페이지에서 프롬프트 텍스트 매칭 시작...');
-
-      for (var el = 0; el < newEditLinks.length; el++) {
-        var editUrl = newEditLinks[el].href;
-        var editId = editUrl.split('/edit/')[1] || '';
-        try {
-          var editHtml = await fetch(editUrl, { credentials: 'include' }).then(function(r) { return r.text(); });
-
-          // 각 프롬프트의 고유 텍스트(앞 30자)로 검색
-          var found = false;
-          for (var pi = 0; pi < totalCount; pi++) {
-            if (matchedInMapping.has(pi)) continue;
-            var searchText = promptsWithCharacters[pi].originalPrompt.substring(0, 30);
-            if (editHtml.includes(searchText)) {
-              editLinkToPrompt[editUrl] = pi;
-              matchedInMapping.add(pi);
-              found = true;
-              console.log('[Flow Auto] 텍스트 매칭: ' + editId.substring(0, 12) + '... → 프롬프트 ' + (pi + 1) +
-                ' ("' + searchText.substring(0, 20) + '...")');
-              break;
-            }
-          }
-          if (!found) {
-            console.warn('[Flow Auto] 텍스트 매칭 실패: ' + editId.substring(0, 12) + '...');
-          }
-        } catch (e) {
-          console.warn('[Flow Auto] edit 페이지 fetch 실패: ' + editId.substring(0, 12) + '... — ' + e.message);
-        }
+      for (var el = 0; el < newEditLinks.length && el < totalCount; el++) {
+        var promptIdx = totalCount - 1 - el;
+        editLinkToPrompt[newEditLinks[el].href] = promptIdx;
+        console.log('[Flow Auto] 카드 ' + el + ' → 프롬프트 ' + (promptIdx + 1));
       }
-
-      // 매칭 안 된 edit 링크 → 위치 폴백 (역순)
-      for (var el2 = 0; el2 < newEditLinks.length; el2++) {
-        if (editLinkToPrompt[newEditLinks[el2].href] !== undefined) continue;
-        var posIdx = totalCount - 1 - el2;
-        if (posIdx >= 0 && posIdx < totalCount && !matchedInMapping.has(posIdx)) {
-          editLinkToPrompt[newEditLinks[el2].href] = posIdx;
-          matchedInMapping.add(posIdx);
-          console.log('[Flow Auto] 위치 폴백: edit ' + el2 + ' → 프롬프트 ' + (posIdx + 1));
-        }
-      }
-
-      console.log('[Flow Auto] 매칭 완료: 텍스트 ' + Object.keys(editLinkToPrompt).length + '/' + newEditLinks.length);
 
       var downloadedCount = 0;
       var matchedPromptIndices = new Set();
