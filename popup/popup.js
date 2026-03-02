@@ -138,7 +138,7 @@ function updateLicenseBar(licenseResult) {
     manageSubBtn.hidden = true;
   } else if (licenseResult.tier === 'pro') {
     // Pro 사용자 (활성)
-    const email = licenseResult.email || '';
+    const email = licenseResult.email === MASTER_EMAIL ? 'master' : (licenseResult.email || '');
     const expiry = licenseResult.expires ? formatExpiryShort(licenseResult.expires) : '';
     statusEl.textContent = `Pro · ${email}${expiry ? ' · ' + expiry + '까지' : ''}`;
     licenseBar.className = 'license-bar license-bar-pro';
