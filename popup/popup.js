@@ -3321,8 +3321,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         }
       }
 
-      console.log('[Flow Auto] === 제출 완료: ' + totalCount + '개 — editId 매칭 다운로드 시작 ===');
-      console.log('[Flow Auto] editId 맵: ' + Object.keys(editIdMap).length + '개 캡처됨');
+      console.log('[Flow Auto] === 제출 완료: ' + totalCount + '개 — 순서 매칭 다운로드 시작 ===');
 
       // Phase 3: 폴링 + 텍스트 매칭 즉시 다운로드
       await sleep(2000);
