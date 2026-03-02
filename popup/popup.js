@@ -3354,14 +3354,12 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
       var downloadedCount = 0;
       var matchedPromptIndices = new Set();
-      var unmatchedRetries = {};
       var maxWait = selectedOutputType === 'video'
         ? Math.min(totalCount * 180000, 1200000)
         : Math.min(totalCount * 60000, 600000);
       var pollInterval = 2000;
       var waited = 0;
       var lastChangeTime = Date.now();
-      var STALL_TIMEOUT = 60000;
 
       while (waited < maxWait && downloadedCount < totalCount) {
         if (isStopRequested()) {
