@@ -2,6 +2,7 @@
 const SUPABASE_URL = "https://cyrbibbosfybylsparfk.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_YPB5wFe6t2ij6dVzdlQYrA_fQf5Sqqm";
 const CHECK_LICENSE_URL = `${SUPABASE_URL}/rest/v1/rpc/check_license`;
+const REDEEM_COUPON_URL = `${SUPABASE_URL}/rest/v1/rpc/redeem_coupon`;
 
 // Storage 키
 const AUTH_TOKEN_KEY = "whisk_auth_token";
