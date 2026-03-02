@@ -62,6 +62,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     case 'GROK_AUTOMATION_ERROR':
       chrome.runtime.sendMessage(message).catch(() => {});
       break;
+
+    case 'SET_ZOOM':
+      chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
+        if (tabs[0]) {
+          chrome.tabs.setZoom(tabs[0].id, message.zoom).then(() => {
+            sendResponse({ success: true });
+          }).catch(e => {
+            sendResponse({ success: false, error: e.message });
+          });
+        }
+      });
+      return true; // async response
+
+    case 'GET_ZOOM':
+      chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
+        if (tabs[0]) {
+          chrome.tabs.getZoom(tabs[0].id).then((zoom) => {
+            sendResponse({ success: true, zoom: zoom });
+          }).catch(e => {
+            sendResponse({ success: false, zoom: 1.0 });
+          });
+        }
+      });
+      return true; // async response
   }
 
   return true;
