@@ -3273,11 +3273,16 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     console.log('[Flow Auto] 파이프라인 모드: ' + totalCount + '개 프롬프트');
 
     try {
-      // Phase 1: 생성 전 이미지 스냅샷
+      // Phase 1: 생성 전 스냅샷
       var preGenSrcs = new Set();
       document.querySelectorAll('img').forEach(function(img) {
         if (img.src) preGenSrcs.add(img.src);
       });
+      var preSubmitEditLinks = new Set();
+      document.querySelectorAll('a').forEach(function(a) {
+        if (a.href && a.href.includes('/edit/')) preSubmitEditLinks.add(a.href);
+      });
+      console.log('[Flow Auto] 기존 edit 링크: ' + preSubmitEditLinks.size + '개');
 
       // Phase 2: 프롬프트 전체 연속 제출
       for (var j = 0; j < totalCount; j++) {
@@ -3321,10 +3326,44 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         }
       }
 
-      console.log('[Flow Auto] === 제출 완료: ' + totalCount + '개 — 순서 매칭 다운로드 시작 ===');
+      console.log('[Flow Auto] === 제출 완료: ' + totalCount + '개 ===');
 
-      // Phase 3: 폴링 + 텍스트 매칭 즉시 다운로드
-      await sleep(2000);
+      // Phase 3: edit 링크 DOM 위치 기반 매칭 다운로드
+      // 갤러리는 최신이 맨 앞(역순): newEditLinks[0] = 마지막 제출, [N-1] = 첫 제출
+      await sleep(3000);
+
+      // 새 edit 링크 수집 (DOM 순서)
+      var newEditLinks = [];
+      document.querySelectorAll('a').forEach(function(a) {
+        if (a.href && a.href.includes('/edit/') && !preSubmitEditLinks.has(a.href)) {
+          newEditLinks.push(a);
+        }
+      });
+      console.log('[Flow Auto] 새 edit 링크: ' + newEditLinks.length + '개 (기대: ' + totalCount + '개)');
+
+      // edit 링크 부족 시 추가 대기 (최대 30초)
+      if (newEditLinks.length < totalCount) {
+        for (var elw = 0; elw < 15; elw++) {
+          await sleep(2000);
+          newEditLinks = [];
+          document.querySelectorAll('a').forEach(function(a) {
+            if (a.href && a.href.includes('/edit/') && !preSubmitEditLinks.has(a.href)) {
+              newEditLinks.push(a);
+            }
+          });
+          if (newEditLinks.length >= totalCount) break;
+        }
+        console.log('[Flow Auto] edit 링크 재확인: ' + newEditLinks.length + '개');
+      }
+
+      // edit 링크 → 프롬프트 인덱스 매핑 (역순: DOM 0 = 마지막 프롬프트)
+      var editLinkToPrompt = {};
+      for (var el = 0; el < newEditLinks.length && el < totalCount; el++) {
+        var promptIdx = totalCount - 1 - el;
+        editLinkToPrompt[newEditLinks[el].href] = promptIdx;
+        console.log('[Flow Auto] edit 링크 ' + el + ' → 프롬프트 ' + (promptIdx + 1) +
+          ' (' + newEditLinks[el].href.split('/edit/')[1].substring(0, 12) + '...)');
+      }
 
       var downloadedCount = 0;
       var matchedPromptIndices = new Set();
@@ -3345,53 +3384,32 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         await sleep(pollInterval);
         waited += pollInterval;
 
-        // DOM에서 새 이미지 탐색 (갤러리 내 getMediaUrlRedirect 이미지)
-        var newImages = [];
-        document.querySelectorAll('img').forEach(function(img) {
-          if (img.src && img.src.includes('getMediaUrlRedirect') &&
-              !preGenSrcs.has(img.src) && !downloadedSrcs.has(img.src)) {
-            newImages.push(img);
+        // 각 edit 링크 내 완성된 이미지 탐색
+        for (var eli = 0; eli < newEditLinks.length && downloadedCount < totalCount; eli++) {
+          var editLink = newEditLinks[eli];
+          var matchIdx = editLinkToPrompt[editLink.href];
+          if (matchIdx === undefined || matchedPromptIndices.has(matchIdx)) continue;
+
+          // 이 카드 안의 이미지 확인
+          var cardImgs = editLink.querySelectorAll('img');
+          var foundImg = null;
+          for (var ci = 0; ci < cardImgs.length; ci++) {
+            if (cardImgs[ci].src && cardImgs[ci].src.includes('getMediaUrlRedirect') &&
+                !downloadedSrcs.has(cardImgs[ci].src)) {
+              foundImg = cardImgs[ci];
+              break;
+            }
           }
-        });
+          if (!foundImg) continue;
 
-        for (var ni = 0; ni < newImages.length && downloadedCount < totalCount; ni++) {
-          var newImg = newImages[ni];
-
-          // 크기 필터: 200KB 미만은 에셋/썸네일
+          // 크기 필터
           try {
-            var imgResp = await fetch(newImg.src);
+            var imgResp = await fetch(foundImg.src);
             var imgBlob = await imgResp.blob();
 
-            if (imgBlob.size < MIN_GENERATED_IMAGE_SIZE) {
-              preGenSrcs.add(newImg.src);  // 다음 폴링에서 다시 안 잡히게
-              continue;
-            }
+            if (imgBlob.size < MIN_GENERATED_IMAGE_SIZE) continue;
 
-            // 1순위: 텍스트 매칭
-            var matchIdx = findPromptForImage(newImg, promptsWithCharacters, matchedPromptIndices);
-            var matchMethod = '';
-            if (matchIdx >= 0) {
-              matchMethod = '텍스트매칭';
-            }
-
-            // 2순위: 순서 폴백 (미매칭 프롬프트 중 첫 번째)
-            if (matchIdx < 0) {
-              for (var fi = 0; fi < totalCount; fi++) {
-                if (!matchedPromptIndices.has(fi)) {
-                  matchIdx = fi;
-                  matchMethod = '순서폴백';
-                  console.log('[Flow Auto] 순서 폴백: 프롬프트 ' + (fi + 1));
-                  break;
-                }
-              }
-              if (matchIdx < 0) {
-                console.log('[Flow Auto] 여분 이미지 스킵 (모든 프롬프트 매칭 완료)');
-                downloadedSrcs.add(newImg.src);
-                continue;
-              }
-            }
-
-            // 매칭 성공 → 다운로드
+            // 매칭 확정 → 다운로드
             var pItem = promptsWithCharacters[matchIdx];
             matchedPromptIndices.add(matchIdx);
 
@@ -3418,12 +3436,12 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
               filename: savePath + '/' + fullFilename
             });
 
-            downloadedSrcs.add(newImg.src);
+            downloadedSrcs.add(foundImg.src);
             downloadedCount++;
             lastChangeTime = Date.now();
 
             console.log('[Flow Auto] DL ' + downloadedCount + '/' + totalCount + ': ' + fullFilename +
-              ' (' + Math.round(imgBlob.size / 1024) + 'KB, ' + matchMethod + ')');
+              ' (' + Math.round(imgBlob.size / 1024) + 'KB, 카드위치매칭)');
 
             try {
               chrome.runtime.sendMessage({
@@ -3437,7 +3455,6 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
             } catch(e) {}
           } catch (e) {
             console.warn('[Flow Auto] 이미지 처리 실패:', e.message);
-            downloadedSrcs.add(newImg.src);
           }
         }
 
