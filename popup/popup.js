@@ -3309,6 +3309,14 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
           });
         } catch(e) {}
 
+        // 이전 프롬프트 + 레퍼런스 초기화
+        try {
+          await clearReferences();
+        } catch(e) {
+          console.log('[Flow Auto] 초기화 실패 (무시):', e.message);
+        }
+        await sleep(300);
+
         // 에셋 레퍼런스 선택
         if (charForThisPrompt) {
           console.log('[Flow Auto] 레퍼런스 선택: ' + charForThisPrompt);
