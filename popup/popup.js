@@ -3309,48 +3309,12 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
           console.log('[Flow Auto] 레퍼런스 선택: ' + charForThisPrompt);
           await uploadReferences(charForThisPrompt, characters);
           await sleep(500);
-
-          // 에셋 이미지 등록
-          document.querySelectorAll('img').forEach(function(img) {
-            if (img.src && img.src.includes('getMediaUrlRedirect') && !preGenSrcs.has(img.src)) {
-              assetSrcs.add(img.src);
-              preGenSrcs.add(img.src);
-            }
-          });
         }
 
         await fillPrompt(item.prompt);
         await sleep(500);
 
-        // editId 캡처: 생성 클릭 전 스냅샷
-        var preClickEditIds = new Set();
-        document.querySelectorAll('a').forEach(function(a) {
-          if (a.href && a.href.includes('/edit/')) preClickEditIds.add(a.href);
-        });
-
         await clickGenerate();
-
-        // 새 editId 감지 (최대 10초)
-        var editIdFound = false;
-        for (var ew = 0; ew < 20; ew++) {
-          await sleep(500);
-          var foundNew = false;
-          document.querySelectorAll('a').forEach(function(a) {
-            if (a.href && a.href.includes('/edit/') && !preClickEditIds.has(a.href)) {
-              var eid = a.href.split('/edit/')[1];
-              if (eid && !editIdMap.hasOwnProperty(eid)) {
-                editIdMap[eid] = j;
-                editIdFound = true;
-                foundNew = true;
-                console.log('[Flow Auto] editId 캡처: ' + eid.substring(0, 12) + '... → 프롬프트 ' + (j + 1));
-              }
-            }
-          });
-          if (foundNew) break;
-        }
-        if (!editIdFound) {
-          console.warn('[Flow Auto] editId 캡처 실패: 프롬프트 ' + (j + 1));
-        }
 
         if (j < totalCount - 1) {
           await sleep(Math.max(delayMs, 2000));
