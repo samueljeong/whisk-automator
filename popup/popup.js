@@ -3396,29 +3396,19 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
               continue;
             }
 
-            // 텍스트 매칭: findPromptForImage()로 프롬프트 식별
-            var matchIdx = findPromptForImage(newImg, promptsWithCharacters, matchedPromptIndices);
-
-            if (matchIdx < 0) {
-              unmatchedRetries[newImg.src] = (unmatchedRetries[newImg.src] || 0) + 1;
-              if (unmatchedRetries[newImg.src] >= 3) {
-                // 3회 실패 → 남은 프롬프트 중 첫 번째로 폴백
-                for (var fi = 0; fi < totalCount; fi++) {
-                  if (!matchedPromptIndices.has(fi)) {
-                    matchIdx = fi;
-                    console.log('[Flow Auto] 위치 폴백: 프롬프트 ' + (fi + 1));
-                    break;
-                  }
-                }
-                if (matchIdx < 0) {
-                  // 남은 프롬프트 없음 → 여분 이미지, 스킵
-                  console.log('[Flow Auto] 여분 이미지 스킵 (모든 프롬프트 매칭 완료)');
-                  downloadedSrcs.add(newImg.src);
-                  continue;
-                }
-              } else {
-                continue;  // 3회 미만 → 다음 폴링에서 재시도
+            // 순서 기반 매칭: 아직 매칭 안 된 가장 작은 인덱스에 할당
+            // (그리드 뷰에서 텍스트 매칭 불가 + 동일 스타일 프리픽스로 텍스트 매칭 무의미)
+            var matchIdx = -1;
+            for (var fi = 0; fi < totalCount; fi++) {
+              if (!matchedPromptIndices.has(fi)) {
+                matchIdx = fi;
+                break;
               }
+            }
+            if (matchIdx < 0) {
+              console.log('[Flow Auto] 여분 이미지 스킵 (모든 프롬프트 매칭 완료)');
+              downloadedSrcs.add(newImg.src);
+              continue;
             }
 
             // 매칭 성공 → 다운로드
