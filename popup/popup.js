@@ -1478,10 +1478,10 @@ async function startAutomation() {
       }
     }
 
-    // 3. 스타일 접두어/접미어 적용 (이미 포함되어 있지 않으면)
+    // 3. 스타일 접두어/접미어 적용 (원본 프롬프트를 앞에 배치하여 텍스트 매칭 정확도 향상)
     let finalPrompt = cleanPrompt;
-    if (projectStylePrefix && !cleanPrompt.toLowerCase().startsWith(projectStylePrefix.toLowerCase().trim())) {
-      finalPrompt = projectStylePrefix + finalPrompt;
+    if (projectStylePrefix && !cleanPrompt.toLowerCase().includes(projectStylePrefix.toLowerCase().trim())) {
+      finalPrompt = finalPrompt + ', ' + projectStylePrefix.trim();
     }
     if (projectStyleSuffix && !cleanPrompt.toLowerCase().endsWith(projectStyleSuffix.toLowerCase().trim())) {
       finalPrompt = finalPrompt + projectStyleSuffix;
