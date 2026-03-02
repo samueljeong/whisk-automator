@@ -254,7 +254,7 @@ async function redeemCoupon(code) {
 
 ## 단계 6: 이벤트 핸들러 — `popup.js`
 
-- [ ] 쿠폰 버튼/모달 이벤트 로직
+- [x] 쿠폰 버튼/모달 이벤트 로직
 
 ### 6-1. `updateLicenseBar()`에 쿠폰 버튼 표시 로직
 
