@@ -337,6 +337,24 @@
     </div>
   </div>
 
+  <!-- 쿠폰 등록 모달 -->
+  <div id="couponModal" class="modal" hidden>
+    <div class="modal-content">
+      <h3>쿠폰 등록</h3>
+      <div class="modal-form">
+        <div class="form-group">
+          <label for="couponCodeInput">쿠폰 코드:</label>
+          <input type="text" id="couponCodeInput" placeholder="쿠폰 코드를 입력하세요" spellcheck="false" autocomplete="off">
+        </div>
+      </div>
+      <p class="coupon-result" id="couponResult" hidden></p>
+      <div class="modal-actions">
+        <button id="cancelCouponBtn" class="btn btn-small btn-secondary">취소</button>
+        <button id="submitCouponBtn" class="btn btn-small btn-primary">등록</button>
+      </div>
+    </div>
+  </div>
+
   <script src="prompt_safety.js"></script>
   <script src="license.js"></script>
   <script src="prompt_helper.js"></script>
