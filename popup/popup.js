@@ -3316,6 +3316,10 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
           });
         } catch(e) {}
 
+        // 매 프롬프트 전 프롬프트 영역 완전 초기화 (에셋 누적 방지)
+        await clearReferences();
+        await sleep(500);
+
         // 에셋 레퍼런스 선택
         if (charForThisPrompt) {
           console.log('[Flow Auto] 레퍼런스 선택: ' + charForThisPrompt);
