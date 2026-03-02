@@ -3444,14 +3444,6 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         await sleep(pollInterval);
         waited += pollInterval;
 
-        // 스크롤하여 lazy-loaded 이미지 강제 로드
-        var scrollContainer = document.scrollingElement || document.documentElement;
-        var prevScroll = scrollContainer.scrollTop;
-        scrollContainer.scrollTop = scrollContainer.scrollHeight;
-        await sleep(500);
-        scrollContainer.scrollTop = prevScroll;
-        await sleep(300);
-
         // DOM에서 새 이미지 탐색
         var newImages = [];
         document.querySelectorAll('img').forEach(function(img) {
