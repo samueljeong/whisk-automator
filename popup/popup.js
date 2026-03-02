@@ -3356,14 +3356,8 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         console.log('[Flow Auto] edit 링크 재확인: ' + newEditLinks.length + '개');
       }
 
-      // edit 링크 → 프롬프트 매칭 (DOM 위치 = 제출 역순)
-      // newEditLinks[0] = 마지막 제출, [1] = 그 전, ... [N-1] = 첫 제출
-      var editLinkToPrompt = {};
-      for (var el = 0; el < newEditLinks.length && el < totalCount; el++) {
-        var promptIdx = totalCount - 1 - el;
-        editLinkToPrompt[newEditLinks[el].href] = promptIdx;
-        console.log('[Flow Auto] 카드 ' + el + ' → 프롬프트 ' + (promptIdx + 1));
-      }
+      // 텍스트 기반 매칭: 폴링 루프에서 이미지 발견 시 주변 DOM 텍스트로 프롬프트 매칭
+      console.log('[Flow Auto] 텍스트 기반 매칭 모드 (originalPrompt 앞 25자)');
 
       var downloadedCount = 0;
       var matchedPromptIndices = new Set();
