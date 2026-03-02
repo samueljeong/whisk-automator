@@ -143,7 +143,7 @@ $$;
 
 ## 단계 3: 클라이언트 — `license.js`에 함수 추가
 
-- [ ] `redeemCoupon(code)` 함수
+- [x] `redeemCoupon(code)` 함수
 
 ```javascript
 const REDEEM_COUPON_URL = `${SUPABASE_URL}/rest/v1/rpc/redeem_coupon`;
