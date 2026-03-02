@@ -72,8 +72,8 @@ async function clearReferences() {
 - → `voidsBefore === 0`이므로 "전체 텍스트 선택" 경로 또는 "텍스트 없음" 경로로 진입
 - → void 보존 로직이 발동하지 않음 → 문제없음
 
-- [ ] 1-1. clearReferences() 함수 보강 (Ctrl+A + Backspace 방식)
-- [ ] 1-2. Phase 2 루프에서 매 프롬프트 전 clearReferences() 호출 추가
+- [x] 1-1. clearReferences() 함수 보강 (Ctrl+A + Backspace 방식)
+- [x] 1-2. Phase 2 루프에서 매 프롬프트 전 clearReferences() 호출 추가
 
 ### 2단계: Phase 2 — 에셋 보정 코드 간소화
 **위치**: line 3313-3333
