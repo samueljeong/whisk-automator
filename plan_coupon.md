@@ -59,7 +59,7 @@ CREATE POLICY "Users can insert own redemptions"
 
 ## 단계 2: Supabase RPC 함수
 
-- [ ] `redeem_coupon(p_code TEXT)` 함수
+- [x] `redeem_coupon(p_code TEXT)` 함수
 
 ```sql
 CREATE OR REPLACE FUNCTION redeem_coupon(p_code TEXT)
