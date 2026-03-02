@@ -3407,28 +3407,44 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
               continue;
             }
 
-            // 텍스트 매칭: findPromptForImage()로 프롬프트 식별
-            var matchIdx = findPromptForImage(newImg, promptsWithCharacters, matchedPromptIndices);
+            // editId 매칭: 이미지의 부모 <a> 태그에서 editId 추출
+            var matchIdx = -1;
+            var matchMethod = '';
+            var imgLink = newImg.closest('a');
+            if (imgLink && imgLink.href && imgLink.href.includes('/edit/')) {
+              var eid = imgLink.href.split('/edit/')[1];
+              if (eid && editIdMap.hasOwnProperty(eid)) {
+                matchIdx = editIdMap[eid];
+                matchMethod = 'editId';
+                console.log('[Flow Auto] editId 매칭: ' + eid.substring(0, 12) + '... → 프롬프트 ' + (matchIdx + 1));
+              }
+            }
 
+            // editId 실패 → 텍스트 매칭 폴백
+            if (matchIdx < 0) {
+              matchIdx = findPromptForImage(newImg, promptsWithCharacters, matchedPromptIndices);
+              if (matchIdx >= 0) matchMethod = '텍스트매칭';
+            }
+
+            // 둘 다 실패 → 위치 폴백
             if (matchIdx < 0) {
               unmatchedRetries[newImg.src] = (unmatchedRetries[newImg.src] || 0) + 1;
               if (unmatchedRetries[newImg.src] >= 3) {
-                // 3회 실패 → 남은 프롬프트 중 첫 번째로 폴백
                 for (var fi = 0; fi < totalCount; fi++) {
                   if (!matchedPromptIndices.has(fi)) {
                     matchIdx = fi;
+                    matchMethod = '위치폴백';
                     console.log('[Flow Auto] 위치 폴백: 프롬프트 ' + (fi + 1));
                     break;
                   }
                 }
                 if (matchIdx < 0) {
-                  // 남은 프롬프트 없음 → 여분 이미지, 스킵
                   console.log('[Flow Auto] 여분 이미지 스킵 (모든 프롬프트 매칭 완료)');
                   downloadedSrcs.add(newImg.src);
                   continue;
                 }
               } else {
-                continue;  // 3회 미만 → 다음 폴링에서 재시도
+                continue;
               }
             }
 
