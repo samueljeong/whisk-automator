@@ -3440,9 +3440,8 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
             downloadedCount++;
             lastChangeTime = Date.now();
 
-            var matchMethod = (unmatchedRetries[newImg.src] >= 3) ? '위치폴백' : '텍스트매칭';
             console.log('[Flow Auto] DL ' + downloadedCount + '/' + totalCount + ': ' + fullFilename +
-              ' (' + Math.round(imgBlob.size / 1024) + 'KB, ' + matchMethod + ')');
+              ' (' + Math.round(imgBlob.size / 1024) + 'KB, 순서매칭)');
 
             try {
               chrome.runtime.sendMessage({
