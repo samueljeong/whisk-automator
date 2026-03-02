@@ -12,7 +12,7 @@
 
 ## 단계 1: Supabase 테이블 생성
 
-- [ ] `coupons` 테이블
+- [x] `coupons` 테이블
 
 ```sql
 CREATE TABLE coupons (
