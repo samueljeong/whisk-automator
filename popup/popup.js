@@ -3390,7 +3390,6 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
             var matchIdx = findPromptForImage(newImg, promptsWithCharacters, matchedPromptIndices);
 
             if (matchIdx < 0) {
-              // 매칭 실패 — 재시도 카운트
               unmatchedRetries[newImg.src] = (unmatchedRetries[newImg.src] || 0) + 1;
               if (unmatchedRetries[newImg.src] >= 3) {
                 // 3회 실패 → 남은 프롬프트 중 첫 번째로 폴백
@@ -3401,10 +3400,14 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
                     break;
                   }
                 }
-              }
-              if (matchIdx < 0) {
-                console.log('[Flow Auto] 매칭 대기 (시도 ' + unmatchedRetries[newImg.src] + '/3)');
-                continue;
+                if (matchIdx < 0) {
+                  // 남은 프롬프트 없음 → 여분 이미지, 스킵
+                  console.log('[Flow Auto] 여분 이미지 스킵 (모든 프롬프트 매칭 완료)');
+                  downloadedSrcs.add(newImg.src);
+                  continue;
+                }
+              } else {
+                continue;  // 3회 미만 → 다음 폴링에서 재시도
               }
             }
 
