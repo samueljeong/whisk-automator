@@ -2908,23 +2908,33 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
       for (var i = 0; i < batchPrompts.length; i++) {
         if (alreadyMatched.has(i)) continue;
-        // originalPrompt (스타일 없는 고유 텍스트) + prompt (스타일 포함 전체) 둘 다 시도
+
+        // prompt (Flow에 제출된 전체 텍스트) 우선, originalPrompt 보조
         var candidates = [
-          batchPrompts[i].originalPrompt,
-          batchPrompts[i].prompt
+          batchPrompts[i].prompt,
+          batchPrompts[i].originalPrompt
         ];
 
         for (var ci = 0; ci < candidates.length; ci++) {
           var searchStr = candidates[ci];
-          if (!searchStr || searchStr.length < 10) continue;
+          if (!searchStr || searchStr.length < 5) continue;
 
-          // 고유성을 위해 가능한 긴 substring 사용 (최대 80자)
-          var matchLen = Math.min(searchStr.length, 80);
-          var matchText = searchStr.substring(0, matchLen);
+          // 여러 길이로 시도: 80자 → 50자 → 30자 (점점 짧게)
+          var lengths = [
+            Math.min(searchStr.length, 80),
+            Math.min(searchStr.length, 50),
+            Math.min(searchStr.length, 30)
+          ];
 
-          if (text.includes(matchText) && matchLen > bestMatchLen) {
-            bestMatch = i;
-            bestMatchLen = matchLen;
+          for (var li = 0; li < lengths.length; li++) {
+            var matchLen = lengths[li];
+            var matchText = searchStr.substring(0, matchLen);
+
+            if (text.includes(matchText) && matchLen > bestMatchLen) {
+              bestMatch = i;
+              bestMatchLen = matchLen;
+              break;  // 가장 긴 매칭이 성공하면 더 짧은 건 불필요
+            }
           }
         }
       }
@@ -2943,21 +2953,19 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     // 매칭 실패 — 디버그 로그
     console.warn('[Flow Auto] 텍스트매칭 실패: 이미지 src=' +
       (imgElement.src || '').substring(0, 60) + '...');
-    // 카드 후보 텍스트 샘플 출력 (디버깅용)
     var debugEl = imgElement;
     for (var dd = 0; dd < 10; dd++) {
       debugEl = debugEl.parentElement;
       if (!debugEl || debugEl === document.body) break;
-      var dt = (debugEl.textContent || '').substring(0, 100);
+      var dt = (debugEl.textContent || '').substring(0, 200);
       if (dt.length >= 20) {
-        console.log('[Flow Auto] 매칭후보 depth=' + dd + ' len=' + (debugEl.textContent || '').length + ': "' + dt + '..."');
+        console.log('[Flow Auto] 카드텍스트 depth=' + dd + ' len=' + (debugEl.textContent || '').length + ': "' + dt + '"');
       }
     }
-    // 프롬프트 검색어 출력
     for (var pi = 0; pi < batchPrompts.length; pi++) {
       if (!alreadyMatched.has(pi)) {
-        var op = batchPrompts[pi].originalPrompt || '';
-        console.log('[Flow Auto] 프롬프트[' + pi + '] 검색어: "' + op.substring(0, 50) + '"');
+        console.log('[Flow Auto] 프롬프트[' + pi + '] prompt: "' + (batchPrompts[pi].prompt || '').substring(0, 80) + '"');
+        console.log('[Flow Auto] 프롬프트[' + pi + '] original: "' + (batchPrompts[pi].originalPrompt || '').substring(0, 80) + '"');
       }
     }
 
