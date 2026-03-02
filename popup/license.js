@@ -235,7 +235,7 @@ async function incrementFreeUsage() {
 async function canGenerate(count = 1) {
   // 개발자 무제한
   const devEmail = await getAuthEmail();
-  if (devEmail === "zkvp17@naver.com") {
+  if (devEmail === MASTER_EMAIL) {
     return { allowed: true };
   }
 
