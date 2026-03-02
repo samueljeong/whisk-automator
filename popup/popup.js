@@ -3381,10 +3381,8 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         // 각 edit 링크 내 완성된 이미지 탐색
         for (var eli = 0; eli < newEditLinks.length && downloadedCount < totalCount; eli++) {
           var editLink = newEditLinks[eli];
-          var matchIdx = editLinkToPrompt[editLink.href];
-          if (matchIdx === undefined || matchedPromptIndices.has(matchIdx)) continue;
 
-          // 이 카드 안의 이미지 확인
+          // 이 카드 안의 완성 이미지 확인
           var cardImgs = editLink.querySelectorAll('img');
           var foundImg = null;
           for (var ci = 0; ci < cardImgs.length; ci++) {
@@ -3395,6 +3393,45 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
             }
           }
           if (!foundImg) continue;
+
+          // 텍스트 기반 매칭: 이미지에서 부모를 올라가며 프롬프트 텍스트 검색
+          var matchIdx = -1;
+          var searchEl = foundImg;
+          for (var sd = 0; sd < 15; sd++) {
+            searchEl = searchEl.parentElement;
+            if (!searchEl) break;
+            var domText = (searchEl.textContent || '');
+            if (domText.length < 20) continue;
+
+            var textMatches = [];
+            for (var pi = 0; pi < totalCount; pi++) {
+              if (matchedPromptIndices.has(pi)) continue;
+              var needle = promptsWithCharacters[pi].originalPrompt.substring(0, 25);
+              if (domText.includes(needle)) {
+                textMatches.push(pi);
+              }
+            }
+            if (textMatches.length === 1) {
+              matchIdx = textMatches[0];
+              console.log('[Flow Auto] 텍스트 매칭: 프롬프트 ' + (matchIdx + 1) + ' (depth ' + sd + ')');
+              break;
+            }
+            if (textMatches.length > 1) {
+              console.log('[Flow Auto] 다중 매칭 ' + textMatches.length + '개 (depth ' + sd + ') — 스킵');
+              break;
+            }
+          }
+
+          // 텍스트 매칭 실패 → 미매칭 프롬프트 중 첫 번째로 폴백
+          if (matchIdx < 0) {
+            for (var fb = 0; fb < totalCount; fb++) {
+              if (!matchedPromptIndices.has(fb)) { matchIdx = fb; break; }
+            }
+            if (matchIdx >= 0) {
+              console.log('[Flow Auto] 텍스트 매칭 실패 → 폴백: 프롬프트 ' + (matchIdx + 1));
+            }
+          }
+          if (matchIdx < 0) continue;
 
           // 크기 필터
           try {
