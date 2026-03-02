@@ -3339,14 +3339,8 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         await sleep(500);
         await clickGenerate();
 
-        // 에셋 보정: clickGenerate 직후
-        document.querySelectorAll('img').forEach(function(img) {
-          if (img.src && img.src.includes('getMediaUrlRedirect') &&
-              !preGenSrcs.has(img.src) && !downloadedSrcs.has(img.src) &&
-              !assetSrcs.has(img.src)) {
-            assetSrcs.add(img.src);
-          }
-        });
+        // 에셋 보정 제거: clickGenerate 직후 모든 새 이미지를 에셋으로 등록하면
+        // 이전 프롬프트의 완성 이미지가 오등록됨. Phase 3의 200KB 크기 필터로 충분.
 
         if (j < totalCount - 1) {
           await sleep(Math.max(delayMs, 3000));
