@@ -3563,6 +3563,15 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         }
       }
 
+      // 줌 복원
+      try {
+        var zoomTabs2 = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+        if (zoomTabs2[0]) {
+          await chrome.tabs.setZoom(zoomTabs2[0].id, originalZoom);
+          console.log('[Flow Auto] 줌 복원: ' + Math.round(originalZoom * 100) + '%');
+        }
+      } catch(e) {}
+
       console.log('[Flow Auto] === 완료: ' + downloadedCount + '/' + totalCount +
         ' 다운로드 (' + (waited / 1000) + '초) ===');
 
