@@ -15,7 +15,7 @@ Flow의 가상 스크롤 특성(뷰포트 근처 6~9개만 DOM 유지)에 맞춰
 
 ### Phase 3 (교체)
 
-- [ ] **3-1. 스크롤 컨테이너 찾기**
+- [x] **3-1. 스크롤 컨테이너 찾기**
   - `DIV.sc-8cc14b4-1` (overflow: auto, scrollHeight > clientHeight)
   - 클래스명이 변경될 수 있으므로, 조건 기반으로 탐색:
     ```js
