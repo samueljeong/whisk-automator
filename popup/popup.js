@@ -3421,145 +3421,235 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         }
       }
 
-      console.log('[Flow Auto] === 제출 완료: ' + totalCount + '개 — 텍스트 매칭 다운로드 시작 ===');
+      console.log('[Flow Auto] === 제출 완료: ' + totalCount + '개 — 스크롤 스윕 다운로드 시작 ===');
 
-      // Phase 3: CSS zoom 축소로 모든 이미지 뷰포트에 노출 → 폴링 + 텍스트 매칭 다운로드
-      var originalCssZoom = document.documentElement.style.zoom || '';
-      document.documentElement.style.zoom = '0.25';
-      console.log('[Flow Auto] CSS 줌 25%로 축소');
+      // Phase 3: 스크롤 스윕 다운로드
+      // Flow는 가상 스크롤 사용 — 뷰포트 근처 6~9개만 DOM 유지
+      // 위(최신=#100)에서 아래(최초=#1)로 스크롤하며 순차 다운로드
 
-      await sleep(2000);
+      // 3-1. 스크롤 컨테이너 찾기 (overflow:auto + 가장 큰 스크롤 범위)
+      var scrollContainer = null;
+      var maxScrollRange = 0;
+      document.querySelectorAll('div').forEach(function(div) {
+        var style = getComputedStyle(div);
+        if ((style.overflowY === 'auto' || style.overflowY === 'scroll') &&
+            div.scrollHeight > div.clientHeight + 200) {
+          var range = div.scrollHeight - div.clientHeight;
+          if (range > maxScrollRange) {
+            maxScrollRange = range;
+            scrollContainer = div;
+          }
+        }
+      });
 
-      var downloadedCount = 0;
-      var matchedPromptIndices = new Set();
-      var maxWait = selectedOutputType === 'video'
-        ? Math.min(totalCount * 180000, 1200000)
-        : Math.min(totalCount * 60000, 600000);
-      var pollInterval = 2000;
-      var waited = 0;
-      var lastChangeTime = Date.now();
+      if (!scrollContainer) {
+        console.warn('[Flow Auto] 스크롤 컨테이너 못 찾음 — window 사용');
+        scrollContainer = null; // null = window 스크롤 사용
+        maxScrollRange = document.documentElement.scrollHeight - window.innerHeight;
+      } else {
+        console.log('[Flow Auto] 스크롤 컨테이너: ' +
+          (scrollContainer.className || '').toString().slice(0, 50) +
+          ' (범위: ' + maxScrollRange + 'px)');
+      }
 
-      while (waited < maxWait && downloadedCount < totalCount) {
+      // 3-2. 첫 이미지 생성 완료 대기
+      var genWaitMax = selectedOutputType === 'video' ? 120000 : 60000;
+      var genWaited = 0;
+      console.log('[Flow Auto] 첫 이미지 생성 대기...');
+
+      while (genWaited < genWaitMax) {
         if (isStopRequested()) {
-          // 줌 복원 후 종료
-          document.documentElement.style.zoom = originalCssZoom;
           try { chrome.runtime.sendMessage({ action: 'AUTOMATION_STOPPED' }); } catch(e) {}
           return;
         }
-
-        await sleep(pollInterval);
-        waited += pollInterval;
-
-        // DOM에서 새 이미지 탐색
-        var newImages = [];
-        document.querySelectorAll('img').forEach(function(img) {
-          if (img.src && img.src.includes('getMediaUrlRedirect') &&
-              !preGenSrcs.has(img.src) && !downloadedSrcs.has(img.src) &&
-              !assetSrcs.has(img.src)) {
-            newImages.push(img);
+        var checkImgs = document.querySelectorAll('img[src*="getMediaUrlRedirect"]');
+        var newGenCount = 0;
+        checkImgs.forEach(function(img) {
+          if (!preGenSrcs.has(img.src) && !downloadedSrcs.has(img.src) && !assetSrcs.has(img.src)) {
+            newGenCount++;
           }
         });
-
-        for (var ni = 0; ni < newImages.length && downloadedCount < totalCount; ni++) {
-          var newImg = newImages[ni];
-
-          // 크기 필터
-          try {
-            var imgResp = await fetch(newImg.src);
-            var imgBlob = await imgResp.blob();
-
-            if (imgBlob.size < MIN_GENERATED_IMAGE_SIZE) {
-              console.log('[Flow Auto] 에셋/썸네일 스킵: ' + Math.round(imgBlob.size / 1024) + 'KB');
-              assetSrcs.add(newImg.src);
-              continue;
-            }
-
-            // 텍스트 매칭: 이미지 카드의 프롬프트 텍스트로 원본 프롬프트 식별
-            var matchIdx = findPromptForImage(newImg, promptsWithCharacters, matchedPromptIndices);
-
-            // 텍스트 매칭 실패 시 순서 기반 폴백
-            if (matchIdx < 0) {
-              for (var fi = 0; fi < totalCount; fi++) {
-                if (!matchedPromptIndices.has(fi)) {
-                  matchIdx = fi;
-                  break;
-                }
-              }
-              if (matchIdx >= 0) {
-                console.log('[Flow Auto] 텍스트매칭 실패 → 순서폴백: #' + matchIdx);
-              }
-            }
-            if (matchIdx < 0) {
-              console.log('[Flow Auto] 여분 이미지 스킵 (모든 프롬프트 매칭 완료)');
-              downloadedSrcs.add(newImg.src);
-              continue;
-            }
-
-            // 매칭 성공 → 다운로드
-            var pItem = promptsWithCharacters[matchIdx];
-            matchedPromptIndices.add(matchIdx);
-
-            var fullFilename;
-            if (pItem.filename) {
-              var safeName = pItem.filename.replace(/[<>:"|?*]/g, '_').replace(/_+/g, '_');
-              fullFilename = safeName.includes('.') ? safeName : safeName + '.png';
-            } else {
-              var autoName = pItem.prompt.substring(0, 30)
-                .replace(/[^a-zA-Z0-9가-힣]/g, '_').replace(/_+/g, '_');
-              fullFilename = 'flow_' + (pItem.index + 1) + '_' + autoName + '.png';
-            }
-
-            // blob → dataUrl → background
-            var reader = new FileReader();
-            var dataUrl = await new Promise(function(resolve, reject) {
-              reader.onload = function() { resolve(reader.result); };
-              reader.onerror = reject;
-              reader.readAsDataURL(imgBlob);
-            });
-            chrome.runtime.sendMessage({
-              action: 'DOWNLOAD_IMAGE',
-              url: dataUrl,
-              filename: savePath + '/' + fullFilename
-            });
-
-            downloadedSrcs.add(newImg.src);
-            downloadedCount++;
-            lastChangeTime = Date.now();
-
-            console.log('[Flow Auto] DL ' + downloadedCount + '/' + totalCount + ': ' + fullFilename +
-              ' (' + Math.round(imgBlob.size / 1024) + 'KB, 프롬프트#' + matchIdx + ')');
-
-            try {
-              chrome.runtime.sendMessage({
-                action: 'PROGRESS_UPDATE',
-                currentIndex: downloadedCount,
-                totalCount: totalCount,
-                promptIndex: pItem.index,
-                status: 'completed',
-                currentPrompt: 'DL ' + downloadedCount + '/' + totalCount + ' ' + fullFilename
-              });
-            } catch(e) {}
-          } catch (e) {
-            console.warn('[Flow Auto] 이미지 처리 실패:', e.message);
-            downloadedSrcs.add(newImg.src);
-          }
-        }
-
-        // 종료 조건: 120초간 변화 없으면 종료 (전체 완료 전 조기 종료 방지)
-        if (Date.now() - lastChangeTime > 120000) {
-          console.log('[Flow Auto] 120초간 새 이미지 없음 — 종료 (' +
-            downloadedCount + '/' + totalCount + ')');
+        if (newGenCount > 0) {
+          console.log('[Flow Auto] 첫 이미지 감지! (' + (genWaited / 1000) + '초)');
           break;
         }
-
-        if (waited % 15000 === 0) {
-          console.log('[Flow Auto] 대기 중... ' + downloadedCount + '/' + totalCount + ' (' + (waited / 1000) + '초)');
+        await sleep(2000);
+        genWaited += 2000;
+        if (genWaited % 10000 === 0) {
+          console.log('[Flow Auto] 생성 대기 중... (' + (genWaited / 1000) + '초)');
         }
       }
 
-      // 줌 복원
-      document.documentElement.style.zoom = originalCssZoom;
-      console.log('[Flow Auto] CSS 줌 복원');
+      if (genWaited >= genWaitMax) {
+        console.warn('[Flow Auto] 생성 타임아웃 — 스윕 시도');
+      }
+
+      // 추가 대기: 여러 이미지 생성 시간 확보
+      await sleep(3000);
+
+      // 3-3. 스크롤 스윕 (위→아래, #100→#1 순차 매칭)
+      var downloadedCount = 0;
+      var nextPromptIdx = totalCount - 1; // #100부터 시작 (역순)
+      var sweepStep = 300; // 300px씩 이동
+      var sweepDelay = 2000; // 2초 대기
+      var matchedPromptIndices = new Set();
+
+      // 스윕 함수: 주어진 방향으로 한번 스윕
+      async function scrollSweep(startPos, endPos, direction) {
+        var pos = startPos;
+        var sweepLabel = direction > 0 ? '1차(위→아래)' : '2차(아래→위)';
+
+        while ((direction > 0 ? pos <= endPos : pos >= endPos) && nextPromptIdx >= 0) {
+          if (isStopRequested()) {
+            try { chrome.runtime.sendMessage({ action: 'AUTOMATION_STOPPED' }); } catch(e) {}
+            return;
+          }
+
+          // 스크롤 이동
+          if (scrollContainer) {
+            scrollContainer.scrollTop = pos;
+          } else {
+            window.scrollTo(0, pos);
+          }
+
+          // 대기 (이미지 lazy load + DOM 안정화)
+          await sleep(sweepDelay);
+
+          // 새 이미지 탐색
+          var newImages = [];
+          document.querySelectorAll('img').forEach(function(img) {
+            if (img.src && img.src.includes('getMediaUrlRedirect') &&
+                !preGenSrcs.has(img.src) && !downloadedSrcs.has(img.src) &&
+                !assetSrcs.has(img.src)) {
+              newImages.push(img);
+            }
+          });
+
+          // 위치순 정렬 (위→아래 = 최신→오래된 순)
+          newImages.sort(function(a, b) {
+            return a.getBoundingClientRect().top - b.getBoundingClientRect().top;
+          });
+
+          // 각 이미지 처리
+          for (var ni = 0; ni < newImages.length && nextPromptIdx >= 0; ni++) {
+            var newImg = newImages[ni];
+
+            try {
+              var imgResp = await fetch(newImg.src);
+              var imgBlob = await imgResp.blob();
+
+              // 크기 필터 (200KB 미만 = 에셋/썸네일)
+              if (imgBlob.size < MIN_GENERATED_IMAGE_SIZE) {
+                console.log('[Flow Auto] 에셋/썸네일 스킵: ' + Math.round(imgBlob.size / 1024) + 'KB');
+                assetSrcs.add(newImg.src);
+                continue;
+              }
+
+              // 역순 매칭: #100 → #99 → #98...
+              var pItem = promptsWithCharacters[nextPromptIdx];
+              matchedPromptIndices.add(nextPromptIdx);
+
+              // 텍스트 매칭 검증 (로그용)
+              var textMatchIdx = findPromptForImage(newImg, promptsWithCharacters, new Set());
+              if (textMatchIdx >= 0 && textMatchIdx !== nextPromptIdx) {
+                console.warn('[Flow Auto] ⚠ 순차=#' + nextPromptIdx +
+                  ' vs 텍스트=#' + textMatchIdx + ' (순차 매칭 우선)');
+              }
+
+              // 파일명 결정
+              var fullFilename;
+              if (pItem.filename) {
+                var safeName = pItem.filename.replace(/[<>:"|?*]/g, '_').replace(/_+/g, '_');
+                fullFilename = safeName.includes('.') ? safeName : safeName + '.png';
+              } else {
+                var autoName = pItem.prompt.substring(0, 30)
+                  .replace(/[^a-zA-Z0-9가-힣]/g, '_').replace(/_+/g, '_');
+                fullFilename = 'flow_' + (pItem.index + 1) + '_' + autoName + '.png';
+              }
+
+              // blob → dataUrl → background 다운로드
+              var reader = new FileReader();
+              var dataUrl = await new Promise(function(resolve, reject) {
+                reader.onload = function() { resolve(reader.result); };
+                reader.onerror = reject;
+                reader.readAsDataURL(imgBlob);
+              });
+
+              if (useCustomDir) {
+                chrome.runtime.sendMessage({
+                  action: 'SAVE_IMAGE_DATA',
+                  dataUrl: dataUrl,
+                  filename: fullFilename
+                });
+              } else {
+                chrome.runtime.sendMessage({
+                  action: 'DOWNLOAD_IMAGE',
+                  url: dataUrl,
+                  filename: savePath + '/' + fullFilename
+                });
+              }
+
+              downloadedSrcs.add(newImg.src);
+              downloadedCount++;
+              nextPromptIdx--;
+
+              console.log('[Flow Auto] ' + sweepLabel + ' DL ' + downloadedCount + '/' + totalCount +
+                ': ' + fullFilename + ' (' + Math.round(imgBlob.size / 1024) + 'KB)');
+
+              try {
+                chrome.runtime.sendMessage({
+                  action: 'PROGRESS_UPDATE',
+                  currentIndex: downloadedCount,
+                  totalCount: totalCount,
+                  promptIndex: pItem.index,
+                  status: 'completed',
+                  currentPrompt: sweepLabel + ' DL ' + downloadedCount + '/' + totalCount + ' ' + fullFilename
+                });
+              } catch(e) {}
+            } catch (e) {
+              console.warn('[Flow Auto] 이미지 처리 실패:', e.message);
+              downloadedSrcs.add(newImg.src);
+            }
+          }
+
+          // 진행 로그 (3000px마다)
+          if (pos % 3000 < sweepStep) {
+            console.log('[Flow Auto] ' + sweepLabel + ' scroll=' + pos + 'px DL=' +
+              downloadedCount + '/' + totalCount);
+          }
+
+          pos += direction * sweepStep;
+        }
+      }
+
+      // 1차 스윕: 위→아래
+      var startScroll = scrollContainer ? scrollContainer.scrollTop : window.scrollY;
+      console.log('[Flow Auto] 1차 스윕 시작 (위→아래, scroll=' + startScroll +
+        '→' + maxScrollRange + 'px)');
+      await scrollSweep(startScroll, maxScrollRange, 1);
+
+      // 2차 스윕: 부족하면 아래→위로 한번 더
+      if (downloadedCount < totalCount && nextPromptIdx >= 0) {
+        console.log('[Flow Auto] 1차 스윕 부족 (' + downloadedCount + '/' + totalCount +
+          ') — 2차 스윕 (아래→위)');
+        await sleep(3000); // 생성 대기 여유
+        var currentPos = scrollContainer
+          ? scrollContainer.scrollTop
+          : window.scrollY;
+        await scrollSweep(currentPos, 0, -1);
+      }
+
+      // 스크롤 원위치
+      if (scrollContainer) {
+        scrollContainer.scrollTop = 0;
+      } else {
+        window.scrollTo(0, 0);
+      }
+
+      if (downloadedCount < totalCount) {
+        console.warn('[Flow Auto] ⚠ 스윕 완료: ' + downloadedCount + '/' + totalCount +
+          ' (' + (totalCount - downloadedCount) + '개 누락)');
+      }
 
       console.log('[Flow Auto] === 완료: ' + downloadedCount + '/' + totalCount +
         ' 다운로드 (' + (waited / 1000) + '초) ===');
