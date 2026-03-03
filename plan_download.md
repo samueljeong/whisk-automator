@@ -76,7 +76,7 @@ Flow의 가상 스크롤 특성(뷰포트 근처 6~9개만 DOM 유지)에 맞춰
   - 2차에서도 역순 매칭 유지 (nextPromptIdx 이어서)
   - 2차 스윕에서도 부족하면 경고 로그 + 현재 수로 완료 처리
 
-- [ ] **3-5. CSS zoom 제거**
+- [x] **3-5. CSS zoom 제거**
   - 더 이상 `document.documentElement.style.zoom = '0.25'` 불필요
   - 스크롤 스윕이 모든 이미지를 순회하므로 zoom 트릭 제거
 
