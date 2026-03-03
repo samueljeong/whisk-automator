@@ -35,31 +35,34 @@ Flow의 가상 스크롤 특성(뷰포트 근처 6~9개만 DOM 유지)에 맞춰
   - 타임아웃: 이미지 60초 / 비디오 120초
 
 - [ ] **3-3. 스크롤 스윕 다운로드 (순차 매칭)**
-  - **핵심 원리**: Flow는 이미지를 제출 순서대로 쌓음 (아래 = 오래된 것)
-    → 맨 아래부터 위로 스윕하면 프롬프트 #1, #2, #3... 순서로 만남
-    → **텍스트 매칭 불필요, 만나는 순서대로 번호 매기면 됨**
-  - **방향**: 맨 아래(첫 프롬프트)부터 위로
+  - **핵심 원리**: Flow는 최신 생성물을 위에 표시
+    → 위 = #100(마지막 제출), 아래 = #1(첫 제출)
+    → 위에서 아래로 스윕하면 #100, #99, #98... #1 순서로 만남
+    → **텍스트 매칭 불필요, 만나는 순서대로 역순 번호 매기면 됨**
+  - **방향**: 위(최신 = 마지막 프롬프트)에서 아래로
+    - 제출 끝나면 이미 위쪽에 있으므로 그 자리에서 바로 시작
+    - 맨 아래로 점프할 필요 없음
   - **단위**: 300px씩 (여유 있게, 이미지 로딩+감지 안정성 확보)
   - **대기 시간**: 2초 (너무 빠르면 매칭 실패하므로 넉넉하게)
   - **각 위치에서**:
-    1. 스크롤 이동 (300px 위로)
+    1. 스크롤 이동 (300px 아래로)
     2. 2초 대기 (이미지 lazy load + DOM 안정화)
     3. `querySelectorAll('img[src*="getMediaUrlRedirect"]')` 탐색
     4. `downloadedSrcs`에 없는 새 이미지 → 크기 검증(200KB+)
-    5. **순차 매칭**: 다음 미할당 프롬프트 번호 부여 (downloadedCount 기반)
+    5. **역순 매칭**: #100부터 내려가며 번호 부여
     6. 다운로드 → src를 `downloadedSrcs`에 등록 → downloadedCount++
   - **종료 조건**: 다운로드 수 === 목표 수, 또는 스크롤 끝 도달
 
   ```
-  nextPromptIdx = 0  // 다음 할당할 프롬프트 번호
-  scrollTop = scrollHeight (맨 아래)
-  while (scrollTop > 0 && nextPromptIdx < totalCount) {
-    스크롤 → 2초 대기 → 감지
+  nextPromptIdx = totalCount - 1  // #100부터 시작
+  scrollTop = 0 (맨 위, 현재 위치)
+  while (scrollTop < maxScroll && nextPromptIdx >= 0) {
+    현재 위치에서 감지 → 2초 대기 → 감지
     새 이미지마다:
       파일명 = promptsWithCharacters[nextPromptIdx].filename
       다운로드
-      nextPromptIdx++
-    scrollTop -= 300
+      nextPromptIdx--  // 100 → 99 → 98...
+    scrollTop += 300
   }
   ```
 
