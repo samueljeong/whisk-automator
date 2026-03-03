@@ -80,7 +80,7 @@ Flow의 가상 스크롤 특성(뷰포트 근처 6~9개만 DOM 유지)에 맞춰
   - 더 이상 `document.documentElement.style.zoom = '0.25'` 불필요
   - 스크롤 스윕이 모든 이미지를 순회하므로 zoom 트릭 제거
 
-- [ ] **3-6. 진행 상황 업데이트**
+- [x] **3-6. 진행 상황 업데이트**
   - 기존 PROGRESS_UPDATE 메시지 유지
   - `스윕 중 DL 15/100 (scroll=3500px)` 형태로 현재 위치 표시
 
