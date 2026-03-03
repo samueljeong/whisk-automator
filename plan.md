@@ -31,7 +31,7 @@ KCP 심사 통과를 위해 결제 페이지에 필수 정보 추가
 - [x] **4. success.html에 사업자 정보 하단 추가**
   - index.html과 동일한 하단 정보
 
-- [ ] **5. Vercel 배포**
+- [x] **5. Vercel 배포**
   - payment/ 폴더를 Vercel에 배포
   - URL: whisk-payment.vercel.app
 
