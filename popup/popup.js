@@ -3651,8 +3651,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
           ' (' + (totalCount - downloadedCount) + '개 누락)');
       }
 
-      console.log('[Flow Auto] === 완료: ' + downloadedCount + '/' + totalCount +
-        ' 다운로드 (' + (waited / 1000) + '초) ===');
+      console.log('[Flow Auto] === 완료: ' + downloadedCount + '/' + totalCount + ' 다운로드 ===');
 
       if (downloadedCount === 0) {
         throw new Error('생성 실패 — 다운로드 0개 (전체 ' + totalCount + '개 제출)');
