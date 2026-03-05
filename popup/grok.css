@@ -270,6 +270,31 @@
   display: none;
 }
 
+/* 영상연장 큐 */
+.extend-queue-num {
+  color: #6366f1;
+  font-weight: 600;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.extend-queue-text {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  color: #ccc;
+}
+
+#extendQueue li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+}
+
 /* Grok 진행률 */
 .grok-progress-section {
   padding: 12px;
