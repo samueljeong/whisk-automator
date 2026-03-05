@@ -18,7 +18,7 @@ Grok 영상 자동화에 "영상 연장" 옵션 추가. 6초 영상 생성 후 �
   - `const grokExtendEnabled = $('#grokExtendEnabled');`
   - 기존 DOM 요소 섹션에 추가
 
-- [ ] **3. grok.js — `clickExtendInMenu()` 함수 추가**
+- [x] **3. grok.js — `clickExtendInMenu()` 함수 추가**
   - `clickUpscaleInMenu()` 로직 복사
   - 텍스트 매칭을 `업스케일|upscale` → `연장|extend` 로 변경
   - 콘솔 로그 접두어: `[Grok Extend]`
