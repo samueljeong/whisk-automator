@@ -207,6 +207,14 @@
         <button id="grokOpenTabBtn" class="btn btn-small btn-secondary">grok.com 열기</button>
       </section>
 
+      <!-- Grok 서브탭: 영상생성 / 영상연장 -->
+      <div class="grok-sub-tabs">
+        <button class="grok-sub-tab active" id="grokSubTabGenerate" data-subtab="generate">영상생성</button>
+        <button class="grok-sub-tab" id="grokSubTabExtend" data-subtab="extend">영상연장</button>
+      </div>
+
+      <!-- ====== 영상생성 서브컨테이너 ====== -->
+      <div id="grokGenerateContainer">
       <!-- 이미지 추가 -->
       <section class="grok-input-section">
         <div class="input-header">
@@ -271,7 +279,73 @@
         </div>
       </section>
 
-      <!-- 진행률 -->
+      <!-- 제어 -->
+      <section class="control-section">
+        <button id="grokStartBtn" class="btn btn-primary" disabled>영상 생성 시작</button>
+        <button id="grokStopBtn" class="btn btn-danger" hidden>중지</button>
+      </section>
+      </div><!-- /grokGenerateContainer -->
+
+      <!-- ====== 영상연장 서브컨테이너 ====== -->
+      <div id="grokExtendContainer" hidden>
+      <section class="grok-input-section">
+        <div class="input-header">
+          <h2>연장 프롬프트</h2>
+          <div class="input-header-actions">
+            <label class="file-input-label">
+              <input type="file" id="extendPromptFileInput" accept=".txt" hidden>
+              📁 파일 불러오기
+            </label>
+          </div>
+        </div>
+        <textarea
+          id="extendPromptInput"
+          placeholder="연장할 프롬프트를 입력하세요. 줄바꿈으로 구분됩니다. (최대 5개)&#10;&#10;예시:&#10;slow zoom out, revealing the full landscape&#10;camera pans left, following the character"
+          rows="5"
+        ></textarea>
+        <div class="input-actions">
+          <button id="addExtendPromptsBtn" class="btn btn-secondary">프롬프트 추가</button>
+        </div>
+      </section>
+
+      <!-- 연장 대기열 -->
+      <section class="grok-queue-section">
+        <div class="queue-header">
+          <h2>연장 대기열 <span id="extendQueueCount">(0개 / 5개)</span></h2>
+          <button id="extendClearQueueBtn" class="btn btn-small btn-danger">전체 삭제</button>
+        </div>
+        <ul id="extendQueue" class="prompt-list">
+          <li class="empty-message">프롬프트를 추가해주세요 (최대 5개)</li>
+        </ul>
+      </section>
+
+      <!-- 설정 -->
+      <section class="grok-settings-section">
+        <h2>설정</h2>
+        <div class="grok-setting-group">
+          <label for="extendDelay">연장 간격 (초):</label>
+          <input type="number" id="extendDelay" value="10" min="5" max="60">
+        </div>
+        <div class="grok-setting-group">
+          <label for="extendSaveLocation">저장 위치:</label>
+          <input type="text" id="extendSaveLocation" placeholder="grok-videos" value="grok-videos">
+        </div>
+        <div class="grok-setting-group">
+          <label class="toggle-label">
+            <input type="checkbox" id="extendUpscaleEnabled">
+            <span class="toggle-text">업스케일 후 저장</span>
+          </label>
+        </div>
+      </section>
+
+      <!-- 제어 -->
+      <section class="control-section">
+        <button id="extendStartBtn" class="btn btn-primary" disabled>영상 연장 시작</button>
+        <button id="extendStopBtn" class="btn btn-danger" hidden>중지</button>
+      </section>
+      </div><!-- /grokExtendContainer -->
+
+      <!-- 진행률 (공용) -->
       <section class="grok-progress-section" id="grokProgressSection" hidden>
         <div class="progress-bar">
           <div class="progress-fill" id="grokProgressFill"></div>
@@ -280,12 +354,6 @@
           <span id="grokCurrentIndex">0</span> / <span id="grokTotalCount">0</span> 완료
         </p>
         <p class="current-prompt" id="grokCurrentStatus"></p>
-      </section>
-
-      <!-- 제어 -->
-      <section class="control-section">
-        <button id="grokStartBtn" class="btn btn-primary" disabled>영상 생성 시작</button>
-        <button id="grokStopBtn" class="btn btn-danger" hidden>중지</button>
       </section>
 
       <footer>
