@@ -24,7 +24,7 @@ Grok 영상 자동화에 "영상 연장" 옵션 추가. 6초 영상 생성 후 �
   - 콘솔 로그 접두어: `[Grok Extend]`
   - `simulateClick()` 헬퍼는 동일
 
-- [ ] **4. grok.js — `waitForExtend()` 함수 추가**
+- [x] **4. grok.js — `waitForExtend()` 함수 추가**
   - 연장 완료 감지 (5분 타임아웃, 3초 폴링)
   - 감지 전략:
     - video src 변경 (기존 src와 다른 새 src 출현)
