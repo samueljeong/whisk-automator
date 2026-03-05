@@ -1582,15 +1582,23 @@
         }
 
         console.log('[Grok Extend] "연장" 텍스트 포함 요소:', extendCandidates.length,
-          extendCandidates.map(c => `${c.tag}:"${c.text}" (${c.x},${c.y}) ${c.w}x${c.h}`));
+          extendCandidates.map(c => `${c.tag}:"${c.directText}"|"${c.text}" (${c.x},${c.y}) ${c.w}x${c.h}`));
 
         if (extendCandidates.length > 0) {
-          for (const c of extendCandidates) {
-            const clickTarget = c.el.closest('button, a, [role="menuitem"], [role="option"], [role="button"], li') || c.el;
-            console.log('[Grok Extend] 연장 항목 클릭:', c.text, clickTarget.tagName);
-            simulateClick(clickTarget);
-            return { success: true, text: c.text };
-          }
+          // directText 매칭 우선, 그 중 텍스트 짧은 것(가장 구체적인 요소) 우선
+          extendCandidates.sort((a, b) => {
+            const aHasDirect = /연장|extend/i.test(a.directText);
+            const bHasDirect = /연장|extend/i.test(b.directText);
+            if (aHasDirect && !bHasDirect) return -1;
+            if (!aHasDirect && bHasDirect) return 1;
+            return a.text.length - b.text.length;
+          });
+
+          const best = extendCandidates[0];
+          const clickTarget = best.el.closest('button, a, [role="menuitem"], [role="option"], [role="button"], li') || best.el;
+          console.log('[Grok Extend] 연장 항목 클릭:', best.directText, '|', best.text, clickTarget.tagName);
+          simulateClick(clickTarget);
+          return { success: true, text: best.text };
         }
 
         console.error('[Grok Extend] 연장 항목 미발견');
