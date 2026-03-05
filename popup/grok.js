@@ -1253,8 +1253,7 @@
           if (shouldLog) {
             console.log('[Grok Upscale] 대기 중...',
               'HD:', hdFound, 'srcChanged:', srcChanged,
-              'loading:', isLoading,
-              'elapsed:', Math.round((Date.now() - startTime) / 1000) + 's');
+              'loading:', isLoading);
           }
 
           // 완료 조건 1: HD 배지가 나타남
