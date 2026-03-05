@@ -14,7 +14,7 @@ Grok 영상 자동화에 "영상 연장" 옵션 추가. 6초 영상 생성 후 �
   - id: `grokExtendEnabled`
   - 위치: Grok 설정 섹션 (266줄 부근)
 
-- [ ] **2. grok.js — DOM 참조 추가**
+- [x] **2. grok.js — DOM 참조 추가**
   - `const grokExtendEnabled = $('#grokExtendEnabled');`
   - 기존 DOM 요소 섹션에 추가
 
