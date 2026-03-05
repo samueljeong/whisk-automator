@@ -199,15 +199,6 @@
     const connected = grokTabId !== null;
     extendStartBtn.disabled = !hasImage || !hasPrompts || !connected;
 
-    // 디버그: 어떤 조건이 미충족인지 표시
-    const debugEl = document.querySelector('#extendDebugStatus');
-    if (debugEl) {
-      const missing = [];
-      if (!hasImage) missing.push('이미지');
-      if (!hasPrompts) missing.push('프롬프트');
-      if (!connected) missing.push('연결');
-      debugEl.textContent = missing.length > 0 ? `미충족: ${missing.join(', ')}` : '';
-    }
   }
 
   function saveExtendQueue() {
