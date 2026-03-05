@@ -197,6 +197,7 @@
     const hasImage = extendImageDataUrl !== null;
     const hasPrompts = extendQueue.length > 0;
     const connected = grokTabId !== null;
+    console.log('[Grok Extend] 버튼 상태:', { hasImage, hasPrompts, connected, grokTabId, queueLen: extendQueue.length });
     extendStartBtn.disabled = !hasImage || !hasPrompts || !connected;
   }
 
