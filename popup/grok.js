@@ -395,6 +395,7 @@
     const hasItems = grokQueue.some(i => i.status === 'pending');
     const connected = grokTabId !== null;
     grokStartBtn.disabled = !hasItems || !connected || grokIsRunning;
+    updateExtendStartBtn();
   }
 
   // ============================================================
