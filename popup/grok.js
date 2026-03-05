@@ -1816,6 +1816,211 @@
     }
   });
 
+  // 영상연장 시작
+  extendStartBtn.addEventListener('click', () => {
+    if (!window.licenseValid) {
+      alert('Flow 라이선스 인증 후 사용할 수 있습니다.');
+      return;
+    }
+    if (!grokIsRunning) {
+      runExtendAutomation();
+    }
+  });
+
+  // 영상연장 중지
+  extendStopBtn.addEventListener('click', async () => {
+    grokIsRunning = false;
+    extendStartBtn.hidden = false;
+    extendStopBtn.hidden = true;
+    updateExtendStartBtn();
+    updateProgress(
+      parseInt(grokCurrentIndexEl.textContent),
+      parseInt(grokTotalCountEl.textContent),
+      '사용자에 의해 중지됨'
+    );
+
+    if (grokTabId) {
+      try {
+        await chrome.tabs.sendMessage(grokTabId, { action: 'GROK_STOP_AUTOMATION' });
+      } catch (e) {
+        console.log('[Grok Extend] 정지 신호 전달 실패:', e.message);
+      }
+    }
+  });
+
+  // 영상연장 자동화 실행
+  async function runExtendAutomation() {
+    if (!extendImageDataUrl || extendQueue.length === 0 || !grokTabId) return;
+
+    grokIsRunning = true;
+    extendStartBtn.hidden = true;
+    extendStopBtn.hidden = false;
+
+    const total = extendQueue.length;
+    let completed = 0;
+
+    updateProgress(0, total, '연장 시작 준비 중...');
+    grokProgressSection.hidden = false;
+
+    // grok.com 탭으로 전환
+    await chrome.tabs.update(grokTabId, { active: true });
+    await sleep(1000);
+
+    // 인터셉터 주입
+    try {
+      await chrome.runtime.sendMessage({
+        action: 'GROK_INJECT_INTERCEPTOR',
+        tabId: grokTabId
+      });
+    } catch (e) {
+      console.log('[Grok Extend] 인터셉터 주입:', e.message);
+    }
+    await sleep(500);
+
+    let videoUrl = null;
+
+    for (let i = 0; i < extendQueue.length; i++) {
+      if (!grokIsRunning) break;
+
+      const item = extendQueue[i];
+      const isFirst = (i === 0);
+      item.status = 'processing';
+      renderExtendQueue();
+
+      try {
+        if (isFirst) {
+          // 1차: 이미지 업로드 → 영상 생성
+          updateProgress(completed, total, `1차 생성: Imagine 모드 진입...`);
+          await clickImagineInSidebar();
+          await sleep(2000);
+
+          updateProgress(completed, total, `1차 생성: 이미지 업로드...`);
+          await uploadImageToGrok(extendImageDataUrl);
+          await sleep(1500);
+
+          // 모션 프롬프트 입력
+          updateProgress(completed, total, `1차 생성: 프롬프트 입력...`);
+          await inputMotionPrompt(item.prompt);
+          await sleep(500);
+
+          // 생성 버튼 클릭
+          updateProgress(completed, total, `1차 생성: 생성 요청...`);
+          let clickResult = null;
+          for (let attempt = 1; attempt <= 3; attempt++) {
+            clickResult = await clickGenerateButton();
+            if (clickResult?.found) break;
+            await sleep(2000);
+          }
+          if (!clickResult?.found) {
+            throw new Error('생성 버튼을 찾을 수 없습니다.');
+          }
+          await sleep(2000);
+
+          await dismissPopups();
+
+          // 영상 완성 대기
+          updateProgress(completed, total, `1차 생성: 영상 생성 대기...`);
+          videoUrl = await waitForVideo();
+
+          if (!videoUrl) {
+            throw new Error('1차 영상 생성 실패');
+          }
+
+        } else {
+          // 2차~: 영상 연장
+          updateProgress(completed, total, `${i + 1}차 연장: 메뉴 클릭...`);
+          const extendClicked = await clickExtendInMenu();
+          if (!extendClicked) {
+            throw new Error('영상 연장 메뉴 클릭 실패');
+          }
+          await sleep(2000);
+
+          // 연장 프롬프트 입력
+          updateProgress(completed, total, `${i + 1}차 연장: 프롬프트 입력...`);
+          await inputMotionPrompt(item.prompt);
+          await sleep(500);
+
+          // 생성 버튼 클릭
+          updateProgress(completed, total, `${i + 1}차 연장: 생성 요청...`);
+          let clickResult = null;
+          for (let attempt = 1; attempt <= 3; attempt++) {
+            clickResult = await clickGenerateButton();
+            if (clickResult?.found) break;
+            await sleep(2000);
+          }
+          if (!clickResult?.found) {
+            throw new Error('생성 버튼을 찾을 수 없습니다.');
+          }
+          await sleep(2000);
+
+          await dismissPopups();
+
+          // 연장 완료 대기
+          updateProgress(completed, total, `${i + 1}차 연장: 영상 생성 대기...`);
+          const extendedUrl = await waitForExtend();
+          if (extendedUrl) {
+            videoUrl = extendedUrl;
+          } else {
+            console.log('[Grok Extend] 연장 대기 실패, 이전 URL 유지');
+          }
+        }
+
+        item.status = 'done';
+        completed++;
+
+      } catch (e) {
+        console.error('[Grok Extend] 오류:', e);
+        item.status = 'error';
+        completed++;
+        // 1차 생성 실패 시 전체 중단
+        if (isFirst) {
+          updateProgress(completed, total, `1차 생성 실패: ${e.message}`);
+          break;
+        }
+      }
+
+      renderExtendQueue();
+      updateProgress(completed, total,
+        item.status === 'done'
+          ? `${isFirst ? '1차 생성' : `${i + 1}차 연장`}: 완료!`
+          : `${isFirst ? '1차 생성' : `${i + 1}차 연장`}: 오류`);
+
+      // 다음 항목 전 대기
+      if (grokIsRunning && i < extendQueue.length - 1) {
+        const delay = (parseInt(extendDelay.value) || 10) * 1000;
+        updateProgress(completed, total, '다음 연장 대기 중...');
+        await sleep(delay);
+      }
+    }
+
+    // 최종 영상 다운로드
+    if (videoUrl && completed > 0) {
+      updateProgress(completed, total, '최종 영상 다운로드 중...');
+      const saveLoc = extendSaveLocation.value || 'grok-videos';
+      await downloadVideo(videoUrl, `extended_${Date.now()}`);
+    }
+
+    // 업스케일 (옵션)
+    if (videoUrl && extendUpscaleEnabled.checked) {
+      updateProgress(completed, total, '업스케일 중...');
+      const upscaleClicked = await clickUpscaleInMenu();
+      if (upscaleClicked) {
+        const upscaledUrl = await waitForUpscale();
+        if (upscaledUrl) {
+          await downloadVideo(upscaledUrl, `extended_upscaled_${Date.now()}`);
+        }
+      }
+    }
+
+    grokIsRunning = false;
+    extendStartBtn.hidden = false;
+    extendStopBtn.hidden = true;
+    updateExtendStartBtn();
+
+    const doneCount = extendQueue.filter(i => i.status === 'done').length;
+    updateProgress(completed, total, `완료! (${doneCount}/${total} 성공, ${completed * 6}초 영상)`);
+  }
+
   // background에서 오는 메시지 수신
   chrome.runtime.onMessage.addListener((message) => {
     if (message.action === 'GROK_PROGRESS_UPDATE') {
