@@ -375,6 +375,15 @@ textarea::placeholder {
   display: none;
 }
 
+.warning-box.account-warning {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  font-size: 11px;
+  line-height: 1.5;
+  margin-top: 12px;
+}
+
 .warning-icon {
   font-size: 14px;
 }
