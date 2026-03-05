@@ -288,9 +288,29 @@
 
       <!-- ====== 영상연장 서브컨테이너 ====== -->
       <div id="grokExtendContainer" hidden>
+      <!-- 기본 이미지 -->
       <section class="grok-input-section">
         <div class="input-header">
-          <h2>연장 프롬프트</h2>
+          <h2>기본 이미지</h2>
+        </div>
+        <div class="extend-image-area" id="extendImageArea">
+          <label class="extend-image-upload" id="extendImageLabel">
+            <input type="file" id="extendImageInput" accept="image/*" hidden>
+            <div class="extend-image-placeholder" id="extendImagePlaceholder">
+              <span class="extend-image-icon">+</span>
+              <span>이미지 선택</span>
+            </div>
+            <img id="extendImagePreview" class="extend-image-preview" hidden>
+          </label>
+          <button id="extendImageClearBtn" class="btn btn-small btn-danger extend-image-clear" hidden>&times;</button>
+        </div>
+        <p class="hint">이 이미지로 1차 영상을 생성하고, 이후 프롬프트마다 6초씩 연장합니다</p>
+      </section>
+
+      <!-- 프롬프트 입력 -->
+      <section class="grok-input-section">
+        <div class="input-header">
+          <h2>프롬프트 (최대 5개)</h2>
           <div class="input-header-actions">
             <label class="file-input-label">
               <input type="file" id="extendPromptFileInput" accept=".txt" hidden>
@@ -300,7 +320,7 @@
         </div>
         <textarea
           id="extendPromptInput"
-          placeholder="연장할 프롬프트를 입력하세요. 줄바꿈으로 구분됩니다. (최대 5개)&#10;&#10;예시:&#10;slow zoom out, revealing the full landscape&#10;camera pans left, following the character"
+          placeholder="프롬프트를 입력하세요. 줄바꿈으로 구분됩니다.&#10;&#10;1차: 이미지로 영상 생성 (6초)&#10;2차~: 마지막 프레임에서 연장 (각 +6초)&#10;&#10;예시:&#10;slow zoom in, flickering firelight&#10;camera pans left, revealing the landscape&#10;slow zoom out, cinematic wide shot"
           rows="5"
         ></textarea>
         <div class="input-actions">
@@ -311,10 +331,10 @@
       <!-- 연장 대기열 -->
       <section class="grok-queue-section">
         <div class="queue-header">
-          <h2>연장 대기열 <span id="extendQueueCount">(0개 / 5개)</span></h2>
+          <h2>프롬프트 목록 <span id="extendQueueCount">(0개 / 5개)</span></h2>
           <button id="extendClearQueueBtn" class="btn btn-small btn-danger">전체 삭제</button>
         </div>
-        <ul id="extendQueue" class="prompt-list">
+        <ul id="extendQueue" class="prompt-list extend-queue-list">
           <li class="empty-message">프롬프트를 추가해주세요 (최대 5개)</li>
         </ul>
       </section>
