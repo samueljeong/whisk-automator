@@ -1360,16 +1360,23 @@
         }
 
         console.log('[Grok Upscale] "업스케일" 텍스트 포함 요소:', upscaleCandidates.length,
-          upscaleCandidates.map(c => `${c.tag}:"${c.text}" (${c.x},${c.y}) ${c.w}x${c.h}`));
+          upscaleCandidates.map(c => `${c.tag}:"${c.directText}"|"${c.text}" (${c.x},${c.y}) ${c.w}x${c.h}`));
 
         if (upscaleCandidates.length > 0) {
-          // 가장 적절한 클릭 대상: 가장 작은(구체적인) 요소, 또는 클릭 가능한 가장 가까운 요소
-          for (const c of upscaleCandidates) {
-            const clickTarget = c.el.closest('button, a, [role="menuitem"], [role="option"], [role="button"], li') || c.el;
-            console.log('[Grok Upscale] 업스케일 항목 클릭:', c.text, clickTarget.tagName);
-            simulateClick(clickTarget);
-            return { success: true, text: c.text };
-          }
+          // directText 매칭 우선, 그 중 텍스트 짧은 것(가장 구체적인 요소) 우선
+          upscaleCandidates.sort((a, b) => {
+            const aHasDirect = /업스케일|upscale/i.test(a.directText);
+            const bHasDirect = /업스케일|upscale/i.test(b.directText);
+            if (aHasDirect && !bHasDirect) return -1;
+            if (!aHasDirect && bHasDirect) return 1;
+            return a.text.length - b.text.length;
+          });
+
+          const best = upscaleCandidates[0];
+          const clickTarget = best.el.closest('button, a, [role="menuitem"], [role="option"], [role="button"], li') || best.el;
+          console.log('[Grok Upscale] 업스케일 항목 클릭:', best.directText, '|', best.text, clickTarget.tagName);
+          simulateClick(clickTarget);
+          return { success: true, text: best.text };
         }
 
         // 폴백: 추가 옵션 버튼 근처(±300px)에 새로 나타난 모든 클릭 가능 요소 로깅
