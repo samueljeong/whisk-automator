@@ -119,6 +119,42 @@
   });
 
   // ============================================================
+  // 영상연장 이미지 관리
+  // ============================================================
+  const extendImageInput = $('#extendImageInput');
+  const extendImagePreview = $('#extendImagePreview');
+  const extendImagePlaceholder = $('#extendImagePlaceholder');
+  const extendImageClearBtn = $('#extendImageClearBtn');
+  let extendImageDataUrl = null;
+
+  extendImageInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      extendImageDataUrl = ev.target.result;
+      extendImagePreview.src = extendImageDataUrl;
+      extendImagePreview.hidden = false;
+      extendImagePlaceholder.hidden = true;
+      extendImageClearBtn.hidden = false;
+      updateExtendStartBtn();
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  });
+
+  extendImageClearBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    extendImageDataUrl = null;
+    extendImagePreview.hidden = true;
+    extendImagePreview.src = '';
+    extendImagePlaceholder.hidden = false;
+    extendImageClearBtn.hidden = true;
+    updateExtendStartBtn();
+  });
+
+  // ============================================================
   // 영상연장 큐 관리
   // ============================================================
   function renderExtendQueue() {
@@ -133,9 +169,16 @@
 
     extendQueue.forEach((item, idx) => {
       const li = document.createElement('li');
+      const isFirst = idx === 0;
+      const label = isFirst ? '생성' : '연장';
+      const labelClass = isFirst ? 'generate' : 'extend';
+      const timeLabel = `${(idx + 1) * 6}초`;
+
       li.innerHTML = `
+        <span class="extend-queue-label ${labelClass}">${label}</span>
         <span class="extend-queue-num">${idx + 1}.</span>
         <span class="extend-queue-text">${item.prompt}</span>
+        <span class="extend-queue-time">${timeLabel}</span>
         <button class="btn-remove" data-idx="${idx}">&times;</button>
       `;
       const removeBtn = li.querySelector('.btn-remove');
@@ -151,7 +194,10 @@
   }
 
   function updateExtendStartBtn() {
-    extendStartBtn.disabled = extendQueue.length === 0 || !grokTabId;
+    const hasImage = extendImageDataUrl !== null;
+    const hasPrompts = extendQueue.length > 0;
+    const connected = grokTabId !== null;
+    extendStartBtn.disabled = !hasImage || !hasPrompts || !connected;
   }
 
   function saveExtendQueue() {
