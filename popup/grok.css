@@ -392,6 +392,12 @@
   color: #c7d2fe;
 }
 
+.extend-queue-time {
+  font-size: 10px;
+  color: #666;
+  flex-shrink: 0;
+}
+
 /* Grok 진행률 */
 .grok-progress-section {
   padding: 12px;
