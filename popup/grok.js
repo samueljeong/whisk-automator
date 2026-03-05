@@ -93,6 +93,149 @@
   modeTabGrok.addEventListener('click', () => switchMode('grok'));
 
   // ============================================================
+  // Grok 서브탭 전환 (영상생성 / 영상연장)
+  // ============================================================
+  function switchGrokSubTab(subtab) {
+    if (subtab === 'generate') {
+      grokSubTabGenerate.classList.add('active');
+      grokSubTabExtend.classList.remove('active');
+      grokGenerateContainer.hidden = false;
+      grokExtendContainer.hidden = true;
+    } else {
+      grokSubTabGenerate.classList.remove('active');
+      grokSubTabExtend.classList.add('active');
+      grokGenerateContainer.hidden = true;
+      grokExtendContainer.hidden = false;
+    }
+    chrome.storage.local.set({ grok_activeSubTab: subtab });
+  }
+
+  grokSubTabGenerate.addEventListener('click', () => switchGrokSubTab('generate'));
+  grokSubTabExtend.addEventListener('click', () => switchGrokSubTab('extend'));
+
+  // 서브탭 상태 복원
+  chrome.storage.local.get('grok_activeSubTab', (data) => {
+    if (data.grok_activeSubTab === 'extend') switchGrokSubTab('extend');
+  });
+
+  // ============================================================
+  // 영상연장 큐 관리
+  // ============================================================
+  function renderExtendQueue() {
+    extendQueueEl.innerHTML = '';
+    extendQueueCount.textContent = `(${extendQueue.length}개 / ${EXTEND_MAX}개)`;
+
+    if (extendQueue.length === 0) {
+      extendQueueEl.innerHTML = '<li class="empty-message">프롬프트를 추가해주세요 (최대 5개)</li>';
+      updateExtendStartBtn();
+      return;
+    }
+
+    extendQueue.forEach((item, idx) => {
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <span class="extend-queue-num">${idx + 1}.</span>
+        <span class="extend-queue-text">${item.prompt}</span>
+        <button class="btn-remove" data-idx="${idx}">&times;</button>
+      `;
+      const removeBtn = li.querySelector('.btn-remove');
+      removeBtn.addEventListener('click', () => {
+        extendQueue.splice(idx, 1);
+        renderExtendQueue();
+        saveExtendQueue();
+      });
+      extendQueueEl.appendChild(li);
+    });
+
+    updateExtendStartBtn();
+  }
+
+  function updateExtendStartBtn() {
+    extendStartBtn.disabled = extendQueue.length === 0 || !grokTabId;
+  }
+
+  function saveExtendQueue() {
+    chrome.storage.local.set({ grok_extendQueue: extendQueue });
+  }
+
+  // 프롬프트 추가
+  addExtendPromptsBtn.addEventListener('click', () => {
+    const text = extendPromptInput.value.trim();
+    if (!text) return;
+
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    const remaining = EXTEND_MAX - extendQueue.length;
+
+    if (remaining <= 0) {
+      alert(`최대 ${EXTEND_MAX}개까지만 추가할 수 있습니다.`);
+      return;
+    }
+
+    const toAdd = lines.slice(0, remaining);
+    if (lines.length > remaining) {
+      alert(`${remaining}개만 추가됩니다. (최대 ${EXTEND_MAX}개)`);
+    }
+
+    toAdd.forEach(prompt => {
+      extendQueue.push({
+        id: Date.now() + '-' + Math.random().toString(36).substr(2, 5),
+        prompt,
+        status: 'pending'
+      });
+    });
+
+    extendPromptInput.value = '';
+    renderExtendQueue();
+    saveExtendQueue();
+  });
+
+  // 파일 불러오기
+  extendPromptFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target.result.trim();
+      const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      const remaining = EXTEND_MAX - extendQueue.length;
+      const toAdd = lines.slice(0, remaining);
+
+      toAdd.forEach(prompt => {
+        extendQueue.push({
+          id: Date.now() + '-' + Math.random().toString(36).substr(2, 5),
+          prompt,
+          status: 'pending'
+        });
+      });
+
+      renderExtendQueue();
+      saveExtendQueue();
+
+      if (lines.length > remaining) {
+        alert(`${toAdd.length}개만 추가됨 (최대 ${EXTEND_MAX}개)`);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+
+  // 전체 삭제
+  extendClearQueueBtn.addEventListener('click', () => {
+    extendQueue = [];
+    renderExtendQueue();
+    saveExtendQueue();
+  });
+
+  // 큐 복원
+  chrome.storage.local.get('grok_extendQueue', (data) => {
+    if (data.grok_extendQueue) {
+      extendQueue = data.grok_extendQueue;
+      renderExtendQueue();
+    }
+  });
+
+  // ============================================================
   // 연결 확인
   // ============================================================
   async function checkGrokConnection() {
