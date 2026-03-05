@@ -41,7 +41,29 @@
   const grokStartBtn = $('#grokStartBtn');
   const grokStopBtn = $('#grokStopBtn');
   const grokUpscaleEnabled = $('#grokUpscaleEnabled');
-  const grokExtendEnabled = $('#grokExtendEnabled');
+
+  // 서브탭 & 서브컨테이너
+  const grokSubTabGenerate = $('#grokSubTabGenerate');
+  const grokSubTabExtend = $('#grokSubTabExtend');
+  const grokGenerateContainer = $('#grokGenerateContainer');
+  const grokExtendContainer = $('#grokExtendContainer');
+
+  // 영상연장 DOM
+  const extendPromptInput = $('#extendPromptInput');
+  const addExtendPromptsBtn = $('#addExtendPromptsBtn');
+  const extendQueueEl = $('#extendQueue');
+  const extendQueueCount = $('#extendQueueCount');
+  const extendClearQueueBtn = $('#extendClearQueueBtn');
+  const extendPromptFileInput = $('#extendPromptFileInput');
+  const extendDelay = $('#extendDelay');
+  const extendSaveLocation = $('#extendSaveLocation');
+  const extendUpscaleEnabled = $('#extendUpscaleEnabled');
+  const extendStartBtn = $('#extendStartBtn');
+  const extendStopBtn = $('#extendStopBtn');
+
+  // 영상연장 상태
+  let extendQueue = [];  // { id, prompt, status }
+  const EXTEND_MAX = 5;
 
   // ============================================================
   // 모드 탭 전환
