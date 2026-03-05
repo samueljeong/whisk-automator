@@ -301,6 +301,10 @@
   color: #aaa;
 }
 
+.extend-image-placeholder[hidden] {
+  display: none;
+}
+
 .extend-image-icon {
   font-size: 28px;
   font-weight: 300;
