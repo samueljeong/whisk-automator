@@ -1285,6 +1285,181 @@
     return null;
   }
 
+  // 더보기(...) 메뉴 → "영상 연장" 클릭
+  async function clickExtendInMenu() {
+    // ── 1단계: "추가 옵션" 버튼 찾기 & 클릭 ──
+    const [result] = await chrome.scripting.executeScript({
+      target: { tabId: grokTabId },
+      world: 'MAIN',
+      func: () => {
+        function simulateClick(element) {
+          const rect = element.getBoundingClientRect();
+          const x = rect.left + rect.width / 2;
+          const y = rect.top + rect.height / 2;
+          const opts = { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0 };
+          element.dispatchEvent(new MouseEvent('pointerdown', { ...opts, pointerId: 1 }));
+          element.dispatchEvent(new MouseEvent('mousedown', opts));
+          element.dispatchEvent(new MouseEvent('pointerup', { ...opts, pointerId: 1 }));
+          element.dispatchEvent(new MouseEvent('mouseup', opts));
+          element.dispatchEvent(new MouseEvent('click', opts));
+        }
+
+        const btn = document.querySelector('button[aria-label="추가 옵션"]');
+        if (!btn) {
+          console.error('[Grok Extend] "추가 옵션" 버튼 미발견');
+          return { success: false, reason: 'no-more-options-button' };
+        }
+
+        const r = btn.getBoundingClientRect();
+        console.log('[Grok Extend] "추가 옵션" 버튼 클릭:',
+          `(${Math.round(r.left)},${Math.round(r.top)}) ${Math.round(r.width)}x${Math.round(r.height)}`);
+
+        simulateClick(btn);
+        return { success: true, step: 'menu-opened' };
+      }
+    });
+
+    if (!result?.result?.success) {
+      console.error('[Grok Extend] 더보기 메뉴 열기 실패:', result?.result?.reason);
+      return false;
+    }
+
+    await sleep(1500);
+
+    // ── 2단계: 메뉴에서 "연장" / "extend" 항목 클릭 ──
+    const [menuResult] = await chrome.scripting.executeScript({
+      target: { tabId: grokTabId },
+      world: 'MAIN',
+      func: () => {
+        function simulateClick(element) {
+          const rect = element.getBoundingClientRect();
+          const x = rect.left + rect.width / 2;
+          const y = rect.top + rect.height / 2;
+          const opts = { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0 };
+          element.dispatchEvent(new MouseEvent('pointerdown', { ...opts, pointerId: 1 }));
+          element.dispatchEvent(new MouseEvent('mousedown', opts));
+          element.dispatchEvent(new MouseEvent('pointerup', { ...opts, pointerId: 1 }));
+          element.dispatchEvent(new MouseEvent('mouseup', opts));
+          element.dispatchEvent(new MouseEvent('click', opts));
+        }
+
+        const allElements = document.querySelectorAll('*');
+        const extendCandidates = [];
+
+        for (const el of allElements) {
+          let directText = '';
+          for (const node of el.childNodes) {
+            if (node.nodeType === Node.TEXT_NODE) {
+              directText += node.textContent;
+            }
+          }
+          directText = directText.trim();
+          const fullText = (el.textContent || '').trim();
+
+          if ((directText && /연장|extend/i.test(directText)) ||
+              (fullText.length < 30 && /연장|extend/i.test(fullText))) {
+            const r = el.getBoundingClientRect();
+            if (r.width === 0) continue;
+            extendCandidates.push({
+              el, text: fullText, directText, tag: el.tagName,
+              x: Math.round(r.left), y: Math.round(r.top),
+              w: Math.round(r.width), h: Math.round(r.height)
+            });
+          }
+        }
+
+        console.log('[Grok Extend] "연장" 텍스트 포함 요소:', extendCandidates.length,
+          extendCandidates.map(c => `${c.tag}:"${c.text}" (${c.x},${c.y}) ${c.w}x${c.h}`));
+
+        if (extendCandidates.length > 0) {
+          for (const c of extendCandidates) {
+            const clickTarget = c.el.closest('button, a, [role="menuitem"], [role="option"], [role="button"], li') || c.el;
+            console.log('[Grok Extend] 연장 항목 클릭:', c.text, clickTarget.tagName);
+            simulateClick(clickTarget);
+            return { success: true, text: c.text };
+          }
+        }
+
+        console.error('[Grok Extend] 연장 항목 미발견');
+        return { success: false, reason: 'extend-item-not-found' };
+      }
+    });
+
+    const menuRes = menuResult?.result;
+    if (menuRes?.success) {
+      console.log('[Grok Extend] 연장 메뉴 클릭 성공:', menuRes.text);
+      return true;
+    } else {
+      console.error('[Grok Extend] 연장 메뉴 클릭 실패:', menuRes?.reason);
+      return false;
+    }
+  }
+
+  // 영상 연장 완료 대기 (최대 5분)
+  // 완료 시그널: video src 변경 + 로딩 소멸
+  async function waitForExtend() {
+    const maxWait = 5 * 60 * 1000;
+    const pollInterval = 3000;
+    const startTime = Date.now();
+    let pollCount = 0;
+
+    // 연장 시작 전 현재 video src 기록
+    const [initialResult] = await chrome.scripting.executeScript({
+      target: { tabId: grokTabId },
+      world: 'MAIN',
+      func: () => {
+        const video = document.querySelector('video');
+        return video ? (video.src || video.currentSrc || '') : '';
+      }
+    });
+    const initialSrc = initialResult?.result || '';
+    console.log('[Grok Extend] 초기 video src:', initialSrc.substring(0, 80));
+
+    while (Date.now() - startTime < maxWait) {
+      if (!grokIsRunning) return null;
+      pollCount++;
+
+      const [result] = await chrome.scripting.executeScript({
+        target: { tabId: grokTabId },
+        world: 'MAIN',
+        func: (origSrc, shouldLog) => {
+          const video = document.querySelector('video');
+          const currentSrc = video ? (video.src || video.currentSrc || '') : '';
+          const srcChanged = currentSrc && currentSrc !== origSrc;
+
+          const loadingEls = document.querySelectorAll(
+            '[class*="loading"], [class*="spinner"], [class*="progress"], [role="progressbar"], [class*="generating"]'
+          );
+          const isLoading = loadingEls.length > 0;
+
+          if (shouldLog) {
+            console.log('[Grok Extend] 대기 중...',
+              'srcChanged:', srcChanged, 'loading:', isLoading);
+          }
+
+          // 완료 조건: src가 변경되고 로딩 없음
+          if (srcChanged && !isLoading) {
+            return { done: true, videoUrl: currentSrc };
+          }
+
+          return { done: false, isLoading };
+        },
+        args: [initialSrc, pollCount % 3 === 0]
+      });
+
+      const res = result?.result;
+      if (res?.done) {
+        console.log('[Grok Extend] 연장 완료!', res.videoUrl?.substring(0, 80));
+        return res.videoUrl;
+      }
+
+      await sleep(pollInterval);
+    }
+
+    console.log('[Grok Extend] 연장 대기 타임아웃 (5분)');
+    return null;
+  }
+
   // 페이지의 다운로드 버튼 클릭 (video URL 추출 실패 시 폴백)
   async function clickPageDownloadButton() {
     const [result] = await chrome.scripting.executeScript({
