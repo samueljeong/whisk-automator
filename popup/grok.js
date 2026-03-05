@@ -744,23 +744,6 @@
           }
         }
 
-        // Step 5.7: 영상 연장 (옵션)
-        if (videoUrl && grokExtendEnabled.checked) {
-          updateProgress(completed, total, `${item.name}: 영상 연장 중...`);
-          const extendClicked = await clickExtendInMenu();
-          if (extendClicked) {
-            const extendedUrl = await waitForExtend();
-            if (extendedUrl) {
-              videoUrl = extendedUrl;
-              console.log('[Grok] 영상 연장 완료, 새 URL:', videoUrl.substring(0, 80));
-            } else {
-              console.log('[Grok] 영상 연장 대기 실패, 기존 영상으로 진행');
-            }
-          } else {
-            console.log('[Grok] 영상 연장 메뉴 클릭 실패, 기존 영상으로 진행');
-          }
-        }
-
         if (videoUrl) {
           // Step 6a: URL 추출 성공 → 프로그래밍 방식 다운로드
           updateProgress(completed, total, `${item.name}: 다운로드 중...`);
