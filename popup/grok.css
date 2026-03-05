@@ -32,6 +32,38 @@
   color: white;
 }
 
+/* Grok 서브탭 (영상생성 / 영상연장) */
+.grok-sub-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 14px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #333;
+}
+
+.grok-sub-tab {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  background: #16162a;
+  color: #888;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.grok-sub-tab:hover {
+  background: #2d2d44;
+  color: #ccc;
+}
+
+.grok-sub-tab.active {
+  background: #4f46e5;
+  color: white;
+}
+
 /* Grok 연결 섹션 */
 .grok-connection-section {
   display: flex;
