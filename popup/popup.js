@@ -3545,15 +3545,30 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
                 continue;
               }
 
-              // 역순 매칭: #100 → #99 → #98...
-              var pItem = promptsWithCharacters[nextPromptIdx];
-              matchedPromptIndices.add(nextPromptIdx);
-
-              // 텍스트 매칭 검증 (로그용)
-              var textMatchIdx = findPromptForImage(newImg, promptsWithCharacters, new Set());
-              if (textMatchIdx >= 0 && textMatchIdx !== nextPromptIdx) {
-                console.warn('[Flow Auto] ⚠ 순차=#' + nextPromptIdx +
-                  ' vs 텍스트=#' + textMatchIdx + ' (순차 매칭 우선)');
+              // 텍스트 매칭 우선, 순차 폴백
+              var textMatchIdx = findPromptForImage(newImg, promptsWithCharacters, matchedPromptIndices);
+              var actualIdx;
+              if (textMatchIdx >= 0) {
+                actualIdx = textMatchIdx;
+                console.log('[Flow Auto] 텍스트매칭 성공: 이미지→프롬프트 #' + actualIdx);
+              } else {
+                // 텍스트 매칭 실패 — 순차 폴백 (매칭 안 된 것 중 가장 가까운 인덱스)
+                actualIdx = nextPromptIdx;
+                while (actualIdx >= 0 && matchedPromptIndices.has(actualIdx)) {
+                  actualIdx--;
+                }
+                if (actualIdx < 0) {
+                  console.warn('[Flow Auto] 매칭 가능한 프롬프트 없음, 스킵');
+                  downloadedSrcs.add(newImg.src);
+                  continue;
+                }
+                console.log('[Flow Auto] 순차 폴백: 이미지→프롬프트 #' + actualIdx);
+              }
+              var pItem = promptsWithCharacters[actualIdx];
+              matchedPromptIndices.add(actualIdx);
+              // nextPromptIdx도 매칭된 것 건너뛰기
+              while (nextPromptIdx >= 0 && matchedPromptIndices.has(nextPromptIdx)) {
+                nextPromptIdx--;
               }
 
               // 파일명 결정
