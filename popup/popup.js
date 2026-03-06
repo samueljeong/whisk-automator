@@ -3606,7 +3606,6 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
               downloadedSrcs.add(newImg.src);
               downloadedCount++;
-              nextPromptIdx--;
 
               console.log('[Flow Auto] ' + sweepLabel + ' DL ' + downloadedCount + '/' + totalCount +
                 ': ' + fullFilename + ' (' + Math.round(imgBlob.size / 1024) + 'KB)');
