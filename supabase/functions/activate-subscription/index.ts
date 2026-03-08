@@ -1,10 +1,11 @@
-// activate-subscription: 빌링키로 첫 결제 + 다음 결제 스케줄 등록
-// 환경변수: PORTONE_API_SECRET, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+// activate-subscription: V1 빌링키(customer_uid)로 첫 결제 + 다음 결제 스케줄 등록
+// 환경변수: IMP_API_KEY, IMP_API_SECRET, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const PORTONE_API_SECRET = Deno.env.get("PORTONE_API_SECRET")!;
-const PORTONE_API_URL = "https://api.portone.io";
+const IMP_API_KEY = Deno.env.get("IMP_API_KEY")!;
+const IMP_API_SECRET = Deno.env.get("IMP_API_SECRET")!;
+const IMP_API_URL = "https://api.iamport.kr";
 
 const PLANS: Record<string, { amount: number; dayInterval: number }> = {
   monthly: { amount: 9900, dayInterval: 30 },
@@ -16,6 +17,23 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+
+// V1 API 인증 토큰 발급
+async function getAccessToken(): Promise<string> {
+  const res = await fetch(`${IMP_API_URL}/users/getToken`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      imp_key: IMP_API_KEY,
+      imp_secret: IMP_API_SECRET,
+    }),
+  });
+  const data = await res.json();
+  if (data.code !== 0) {
+    throw new Error(`Token error: ${data.message}`);
+  }
+  return data.response.access_token;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -50,79 +68,75 @@ Deno.serve(async (req) => {
     }
 
     const plan = PLANS[planType];
-    const paymentId = `whisk_${user.id}_${Date.now()}`;
+    const merchantUid = `whisk_${user.id}_${Date.now()}`;
 
-    // 3. 첫 결제 실행
-    const payRes = await fetch(
-      `${PORTONE_API_URL}/payments/${encodeURIComponent(paymentId)}/billing-key`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `PortOne ${PORTONE_API_SECRET}`,
-        },
-        body: JSON.stringify({
-          billingKey,
-          orderName: planType === "monthly" ? "Whisk Pro 월간" : "Whisk Pro 연간",
-          amount: { total: plan.amount },
-          currency: "KRW",
-          customer: {
-            id: user.id,
-            email: user.email,
-          },
-        }),
-      }
-    );
+    // 3. V1 API 토큰 발급
+    const accessToken = await getAccessToken();
 
-    if (!payRes.ok) {
-      const err = await payRes.json().catch(() => ({}));
-      console.error("[activate] Payment failed:", err);
+    // 4. 첫 결제 실행 (V1 빌링키 결제)
+    const payRes = await fetch(`${IMP_API_URL}/subscribe/payments/again`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        customer_uid: billingKey,
+        merchant_uid: merchantUid,
+        amount: plan.amount,
+        name: planType === "monthly" ? "Whisk Pro 월간" : "Whisk Pro 연간",
+        buyer_email: user.email,
+      }),
+    });
+
+    const payData = await payRes.json();
+    if (payData.code !== 0) {
+      console.error("[activate] Payment failed:", payData);
       return jsonResponse(
-        { error: err.message || "결제에 실패했습니다" },
+        { error: payData.message || "결제에 실패했습니다" },
         400
       );
     }
 
-    // 4. 만료일 계산
+    // 5. 만료일 계산
     const now = new Date();
     const expiresAt = new Date(
       now.getTime() + plan.dayInterval * 24 * 60 * 60 * 1000
     );
 
-    // 5. 다음 결제 스케줄 등록
-    const nextPaymentId = `whisk_${user.id}_${Date.now() + 1}`;
+    // 6. 다음 결제 스케줄 등록
+    const nextMerchantUid = `whisk_${user.id}_${Date.now() + 1}`;
     const scheduleRes = await fetch(
-      `${PORTONE_API_URL}/payments/${encodeURIComponent(nextPaymentId)}/schedule`,
+      `${IMP_API_URL}/subscribe/payments/schedule`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `PortOne ${PORTONE_API_SECRET}`,
+          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
-          payment: {
-            billingKey,
-            orderName:
-              planType === "monthly" ? "Whisk Pro 월간" : "Whisk Pro 연간",
-            amount: { total: plan.amount },
-            currency: "KRW",
-            customer: {
-              id: user.id,
-              email: user.email,
+          customer_uid: billingKey,
+          schedules: [
+            {
+              merchant_uid: nextMerchantUid,
+              schedule_at: Math.floor(expiresAt.getTime() / 1000),
+              amount: plan.amount,
+              name:
+                planType === "monthly" ? "Whisk Pro 월간" : "Whisk Pro 연간",
+              buyer_email: user.email,
             },
-          },
-          timeToPay: expiresAt.toISOString(),
+          ],
         }),
       }
     );
 
-    if (!scheduleRes.ok) {
-      const err = await scheduleRes.json().catch(() => ({}));
-      console.error("[activate] Schedule failed:", err);
+    const scheduleData = await scheduleRes.json();
+    if (scheduleData.code !== 0) {
+      console.error("[activate] Schedule failed:", scheduleData);
       // 스케줄 실패해도 첫 결제는 성공 → Pro 활성화는 진행
     }
 
-    // 6. DB 업데이트 (service_role_key로 RLS 우회)
+    // 7. DB 업데이트 (service_role_key로 RLS 우회)
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
