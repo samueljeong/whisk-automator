@@ -112,51 +112,64 @@ Deno.serve(async (req) => {
       `Generate ${clampedCount} Suno Custom mode prompt(s). Return ONLY a JSON array.`,
     ].join("\n");
 
-    // Call Gemini Flash API with timeout
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
+    // Call Gemini Flash API with key rotation on 429
+    const requestBody = JSON.stringify({
+      system_instruction: {
+        parts: [{ text: SYSTEM_PROMPT }],
+      },
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: userPrompt }],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.9,
+        maxOutputTokens: 4096,
+        responseMimeType: "application/json",
+      },
+    });
 
-    let geminiRes: Response;
-    try {
-      geminiRes = await fetch(GEMINI_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        signal: controller.signal,
-        body: JSON.stringify({
-          system_instruction: {
-            parts: [{ text: SYSTEM_PROMPT }],
-          },
-          contents: [
-            {
-              role: "user",
-              parts: [{ text: userPrompt }],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.9,
-            maxOutputTokens: 4096,
-            responseMimeType: "application/json",
-          },
-        }),
-      });
-    } catch (err) {
-      if (err instanceof DOMException && err.name === "AbortError") {
-        return jsonResponse({ error: "Gemini API timeout (30s)" }, 504);
+    let geminiRes: Response | null = null;
+    for (const key of API_KEYS) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
+
+      try {
+        geminiRes = await fetch(geminiUrl(key), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
+          body: requestBody,
+        });
+      } catch (err) {
+        clearTimeout(timeout);
+        if (err instanceof DOMException && err.name === "AbortError") {
+          return jsonResponse({ error: "Gemini API timeout (30s)" }, 504);
+        }
+        throw err;
+      } finally {
+        clearTimeout(timeout);
       }
-      throw err;
-    } finally {
-      clearTimeout(timeout);
+
+      // 429 = rate limit → 다음 키로 시도
+      if (geminiRes.status === 429) {
+        console.log(`[gemini-proxy] Key ${key.slice(0, 8)}... hit 429, trying next key`);
+        continue;
+      }
+      break; // 성공 또는 다른 에러면 중단
     }
 
-    if (!geminiRes.ok) {
-      const errBody = await geminiRes.text().catch(() => "");
-      console.error("[gemini-proxy] Gemini API error:", geminiRes.status, errBody);
+    if (!geminiRes || !geminiRes.ok) {
+      const status = geminiRes?.status ?? 502;
+      const errBody = await geminiRes?.text().catch(() => "") ?? "";
+      console.error("[gemini-proxy] Gemini API error:", status, errBody);
 
-      if (geminiRes.status === 429) {
-        return jsonResponse({ error: "Rate limit exceeded. Try again later." }, 429);
+      if (status === 429) {
+        return jsonResponse({ error: "All API keys rate limited. Try again later." }, 429);
       }
       return jsonResponse(
-        { error: `Gemini API error (${geminiRes.status})` },
+        { error: `Gemini API error (${status})` },
         502
       );
     }
