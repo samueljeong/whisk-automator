@@ -47,17 +47,31 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "인증이 필요합니다" }, 401);
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
+    let userId: string;
+    let userEmail: string | undefined;
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      return jsonResponse({ error: "인증이 유효하지 않습니다" }, 401);
+    // 테스트 토큰 지원 (개발용 — 프로덕션 전에 제거)
+    const token = authHeader.replace("Bearer ", "");
+    if (token === "test-token") {
+      const url = new URL(req.url);
+      userId = "test123";
+      userEmail = "test@test.com";
+      console.log("[activate] Using test mode");
+    } else {
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!,
+        { global: { headers: { Authorization: authHeader } } }
+      );
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        return jsonResponse({ error: "인증이 유효하지 않습니다" }, 401);
+      }
+      userId = user.id;
+      userEmail = user.email;
     }
 
     // 2. 요청 파싱
