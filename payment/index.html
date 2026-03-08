@@ -304,6 +304,9 @@
           storeId: STORE_ID,
           channelKey: CHANNEL_KEY,
           billingKeyMethod: 'CARD',
+          customer: {
+            email: email || 'user@example.com',
+          },
         });
 
         if (issueResponse.code) {
