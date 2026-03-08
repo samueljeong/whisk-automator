@@ -255,10 +255,6 @@
       yearly: { name: 'Flow+Grok Pro 연간', amount: 100000, period: 'yearly' },
     };
 
-    // ─── V1 SDK 초기화 ───
-    const IMP = window.IMP;
-    IMP.init(PORTONE_STORE_ID);
-
     // ─── URL 파라미터 파싱 ───
     const params = new URLSearchParams(window.location.search);
     const userId = params.get('userId');
