@@ -290,11 +290,21 @@
       loading.style.display = 'block';
       errorEl.style.display = 'none';
 
+      if (!window.IMP) {
+        errorEl.textContent = 'SDK 로딩 실패. 페이지를 새로고침 해주세요.';
+        errorEl.style.display = 'block';
+        btn.disabled = false;
+        loading.style.display = 'none';
+        return;
+      }
+
+      window.IMP.init(PORTONE_STORE_ID);
+
       const plan = PLANS[selectedPlan];
       const customerUid = `billing_${userId}_${Date.now()}`;
 
       // 1. 포트원 V1 빌링키 발급 (카드 등록)
-      IMP.request_pay({
+      window.IMP.request_pay({
         pg: KCP_BILLING_PG,
         pay_method: 'card',
         merchant_uid: `order_${userId}_${Date.now()}`,
