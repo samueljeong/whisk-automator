@@ -312,7 +312,7 @@ document.getElementById('logoutBtn')?.addEventListener('click', async () => {
 
 // 결제 페이지 URL (Vercel 배포 후 실제 URL로 교체)
 // TODO: 배포 후 실제 URL로 교체
-const PAYMENT_PAGE_URL = 'https://whisk-payment.vercel.app';
+const PAYMENT_PAGE_URL = 'https://payment-tau-three.vercel.app';
 const CANCEL_SUB_URL = `${SUPABASE_URL}/functions/v1/cancel-subscription`;
 
 // Pro 업그레이드 버튼
