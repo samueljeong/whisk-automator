@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
         return jsonResponse({ error: "인증이 유효하지 않습니다" }, 401);
       }
       userId = userId;
-      userEmail = user.email;
+      userEmail = userEmail;
     }
 
     // 2. 요청 파싱
@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
         merchant_uid: merchantUid,
         amount: plan.amount,
         name: planType === "monthly" ? "Whisk Pro 월간" : "Whisk Pro 연간",
-        buyer_email: user.email,
+        buyer_email: userEmail,
       }),
     });
 
@@ -137,7 +137,7 @@ Deno.serve(async (req) => {
               amount: plan.amount,
               name:
                 planType === "monthly" ? "Whisk Pro 월간" : "Whisk Pro 연간",
-              buyer_email: user.email,
+              buyer_email: userEmail,
             },
           ],
         }),
