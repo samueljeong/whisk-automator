@@ -1,10 +1,18 @@
 // gemini-proxy: Suno AI music prompt generator via Gemini Flash
-// Environment: GOOGLE_API_KEY
+// Environment: GOOGLE_API_KEY, GOOGLE_API_KEY_2, GOOGLE_API_KEY_3 (auto-rotation on 429)
 
-const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY")!;
+const API_KEYS = [
+  Deno.env.get("GOOGLE_API_KEY"),
+  Deno.env.get("GOOGLE_API_KEY_2"),
+  Deno.env.get("GOOGLE_API_KEY_3"),
+].filter(Boolean) as string[];
+
 const GEMINI_MODEL = "gemini-2.0-flash";
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GOOGLE_API_KEY}`;
 const GEMINI_TIMEOUT_MS = 30_000;
+
+function geminiUrl(key: string) {
+  return `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`;
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
