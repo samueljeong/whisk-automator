@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
       if (!user) {
         return jsonResponse({ error: "인증이 유효하지 않습니다" }, 401);
       }
-      userId = user.id;
+      userId = userId;
       userEmail = user.email;
     }
 
@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
     }
 
     const plan = PLANS[planType];
-    const merchantUid = `whisk_${user.id}_${Date.now()}`;
+    const merchantUid = `whisk_${userId}_${Date.now()}`;
 
     // 3. V1 API 토큰 발급
     const accessToken = await getAccessToken();
@@ -119,7 +119,7 @@ Deno.serve(async (req) => {
     );
 
     // 6. 다음 결제 스케줄 등록
-    const nextMerchantUid = `whisk_${user.id}_${Date.now() + 1}`;
+    const nextMerchantUid = `whisk_${userId}_${Date.now() + 1}`;
     const scheduleRes = await fetch(
       `${IMP_API_URL}/subscribe/payments/schedule`,
       {
@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
 
     const { error: dbError } = await supabaseAdmin.from("licenses").upsert(
       {
-        user_id: user.id,
+        user_id: userId,
         tier: "pro",
         billing_key: billingKey,
         plan_type: planType,
