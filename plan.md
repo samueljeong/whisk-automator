@@ -1,54 +1,25 @@
-# Grok 영상 연장 기능 추가 — 계획
+# Grok 이미지→영상 변환 누락 버그 수정
 
-## 목표
-Grok 영상 자동화에 "영상 연장" 옵션 추가. 6초 영상 생성 후 자동으로 연장하여 12초 영상으로 만든 뒤 다운로드.
+## 문제
+Grok 실제 플로우: 이미지+프롬프트 제출 → **이미지 생성** → `/imagine/post/xxx` 이동 → **"동영상 만들기" 클릭** → 영상 생성
+자동화 코드: 제출 후 바로 `waitForVideo()` → 영상이 안 만들어졌으니 타임아웃
 
-## 수정 파일
-- `popup/popup.html` — UI 체크박스 추가
-- `popup/grok.js` — 연장 로직 추가
+## 수정 (grok.js 1개 파일)
 
-## 작업 단계
+- [ ] **1. `waitForImagePost()` 함수 추가**
+  - 이미지 제출 후 URL이 `/imagine/post/...`로 변경되거나 "동영상 만들기" 버튼 출현 대기
+  - 타임아웃: 3분, 폴링: 3초
 
-- [x] **1. popup.html — 체크박스 추가**
-  - 기존 "업스케일 후 저장" 체크박스 아래에 "영상 연장" 체크박스 추가
-  - id: `grokExtendEnabled`
-  - 위치: Grok 설정 섹션 (266줄 부근)
+- [ ] **2. `clickMakeVideoButton()` 함수 추가**
+  - 포스트 페이지에서 `button[aria-label="동영상 만들기"]` 클릭 (simulateClick)
+  - 최대 3회 재시도
 
-- [x] **2. grok.js — DOM 참조 추가**
-  - `const grokExtendEnabled = $('#grokExtendEnabled');`
-  - 기존 DOM 요소 섹션에 추가
+- [ ] **3. `runGrokAutomation()` 수정 (line ~724)**
+  - dismissPopups() 후, waitForVideo() 전에:
+  - → `waitForImagePost()` 추가
+  - → `clickMakeVideoButton()` 추가
 
-- [x] **3. grok.js — `clickExtendInMenu()` 함수 추가**
-  - `clickUpscaleInMenu()` 로직 복사
-  - 텍스트 매칭을 `업스케일|upscale` → `연장|extend` 로 변경
-  - 콘솔 로그 접두어: `[Grok Extend]`
-  - `simulateClick()` 헬퍼는 동일
+- [ ] **4. `runExtendAutomation()` 1차 생성 수정 (line ~1925)**
+  - 같은 위치에 동일 로직 추가
 
-- [x] **4. grok.js — `waitForExtend()` 함수 추가**
-  - 연장 완료 감지 (5분 타임아웃, 3초 폴링)
-  - 감지 전략:
-    - video src 변경 (기존 src와 다른 새 src 출현)
-    - 로딩 인디케이터 소멸
-  - `waitForUpscale()` 구조 기반, HD 배지 대신 src 변경에 집중
-
-- [x] **5. grok.js — 메인 루프에 연장 스텝 추가**
-  - 위치: Step 5 (waitForVideo) 이후, Step 5.5 (업스케일) 이후
-  - 순서: 생성 → (업스케일) → **(연장)** → 다운로드
-  - 연장은 업스케일과 독립적 (둘 다 켜거나 하나만 켜거나)
-  - 연장 시 최신 videoUrl 갱신 필요
-
-- [ ] **6. 테스트**
-  - 연장만 ON으로 1건 테스트
-  - 업스케일 + 연장 둘 다 ON으로 1건 테스트
-  - 콘솔 로그로 연장 완료 감지 동작 확인
-
-## 기존 코드 영향
-- 메인 루프 구조 유지, 연장 스텝만 삽입
-- 업스케일 로직 변경 없음
-- 더보기 메뉴 열기 로직 공유 (동일한 `button[aria-label="추가 옵션"]`)
-  - 주의: 업스케일 후 연장 시 메뉴를 다시 열어야 함
-
-## 불확실한 점 (테스트로 확인)
-- 연장 완료 후 다운로드되는 영상이 12초 전체인지, 추가 6초만인지
-- 업스케일 + 연장 조합 시 순서가 중요한지
-- 연장 중 DOM 변화 패턴 (첫 테스트에서 진단 로그로 파악)
+- [ ] **5. 테스트**
