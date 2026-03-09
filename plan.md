@@ -14,7 +14,7 @@ Grok 실제 플로우: 이미지+프롬프트 제출 → **이미지 생성** �
   - 포스트 페이지에서 `button[aria-label="동영상 만들기"]` 클릭 (simulateClick)
   - 최대 3회 재시도
 
-- [ ] **3. `runGrokAutomation()` 수정 (line ~724)**
+- [x] **3. `runGrokAutomation()` 수정 (line ~724)**
   - dismissPopups() 후, waitForVideo() 전에:
   - → `waitForImagePost()` 추가
   - → `clickMakeVideoButton()` 추가
