@@ -10,7 +10,7 @@ Grok 실제 플로우: 이미지+프롬프트 제출 → **이미지 생성** �
   - 이미지 제출 후 URL이 `/imagine/post/...`로 변경되거나 "동영상 만들기" 버튼 출현 대기
   - 타임아웃: 3분, 폴링: 3초
 
-- [ ] **2. `clickMakeVideoButton()` 함수 추가**
+- [x] **2. `clickMakeVideoButton()` 함수 추가**
   - 포스트 페이지에서 `button[aria-label="동영상 만들기"]` 클릭 (simulateClick)
   - 최대 3회 재시도
 
