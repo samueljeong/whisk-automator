@@ -723,6 +723,21 @@
         // Step 4: A/B 테스트 팝업 자동 처리
         await dismissPopups();
 
+        // Step 4.5: 이미지 생성 완료 대기 (포스트 페이지 이동)
+        updateProgress(completed, total, `${item.name}: 이미지 생성 대기 중...`);
+        const imageReady = await waitForImagePost();
+        if (!imageReady) {
+          throw new Error('이미지 생성 대기 타임아웃');
+        }
+
+        // Step 4.6: "동영상 만들기" 버튼 클릭
+        updateProgress(completed, total, `${item.name}: 동영상 변환 요청 중...`);
+        const makeVideoClicked = await clickMakeVideoButton();
+        if (!makeVideoClicked) {
+          throw new Error('"동영상 만들기" 버튼을 찾을 수 없습니다.');
+        }
+        await sleep(2000);
+
         // Step 5: 영상 완성 대기
         updateProgress(completed, total, `${item.name}: 영상 생성 대기 중...`);
         let videoUrl = await waitForVideo();
