@@ -2052,6 +2052,21 @@
 
           await dismissPopups();
 
+          // 이미지 생성 완료 대기 (포스트 페이지 이동)
+          updateProgress(completed, total, `1차 생성: 이미지 생성 대기...`);
+          const imageReady = await waitForImagePost();
+          if (!imageReady) {
+            throw new Error('이미지 생성 대기 타임아웃');
+          }
+
+          // "동영상 만들기" 버튼 클릭
+          updateProgress(completed, total, `1차 생성: 동영상 변환 요청...`);
+          const makeVideoClicked = await clickMakeVideoButton();
+          if (!makeVideoClicked) {
+            throw new Error('"동영상 만들기" 버튼을 찾을 수 없습니다.');
+          }
+          await sleep(2000);
+
           // 영상 완성 대기
           updateProgress(completed, total, `1차 생성: 영상 생성 대기...`);
           videoUrl = await waitForVideo();
