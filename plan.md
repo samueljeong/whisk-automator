@@ -19,7 +19,7 @@ Grok 실제 플로우: 이미지+프롬프트 제출 → **이미지 생성** �
   - → `waitForImagePost()` 추가
   - → `clickMakeVideoButton()` 추가
 
-- [ ] **4. `runExtendAutomation()` 1차 생성 수정 (line ~1925)**
+- [x] **4. `runExtendAutomation()` 1차 생성 수정 (line ~1925)**
   - 같은 위치에 동일 로직 추가
 
 - [ ] **5. 테스트**
