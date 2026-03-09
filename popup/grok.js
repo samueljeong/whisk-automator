@@ -1187,6 +1187,119 @@
     });
   }
 
+  // 이미지 생성 완료 대기 (포스트 페이지 이동 또는 "동영상 만들기" 버튼 출현)
+  async function waitForImagePost() {
+    const maxWait = 3 * 60 * 1000; // 3분
+    const pollInterval = 3000;
+    const startTime = Date.now();
+    let pollCount = 0;
+
+    while (Date.now() - startTime < maxWait) {
+      if (!grokIsRunning) return false;
+      pollCount++;
+
+      const [result] = await chrome.scripting.executeScript({
+        target: { tabId: grokTabId },
+        func: (shouldLog) => {
+          const url = window.location.pathname;
+          const isPostPage = url.startsWith('/imagine/post/');
+          const makeVideoBtn = document.querySelector('button[aria-label="동영상 만들기"]');
+
+          if (shouldLog) {
+            console.log('[Grok] 이미지 생성 대기...',
+              'url:', url, 'isPost:', isPostPage, 'makeVideoBtn:', !!makeVideoBtn);
+          }
+
+          if (isPostPage || makeVideoBtn) {
+            return { ready: true, isPost: isPostPage, hasBtn: !!makeVideoBtn };
+          }
+
+          // 로딩 상태 확인
+          const loadingEls = document.querySelectorAll(
+            '[class*="loading"], [class*="spinner"], [class*="progress"], [role="progressbar"], [class*="generating"]'
+          );
+          return { ready: false, loading: loadingEls.length > 0 };
+        },
+        args: [pollCount % 3 === 0]
+      });
+
+      if (result?.result?.ready) {
+        console.log('[Grok] 이미지 생성 완료, 포스트 페이지 도착');
+        await sleep(1500); // DOM 안정화 대기
+        return true;
+      }
+
+      await sleep(pollInterval);
+    }
+
+    console.log('[Grok] 이미지 생성 대기 타임아웃 (3분)');
+    return false;
+  }
+
+  // 포스트 페이지에서 "동영상 만들기" 버튼 클릭 (최대 3회 재시도)
+  async function clickMakeVideoButton() {
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const [result] = await chrome.scripting.executeScript({
+        target: { tabId: grokTabId },
+        world: 'MAIN',
+        func: () => {
+          function simulateClick(element) {
+            const rect = element.getBoundingClientRect();
+            const x = rect.left + rect.width / 2;
+            const y = rect.top + rect.height / 2;
+            const opts = { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0 };
+            element.dispatchEvent(new PointerEvent('pointerdown', { ...opts, pointerId: 1 }));
+            element.dispatchEvent(new MouseEvent('mousedown', opts));
+            element.dispatchEvent(new PointerEvent('pointerup', { ...opts, pointerId: 1 }));
+            element.dispatchEvent(new MouseEvent('mouseup', opts));
+            element.dispatchEvent(new MouseEvent('click', opts));
+          }
+
+          // "동영상 만들기" 버튼 찾기
+          const btn = document.querySelector('button[aria-label="동영상 만들기"]');
+          if (btn) {
+            const r = btn.getBoundingClientRect();
+            if (r.width > 0) {
+              console.log('[Grok] "동영상 만들기" 버튼 클릭:',
+                `(${Math.round(r.left)},${Math.round(r.top)}) ${Math.round(r.width)}x${Math.round(r.height)}`);
+              simulateClick(btn);
+              return { found: true };
+            }
+          }
+
+          // 폴백: 텍스트로 찾기
+          const allBtns = document.querySelectorAll('button:not([disabled])');
+          for (const b of allBtns) {
+            const text = (b.textContent || '').trim();
+            const aria = b.getAttribute('aria-label') || '';
+            if (/동영상 만들기|make video|create video/i.test(text) ||
+                /동영상 만들기|make video|create video/i.test(aria)) {
+              const r = b.getBoundingClientRect();
+              if (r.width > 0) {
+                console.log('[Grok] "동영상 만들기" 텍스트 폴백:', text || aria);
+                simulateClick(b);
+                return { found: true, method: 'text-fallback' };
+              }
+            }
+          }
+
+          console.log('[Grok] "동영상 만들기" 버튼 미발견');
+          return { found: false };
+        }
+      });
+
+      if (result?.result?.found) {
+        console.log('[Grok] 동영상 만들기 클릭 성공');
+        return true;
+      }
+
+      console.log(`[Grok] 동영상 만들기 ${attempt}차 실패, ${attempt < 3 ? '재시도...' : '중단'}`);
+      await sleep(2000);
+    }
+
+    return false;
+  }
+
   // 영상 완성 대기 (최대 3분)
   async function waitForVideo() {
     const maxWait = 3 * 60 * 1000; // 3분
