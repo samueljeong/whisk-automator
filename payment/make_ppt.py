@@ -7,10 +7,11 @@ from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
 import os
 
+SS_DIR = "/Users/samuel/Projects/코딩/whisk-automator/payment/screenshots"
 SCREENSHOTS = {
-    "product": "/Users/samuel/Downloads/debug-reports/mcp-screenshot-2026-03-11T14-07-29.png",
-    "refund_footer": "/Users/samuel/Downloads/debug-reports/mcp-screenshot-2026-03-11T14-09-45.png",
-    "billing": "/Users/samuel/Downloads/debug-reports/mcp-screenshot-2026-03-11T14-10-15.png",
+    "product": f"{SS_DIR}/01_상품선택.png",
+    "refund_footer": f"{SS_DIR}/02_환불규정_footer.png",
+    "billing": f"{SS_DIR}/03_빌링카드입력.png",
 }
 
 OUTPUT = "/Users/samuel/Projects/코딩/whisk-automator/payment/결제경로_FlowGrokPro.pptx"
