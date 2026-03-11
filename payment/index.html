@@ -260,13 +260,16 @@
     const userId = params.get('userId');
     const email = params.get('email');
     const token = params.get('token');
+    const isDemo = params.get('demo') === 'true';
     let selectedPlan = 'monthly';
 
     if (email) {
       document.getElementById('emailDisplay').textContent = email;
+    } else if (isDemo) {
+      document.getElementById('emailDisplay').textContent = '심사용 테스트 모드';
     }
 
-    if (!userId || !token) {
+    if (!isDemo && (!userId || !token)) {
       document.getElementById('errorMsg').textContent = '잘못된 접근입니다. 확장 프로그램에서 다시 시도해주세요.';
       document.getElementById('errorMsg').style.display = 'block';
       document.getElementById('subscribeBtn').disabled = true;
