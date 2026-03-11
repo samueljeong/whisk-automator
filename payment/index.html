@@ -304,12 +304,13 @@
       window.IMP.init(IMP_CODE);
 
       const plan = PLANS[selectedPlan];
-      const customerUid = `billing_${userId}_${Date.now()}`;
+      const effectiveUserId = userId || 'demo_' + Date.now();
+      const customerUid = `billing_${effectiveUserId}_${Date.now()}`;
 
       window.IMP.request_pay({
         pg: BILLING_PG,
         pay_method: 'card',
-        merchant_uid: `order_${userId}_${Date.now()}`,
+        merchant_uid: `order_${effectiveUserId}_${Date.now()}`,
         customer_uid: customerUid,
         name: plan.name,
         amount: 0,
@@ -320,6 +321,12 @@
           errorEl.style.display = 'block';
           btn.disabled = false;
           loading.style.display = 'none';
+          return;
+        }
+
+        // 데모 모드: 서버 호출 없이 바로 success 페이지로
+        if (isDemo) {
+          window.location.href = `success.html?plan=${selectedPlan}&expires=demo`;
           return;
         }
 
