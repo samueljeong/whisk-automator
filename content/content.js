@@ -6,7 +6,7 @@
 
 const DEBUG = false;
 
-DEBUG && console.log('[Flow Automator] Content script loaded');
+DEBUG && DEBUG && console.log('[Flow Automator] Content script loaded');
 
 // Message listener
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -16,9 +16,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // DOM 속성으로 정지 신호 전달 (ISOLATED/MAIN 모든 월드에서 읽기 가능)
     document.documentElement.setAttribute('data-flow-stop', 'true');
     sendResponse({ stopped: true });
-    console.log('[Flow Automator] 정지 신호 전달됨 (DOM attribute)');
+    DEBUG && console.log('[Flow Automator] 정지 신호 전달됨 (DOM attribute)');
   }
   return true;
 });
 
-console.log('[Flow Automator] Ready on:', window.location.href);
+DEBUG && console.log('[Flow Automator] Ready on:', window.location.href);
