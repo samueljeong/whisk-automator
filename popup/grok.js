@@ -3,6 +3,8 @@
 (function() {
   'use strict';
 
+  const DEBUG = false;
+
   function escapeHtml(text) {
     const div = document.createElement('div');
     div.appendChild(document.createTextNode(text));
