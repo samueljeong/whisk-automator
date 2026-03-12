@@ -855,7 +855,8 @@ function updateUI() {
     promptQueue.innerHTML = '<li class="empty-message">프롬프트를 추가해주세요</li>';
   } else {
     promptQueue.innerHTML = prompts.map((prompt, index) => `
-      <li class="${prompt.status || ''}" data-index="${index}">
+      ${ '' /* status allowlist */ }
+      <li class="${['completed','error',''].includes(prompt.status) ? prompt.status : ''}" data-index="${index}">
         <span class="prompt-text" title="${escapeHtml(prompt.text)}">${index + 1}. ${escapeHtml(prompt.text)}</span>
         ${!isRunning ? `<button class="delete-btn" data-index="${index}">×</button>` : ''}
       </li>
