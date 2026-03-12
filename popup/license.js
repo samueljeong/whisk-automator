@@ -192,7 +192,7 @@ async function checkLicense() {
 
     return result;
   } catch (err) {
-    console.log("[License] Server error:", err.message);
+    DEBUG && console.log("[License] Server error:", err.message);
     // 서버 오류 → 캐시된 값 사용 (없으면 Free)
     const fallback = await getCachedLicense(true);
     if (fallback) return fallback;
