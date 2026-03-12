@@ -6,7 +6,7 @@
 
 const DEBUG = false;
 
-DEBUG && DEBUG && console.log('[Flow Automator] Content script loaded');
+DEBUG && console.log('[Flow Automator] Content script loaded');
 
 // Message listener
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
