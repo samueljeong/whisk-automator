@@ -896,7 +896,7 @@ function renderProjectTabs() {
   projectTabs.innerHTML = projectKeys.map(key => {
     const project = PROJECTS[key];
     const isActive = key === currentProject;
-    return `<button class="project-tab${isActive ? ' active' : ''}" data-project="${key}">${project.name}</button>`;
+    return `<button class="project-tab${isActive ? ' active' : ''}" data-project="${escapeHtml(key)}">${escapeHtml(project.name)}</button>`;
   }).join('');
 }
 
