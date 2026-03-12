@@ -241,14 +241,10 @@ async function incrementFreeUsage() {
 }
 
 async function canGenerate(count = 1) {
-  // 로그인 상태 확인
-  const token = await getAccessToken();
-  if (token) {
-    // Pro 사용자 체크 (캐시에서)
-    const cached = await getCachedLicense(true);
-    if (cached && cached.tier === "pro") {
-      return { allowed: true };
-    }
+  // 라이선스 체크 (캐시 또는 서버)
+  const license = await checkLicense();
+  if (license.tier === "pro") {
+    return { allowed: true };
   }
 
   // Free 한도 체크
