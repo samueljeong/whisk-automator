@@ -70,6 +70,13 @@ let currentTier = 'free';
 document.addEventListener('DOMContentLoaded', async () => {
   await loadState();
 
+  // 확장 ID 변경 감지 → 인증 초기화 (재설치/경로 변경 시)
+  const storedExtId = (await chrome.storage.local.get('flow_ext_id')).flow_ext_id;
+  if (storedExtId && storedExtId !== chrome.runtime.id) {
+    await chrome.storage.local.remove(['flow_auth_token', 'flow_license_cache']);
+  }
+  await chrome.storage.local.set({ flow_ext_id: chrome.runtime.id });
+
   // License check
   const licenseResult = await checkLicense();
   currentTier = licenseResult.tier || 'free';
