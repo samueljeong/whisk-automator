@@ -134,6 +134,12 @@ async function checkLicense() {
     return { valid: true, tier: "free", daily_remaining: remaining };
   }
 
+  // 마스터 이메일 → 항상 Pro
+  const email = await getAuthEmail();
+  if (email === MASTER_EMAIL) {
+    return { valid: true, tier: "pro", email };
+  }
+
   // 캐시 확인
   const cached = await getCachedLicense();
   if (cached) {
