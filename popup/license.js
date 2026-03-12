@@ -249,7 +249,7 @@ async function incrementFreeUsage() {
 async function canGenerate(count = 1) {
   // 마스터 이메일 → 항상 허용
   const email = await getAuthEmail();
-  if (email === MASTER_EMAIL) {
+  if (await isMasterEmail(email)) {
     return { allowed: true };
   }
 
