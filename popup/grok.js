@@ -183,7 +183,7 @@
       li.innerHTML = `
         <span class="extend-queue-label ${labelClass}">${label}</span>
         <span class="extend-queue-num">${idx + 1}.</span>
-        <span class="extend-queue-text">${item.prompt}</span>
+        <span class="extend-queue-text">${escapeHtml(item.prompt)}</span>
         <span class="extend-queue-time">${timeLabel}</span>
         <button class="btn-remove" data-idx="${idx}">&times;</button>
       `;
