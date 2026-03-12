@@ -1,3 +1,5 @@
+const DEBUG = false;
+
 // Whisk/Imagen 프롬프트 안전 치환 규칙
 // 위험 표현 → 안전 표현 자동 변환
 // DB: outputs/whisk/prompt_safety_db.json과 동기화
