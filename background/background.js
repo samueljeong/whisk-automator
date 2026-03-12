@@ -11,6 +11,8 @@ chrome.action.onClicked.addListener((tab) => {
 
 // Handle messages from content script and popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // 메시지 발신자 검증
+  if (sender.id !== chrome.runtime.id) return;
   console.log('[Flow Automator Background] Received message:', message.action);
 
   switch (message.action) {
