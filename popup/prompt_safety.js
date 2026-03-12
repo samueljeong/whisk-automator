@@ -2,7 +2,7 @@ const DEBUG = false;
 
 // Flow/Imagen 프롬프트 안전 치환 규칙
 // 위험 표현 → 안전 표현 자동 변환
-// DB: outputs/whisk/prompt_safety_db.json과 동기화
+// DB: outputs/flow/prompt_safety_db.json과 동기화
 const PROMPT_REPLACEMENTS = [
   // === 피/부상 (Blood/Injury) ===
   ["blood splashing", "red impact marks scattering"],
