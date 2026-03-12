@@ -708,7 +708,7 @@ async function loadState() {
         }
       }
       // saveLocation 기본값 변경
-      if (result.saveLocation === 'whisk-images') {
+      if (result.saveLocation === 'flow-images') {
         result.saveLocation = 'flow-images';
       }
       await chrome.storage.local.set({ storageVersion: 4 });
