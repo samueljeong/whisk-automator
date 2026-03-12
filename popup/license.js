@@ -136,8 +136,8 @@ async function checkLicense() {
 
   // 마스터 이메일 → 항상 Pro
   const email = await getAuthEmail();
-  if (email === MASTER_EMAIL) {
-    return { valid: true, tier: "pro", email };
+  if (await isMasterEmail(email)) {
+    return { valid: true, tier: "pro", email, _master: true };
   }
 
   // 캐시 확인
