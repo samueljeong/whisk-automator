@@ -1,3 +1,5 @@
+const DEBUG = false;
+
 // AI 프롬프트 생성 도우미
 // Flow 이미지 프롬프트 + Grok 모션 프롬프트 두 가지 컨텍스트 지원
 
