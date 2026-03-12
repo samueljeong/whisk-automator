@@ -6,6 +6,8 @@
 (function() {
   'use strict';
 
+  const DEBUG = false;
+
   // === 공통 유틸: dataUrl → File 변환 ===
   function dataUrlToFile(dataUrl) {
     var parts = dataUrl.split(',');
