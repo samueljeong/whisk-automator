@@ -2677,9 +2677,9 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
   // 12. 기존 레퍼런스 제거 (프롬프트 영역 초기화)
   async function clearReferences() {
-    // Whisk은 에셋(ingredient)을 Slate 밖의 자체 UI로 관리함.
+    // Flow는 에셋(ingredient)을 Slate 밖의 자체 UI로 관리함.
     // Slate 텍스트를 아무리 지워도 에셋 썸네일은 남아있으므로,
-    // Whisk 네이티브 "프롬프트 지우기" 버튼 또는 개별 cancel 버튼을 사용해야 함.
+    // Flow 네이티브 "프롬프트 지우기" 버튼 또는 개별 cancel 버튼을 사용해야 함.
 
     // 방법 1: "프롬프트 지우기" 버튼 클릭 (텍스트 + 에셋 모두 초기화)
     var allBtns = document.querySelectorAll('button');
