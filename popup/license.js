@@ -241,12 +241,6 @@ async function incrementFreeUsage() {
 }
 
 async function canGenerate(count = 1) {
-  // 마스터 이메일 → 항상 허용
-  const email = await getAuthEmail();
-  if (await isMasterEmail(email)) {
-    return { allowed: true };
-  }
-
   // 로그인 상태 확인
   const token = await getAccessToken();
   if (token) {
