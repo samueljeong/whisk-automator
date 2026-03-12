@@ -4,6 +4,8 @@
 (function() {
   'use strict';
 
+  const DEBUG = false;
+
   if (window.__grokInterceptorInstalled) return;
 
   function dataUrlToFile(dataUrl, filename) {
