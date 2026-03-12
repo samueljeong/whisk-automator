@@ -310,6 +310,27 @@ async function getAuthUserId() {
   }
 }
 
+// ─── 캐시 무결성 ───
+const CACHE_SIGN_KEY = 'whisk_cache_sign';
+
+async function signCache(data) {
+  const raw = JSON.stringify(data);
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(chrome.runtime.id),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(raw));
+  return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function verifyCache(data, signature) {
+  const expected = await signCache(data);
+  return expected === signature;
+}
+
 // ─── 쿠폰 등록 ───
 
 async function redeemCoupon(code) {
