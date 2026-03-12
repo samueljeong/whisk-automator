@@ -416,7 +416,7 @@ async function checkConnection() {
     const tab = tabs[0];
     const url = tab?.url || '';
 
-    console.log('[Flow Automator] Current tab URL:', url);
+    DEBUG && console.log('[Flow Automator] Current tab URL:', url);
 
     // Flow 페이지 패턴 확인 (다양한 URL 형식 지원)
     const isFlowPage = url.includes('labs.google') && url.includes('flow') ||
@@ -584,10 +584,10 @@ async function scanCharacterFolder(rootHandle) {
     const slotType = slotMap[slotName] || slotMap[slotName.toLowerCase()];
     foundFolders.push(`${slotEntry.name}→${slotType || '무시'}`);
     if (!slotType) {
-      console.log(`[Flow] 알 수 없는 폴더 무시: ${slotEntry.name} (NFC: ${slotName})`);
+      DEBUG && console.log(`[Flow] 알 수 없는 폴더 무시: ${slotEntry.name} (NFC: ${slotName})`);
       continue;
     }
-    console.log(`[Flow] 슬롯 발견: ${slotName} → ${slotType}`);
+    DEBUG && console.log(`[Flow] 슬롯 발견: ${slotName} → ${slotType}`);
 
     // 슬롯 폴더 안의 프로젝트 폴더 스캔
     for await (const projEntry of slotEntry.values()) {
@@ -627,7 +627,7 @@ async function scanCharacterFolder(rootHandle) {
               PROJECTS[projectKey].styleSuffix = parsed.suffix;
               PROJECTS[projectKey].styleSuffixFromFolder = true;
             }
-            console.log(`[Flow] style.txt 로드: ${projName}`, parsed);
+            DEBUG && console.log(`[Flow] style.txt 로드: ${projName}`, parsed);
           } catch (e) {
             console.error(`[Flow] style.txt 읽기 실패: ${projName}`, e);
           }
@@ -679,8 +679,8 @@ async function scanCharacterFolder(rootHandle) {
     }
   }
 
-  console.log(`[Flow] 폴더 스캔 결과: ${foundFolders.join(', ')}`);
-  console.log(`[Flow] 폴더에서 ${totalCount}개 로드 완료`);
+  DEBUG && console.log(`[Flow] 폴더 스캔 결과: ${foundFolders.join(', ')}`);
+  DEBUG && console.log(`[Flow] 폴더에서 ${totalCount}개 로드 완료`);
 
   if (totalCount === 0 && foundFolders.length > 0) {
     const matched = foundFolders.filter(f => !f.endsWith('→무시'));
@@ -699,7 +699,7 @@ async function loadState() {
 
     // v3 → v4 마이그레이션
     if (!result.storageVersion || result.storageVersion < 4) {
-      console.log('[Flow] 스토리지 마이그레이션: v' + (result.storageVersion || 3) + ' → v4');
+      DEBUG && console.log('[Flow] 스토리지 마이그레이션: v' + (result.storageVersion || 3) + ' → v4');
       // styleImage 필드 제거 (Flow에는 스타일 이미지 슬롯 없음)
       if (result.projects) {
         for (const proj of Object.values(result.projects)) {
@@ -773,11 +773,11 @@ async function loadState() {
           };
           // 마이그레이션: 옛날 스타일 텍스트가 저장되어 있으면 기본값으로 강제 교체
           if (PROJECTS[key].stylePrefix && PROJECTS[key].stylePrefix.toLowerCase().includes('wuxia')) {
-            console.log('[Flow] 마이그레이션: stylePrefix wuxia → murim (' + key + ')');
+            DEBUG && console.log('[Flow] 마이그레이션: stylePrefix wuxia → murim (' + key + ')');
             PROJECTS[key].stylePrefix = defaultProj.stylePrefix || '';
           }
           if (PROJECTS[key].styleSuffix && PROJECTS[key].styleSuffix.toLowerCase().includes('ink wash')) {
-            console.log('[Flow] 마이그레이션: styleSuffix 옛날 스타일 교체 (' + key + ')');
+            DEBUG && console.log('[Flow] 마이그레이션: styleSuffix 옛날 스타일 교체 (' + key + ')');
             PROJECTS[key].styleSuffix = defaultProj.styleSuffix || '';
           }
         }
@@ -810,11 +810,11 @@ async function loadState() {
             var fallbackName = result.customDirName || 'flow-images';
             saveLocation.value = fallbackName;
             saveLocation.readOnly = false;
-            console.log('[Flow] 커스텀 폴더 권한 만료 → 다운로드/' + fallbackName + ' 으로 폴백');
+            DEBUG && console.log('[Flow] 커스텀 폴더 권한 만료 → 다운로드/' + fallbackName + ' 으로 폴백');
           }
         }
       } catch (e) {
-        console.log('[Flow] Failed to restore directory handle:', e);
+        DEBUG && console.log('[Flow] Failed to restore directory handle:', e);
       }
     }
 
@@ -1282,7 +1282,7 @@ function saveCapuredCharacter() {
     saveState();
     updateUI();
     closeCaptureModal();
-    console.log(`[Flow Automator] 캐릭터 저장 완료: ${name}`);
+    DEBUG && console.log(`[Flow Automator] 캐릭터 저장 완료: ${name}`);
   }
 }
 
@@ -1401,7 +1401,7 @@ function clearQueue() {
 
 // Start automation
 async function startAutomation() {
-  console.log('[Popup] startAutomation called');
+  DEBUG && console.log('[Popup] startAutomation called');
 
   if (prompts.length === 0 || isRunning) {
     return;
@@ -1446,11 +1446,11 @@ async function startAutomation() {
           saveLocation.value = '\uD83D\uDCC1 ' + savedHandle.name;
           saveLocation.readOnly = true;
           updateCustomDirUI();
-          console.log('[Popup] 커스텀 폴더 권한 재획득:', savedHandle.name);
+          DEBUG && console.log('[Popup] 커스텀 폴더 권한 재획득:', savedHandle.name);
         }
       }
     } catch (e) {
-      console.log('[Popup] 커스텀 폴더 권한 재요청 실패:', e);
+      DEBUG && console.log('[Popup] 커스텀 폴더 권한 재요청 실패:', e);
     }
   }
 
@@ -1471,7 +1471,7 @@ async function startAutomation() {
   const selectedModel = modelSelect ? modelSelect.value : 'nano-banana-2';
   const selectedOutputType = outputType ? document.getElementById('outputType').value : 'image';
 
-  console.log('[Popup] 프로젝트 스타일:', {
+  DEBUG && console.log('[Popup] 프로젝트 스타일:', {
     prefix: projectStylePrefix || '없음',
     suffix: projectStyleSuffix || '없음',
     model: selectedModel,
@@ -1528,10 +1528,10 @@ async function startAutomation() {
       );
       if (styleTypes.size === 1) {
         style = [...styleTypes][0];
-        console.log(`[스타일 자동] ${charNames.join('+')} → ${style}`);
+        DEBUG && console.log(`[스타일 자동] ${charNames.join('+')} → ${style}`);
       } else if (styleTypes.size > 1 && mixedPreset) {
         style = mixedPreset;
-        console.log(`[스타일 자동] ${charNames.join('+')} → 혼합 → ${style}`);
+        DEBUG && console.log(`[스타일 자동] ${charNames.join('+')} → 혼합 → ${style}`);
       }
     }
 
@@ -1574,7 +1574,7 @@ async function startAutomation() {
 
   // 정렬 제거: 매 프롬프트마다 에셋을 재선택하므로 그룹핑 불필요
   // 원래 프롬프트 순서 유지 → 제출 순서 = 원래 순서 = 파일명 순서
-  console.log('[Popup] 프롬프트 순서 (원본 유지):',
+  DEBUG && console.log('[Popup] 프롬프트 순서 (원본 유지):',
     promptsWithCharacters.map(p => `[씬${p.index + 1}]${p.style ? `{${p.style}}` : ''}${p.character || '배경'}`).join(', '));
 
   // 캐릭터 맵 + 장면 맵 생성 (별명 포함)
@@ -1596,13 +1596,13 @@ async function startAutomation() {
       }
     });
   } catch (e) {
-    console.log('[Popup] 플래그 초기화 실패 (무시):', e);
+    DEBUG && console.log('[Popup] 플래그 초기화 실패 (무시):', e);
   }
 
   // showOpenFilePicker interceptor는 manifest.json content_scripts에서
   // world:"MAIN" + run_at:"document_start"로 자동 주입됨 (interceptor.js)
   // → Flow JS보다 먼저 설치되므로 원본 참조 저장 문제 해결
-  console.log('[Popup] interceptor.js는 manifest에서 자동 주입됨');
+  DEBUG && console.log('[Popup] interceptor.js는 manifest에서 자동 주입됨');
 
   // 직접 스크립트 주입
   try {
@@ -1623,14 +1623,14 @@ async function startAutomation() {
 function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused, characters, savePath, scenes, styles, useCustomDir, selectedModel, selectedOutputType) {
   // 중복 실행 방지
   if (window.__flowAutoRunning) {
-    console.log('[Flow Auto] 이미 실행 중, 중복 실행 방지');
+    DEBUG && console.log('[Flow Auto] 이미 실행 중, 중복 실행 방지');
     return;
   }
   window.__flowAutoRunning = true;
 
-  console.log('[Flow Auto] Starting with', promptsWithCharacters.length, 'prompts');
-  console.log('[Flow Auto] Model:', selectedModel || 'nano-banana-2');
-  console.log('[Flow Auto] Output type:', selectedOutputType || 'image');
+  DEBUG && console.log('[Flow Auto] Starting with', promptsWithCharacters.length, 'prompts');
+  DEBUG && console.log('[Flow Auto] Model:', selectedModel || 'nano-banana-2');
+  DEBUG && console.log('[Flow Auto] Output type:', selectedOutputType || 'image');
 
   var downloadedSrcs = new Set();   // 이미 다운로드한 이미지 src 추적
   var assetSrcs = new Set();        // 에셋 이미지 src 추적 (다운로드/완료 감지에서 제외)
@@ -1663,7 +1663,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       var r = el.getBoundingClientRect();
       if (r.width > window.innerWidth * 0.5 && r.height > window.innerHeight * 0.5) {
         simulateRealClick(el);
-        console.log('[Flow Auto] 팝업 오버레이 클릭 닫기');
+        DEBUG && console.log('[Flow Auto] 팝업 오버레이 클릭 닫기');
       }
     });
     // 전략 2: 닫기 버튼 (X, close, 닫기) 찾아서 클릭
@@ -1676,7 +1676,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
            aria.includes('close') || aria.includes('dismiss')) &&
           r.width > 0 && r.width <= 60) {
         simulateRealClick(btn);
-        console.log('[Flow Auto] 팝업 닫기 버튼 클릭: "' + (text || aria) + '"');
+        DEBUG && console.log('[Flow Auto] 팝업 닫기 버튼 클릭: "' + (text || aria) + '"');
       }
     });
     // 전략 3: 팝업/모달 내부의 거절 버튼만 클릭 (일반 UI 버튼 오탐 방지)
@@ -1685,7 +1685,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       if (text.includes('no thanks') || text.includes('아니') || text.includes('skip') ||
           text.includes('later') || text.includes('나중에') || text.includes('dismiss')) {
         simulateRealClick(el);
-        console.log('[Flow Auto] 팝업 거절 버튼 클릭: "' + text + '"');
+        DEBUG && console.log('[Flow Auto] 팝업 거절 버튼 클릭: "' + text + '"');
       }
     });
     // 전략 4: "예상했던 내용이 아닌가요?" 피드백 팝업 닫기 (구체적 셀렉터로 범위 축소)
@@ -1705,7 +1705,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         }
         if (closeBtn) {
           simulateRealClick(closeBtn);
-          console.log('[Flow Auto] "예상했던 내용" 피드백 팝업 닫기');
+          DEBUG && console.log('[Flow Auto] "예상했던 내용" 피드백 팝업 닫기');
         }
       }
     });
@@ -1742,7 +1742,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
   // 0. Slate.js 에디터 내부 구조 덤프 (디버그용)
   // MAIN world의 interceptor.js로 위임 (CSP 우회)
   function dumpSlateEditor() {
-    console.log('[Flow Auto] Slate 디버그 트리거 (data-slate-debug=dump)');
+    DEBUG && console.log('[Flow Auto] Slate 디버그 트리거 (data-slate-debug=dump)');
     document.documentElement.setAttribute('data-slate-debug', 'dump');
     // 결과 대기 (MAIN world에서 비동기로 처리)
   }
@@ -1754,7 +1754,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       throw new Error('프롬프트 입력창을 찾을 수 없습니다 ([role="textbox"][contenteditable])');
     }
     var rect = el.getBoundingClientRect();
-    console.log('[Flow Auto] 프롬프트 입력창 발견: ' + Math.round(rect.width) + 'x' + Math.round(rect.height) +
+    DEBUG && console.log('[Flow Auto] 프롬프트 입력창 발견: ' + Math.round(rect.width) + 'x' + Math.round(rect.height) +
       ' at(' + Math.round(rect.left) + ',' + Math.round(rect.top) + ')');
     return el;
   }
@@ -1781,7 +1781,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         if (pRect.width > 20 && pRect.height > 20) parentCount++;
       }
       if (parentCount > count) {
-        console.log('[Flow Auto] ref 카운트 보정: promptEl 내 ' + count + '개, 부모 영역 ' + parentCount + '개');
+        DEBUG && console.log('[Flow Auto] ref 카운트 보정: promptEl 내 ' + count + '개, 부모 영역 ' + parentCount + '개');
         count = parentCount;
       }
     }
@@ -1816,7 +1816,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       }
       sel.removeAllRanges();
       sel.addRange(range);
-      console.log('[Flow Auto] 텍스트만 선택 (void ' + voidsBefore + '개 보존)');
+      DEBUG && console.log('[Flow Auto] 텍스트만 선택 (void ' + voidsBefore + '개 보존)');
     } else if (slateTexts.length > 0) {
       // 레퍼런스 없으면 전체 텍스트 선택
       var firstText = slateTexts[0];
@@ -1825,14 +1825,14 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       range.setEndAfter(lastText);
       sel.removeAllRanges();
       sel.addRange(range);
-      console.log('[Flow Auto] 전체 텍스트 선택 (레퍼런스 없음)');
+      DEBUG && console.log('[Flow Auto] 전체 텍스트 선택 (레퍼런스 없음)');
     } else {
       // 텍스트 없으면 끝으로 커서 이동
       range.selectNodeContents(promptEl);
       range.collapse(false);
       sel.removeAllRanges();
       sel.addRange(range);
-      console.log('[Flow Auto] 텍스트 없음, 커서를 끝으로');
+      DEBUG && console.log('[Flow Auto] 텍스트 없음, 커서를 끝으로');
     }
     await sleep(100);
 
@@ -1872,7 +1872,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       }));
       await sleep(300);
     }
-    console.log('[Flow Auto] 프롬프트 입력 완료: "' + text.substring(0, 50) + (text.length > 50 ? '...' : '') + '"');
+    DEBUG && console.log('[Flow Auto] 프롬프트 입력 완료: "' + text.substring(0, 50) + (text.length > 50 ? '...' : '') + '"');
     return true;
   }
 
@@ -1884,12 +1884,12 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       var rect = buttons[i].getBoundingClientRect();
       if (rect.top > 500 && rect.width > 0 &&
           (txt.includes('Banana') || txt.includes('Imagen') || txt.includes('Nano'))) {
-        console.log('[Flow Auto] 모델 버튼 발견: "' + txt.substring(0, 40) + '" at(' +
+        DEBUG && console.log('[Flow Auto] 모델 버튼 발견: "' + txt.substring(0, 40) + '" at(' +
           Math.round(rect.left) + ',' + Math.round(rect.top) + ')');
         return buttons[i];
       }
     }
-    console.log('[Flow Auto] 모델 버튼 미발견');
+    DEBUG && console.log('[Flow Auto] 모델 버튼 미발견');
     return null;
   }
 
@@ -1906,7 +1906,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     while (waited < 3000) {
       var menus = document.querySelectorAll('[role="menu"]');
       if (menus.length > 0) {
-        console.log('[Flow Auto] 모델 메뉴 열림 (' + menus.length + '개 [role="menu"])');
+        DEBUG && console.log('[Flow Auto] 모델 메뉴 열림 (' + menus.length + '개 [role="menu"])');
         return menus[0];
       }
       await sleep(300);
@@ -1924,13 +1924,13 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       if (txt === targetText && items[i].getBoundingClientRect().width > 0) {
         // 가장 안쪽 클릭 가능 요소 찾기
         var clickTarget = items[i].closest('button, [role="menuitem"], [role="menuitemradio"]') || items[i];
-        console.log('[Flow Auto] 출력 유형 선택: "' + targetText + '"');
+        DEBUG && console.log('[Flow Auto] 출력 유형 선택: "' + targetText + '"');
         simulateRealClick(clickTarget);
         await sleep(300);
         return true;
       }
     }
-    console.log('[Flow Auto] 출력 유형 "' + targetText + '" 메뉴 아이템 미발견');
+    DEBUG && console.log('[Flow Auto] 출력 유형 "' + targetText + '" 메뉴 아이템 미발견');
     return false;
   }
 
@@ -1942,13 +1942,13 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       var txt = items[i].textContent.trim();
       if (txt === targetText && items[i].getBoundingClientRect().width > 0) {
         var clickTarget = items[i].closest('button, [role="menuitem"], [role="menuitemradio"]') || items[i];
-        console.log('[Flow Auto] 수량 선택: "' + targetText + '"');
+        DEBUG && console.log('[Flow Auto] 수량 선택: "' + targetText + '"');
         simulateRealClick(clickTarget);
         await sleep(300);
         return true;
       }
     }
-    console.log('[Flow Auto] 수량 "' + targetText + '" 메뉴 아이템 미발견');
+    DEBUG && console.log('[Flow Auto] 수량 "' + targetText + '" 메뉴 아이템 미발견');
     return false;
   }
 
@@ -1977,11 +1977,11 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     }
 
     if (!modelBtn) {
-      console.log('[Flow Auto] 모델 버튼 미발견 in menu');
+      DEBUG && console.log('[Flow Auto] 모델 버튼 미발견 in menu');
       return false;
     }
 
-    console.log('[Flow Auto] 모델 하위 메뉴 열기: "' + modelBtn.textContent.trim().substring(0, 40) + '"');
+    DEBUG && console.log('[Flow Auto] 모델 하위 메뉴 열기: "' + modelBtn.textContent.trim().substring(0, 40) + '"');
     simulateRealClick(modelBtn);
     await sleep(500);
 
@@ -1997,7 +1997,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     }
 
     if (!subMenu) {
-      console.log('[Flow Auto] 모델 하위 메뉴 미출현');
+      DEBUG && console.log('[Flow Auto] 모델 하위 메뉴 미출현');
       return false;
     }
 
@@ -2032,13 +2032,13 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
     if (bestMatch) {
       var subClickable = bestMatch.closest('button, [role="menuitem"], [role="menuitemradio"]') || bestMatch;
-      console.log('[Flow Auto] 모델 선택: "' + displayName + '" → "' + bestMatch.textContent.trim().substring(0, 40) + '"');
+      DEBUG && console.log('[Flow Auto] 모델 선택: "' + displayName + '" → "' + bestMatch.textContent.trim().substring(0, 40) + '"');
       simulateRealClick(subClickable);
       await sleep(300);
       return true;
     }
 
-    console.log('[Flow Auto] 모델 "' + displayName + '" 하위 메뉴에 미발견');
+    DEBUG && console.log('[Flow Auto] 모델 "' + displayName + '" 하위 메뉴에 미발견');
     return false;
   }
 
@@ -2062,14 +2062,14 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       }));
       await sleep(200);
     }
-    console.log('[Flow Auto] 메뉴 닫기 완료');
+    DEBUG && console.log('[Flow Auto] 메뉴 닫기 완료');
   }
 
   // 8. 모델 + 출력 유형 한번에 설정 (첫 실행 시 1회)
   async function setupModelAndOutput(model, outputType) {
     model = model || 'nano-banana-2';
     outputType = outputType || 'image';
-    console.log('[Flow Auto] 모델/출력 설정: model=' + model + ', output=' + outputType);
+    DEBUG && console.log('[Flow Auto] 모델/출력 설정: model=' + model + ', output=' + outputType);
 
     try {
       var menu = await openModelMenu();
@@ -2104,7 +2104,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
       // 메뉴 닫기
       await closeMenus();
-      console.log('[Flow Auto] 모델/출력 설정 완료');
+      DEBUG && console.log('[Flow Auto] 모델/출력 설정 완료');
     } catch (e) {
       console.error('[Flow Auto] 모델/출력 설정 실패:', e.message);
       await closeMenus();
@@ -2180,7 +2180,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
             stableCount = 0;
           }
           if (stableCount >= 2) {
-            console.log('[Flow Auto] 에셋 "' + label + '" 분석 완료 (' + (waited / 1000) + '초), 썸네일 ' + beforeVoids + ' → ' + currentVoids);
+            DEBUG && console.log('[Flow Auto] 에셋 "' + label + '" 분석 완료 (' + (waited / 1000) + '초), 썸네일 ' + beforeVoids + ' → ' + currentVoids);
             return true;
           }
         } else {
@@ -2191,7 +2191,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       lastVoidCount = currentVoids;
 
       if (waited % 5000 === 0) {
-        console.log('[Flow Auto] 에셋 "' + label + '" 분석 대기 중... (' + (waited / 1000) + '초), void: ' + currentVoids + '/' + beforeVoids);
+        DEBUG && console.log('[Flow Auto] 에셋 "' + label + '" 분석 대기 중... (' + (waited / 1000) + '초), void: ' + currentVoids + '/' + beforeVoids);
       }
 
       await sleep(1500);
@@ -2209,7 +2209,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       var txt = (buttons[i].textContent || '').trim();
       var rect = buttons[i].getBoundingClientRect();
       if (rect.top > 500 && rect.width > 0 && txt.includes('add_2') && txt.includes('만들기')) {
-        console.log('[Flow Auto] Ingredient 버튼 발견: ' + Math.round(rect.width) + 'x' + Math.round(rect.height) +
+        DEBUG && console.log('[Flow Auto] Ingredient 버튼 발견: ' + Math.round(rect.width) + 'x' + Math.round(rect.height) +
           ' at(' + Math.round(rect.left) + ',' + Math.round(rect.top) + ')');
         return buttons[i];
       }
@@ -2259,7 +2259,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       throw new Error('에셋 검색바를 찾을 수 없습니다');
     }
 
-    console.log('[Flow Auto] 에셋 검색바 발견, "' + charName + '" 검색');
+    DEBUG && console.log('[Flow Auto] 에셋 검색바 발견, "' + charName + '" 검색');
 
     // 3. 검색바에 캐릭터 이름 입력
     searchInput.focus();
@@ -2300,18 +2300,18 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
     // 5. 키보드로 첫 번째 검색 결과 선택 (ArrowDown → Enter)
     // Enter 키가 SPA 네비게이션을 트리거하므로 history API를 임시 차단
-    console.log('[Flow Auto] 에셋 "' + charName + '" 키보드 선택 시도');
+    DEBUG && console.log('[Flow Auto] 에셋 "' + charName + '" 키보드 선택 시도');
 
     // SPA 네비게이션 차단: history.pushState/replaceState 오버라이드
     var origPushState = history.pushState.bind(history);
     var origReplaceState = history.replaceState.bind(history);
     var navBlocked = false;
     history.pushState = function() {
-      console.log('[Flow Auto] 네비게이션 차단됨 (pushState):', arguments[2]);
+      DEBUG && console.log('[Flow Auto] 네비게이션 차단됨 (pushState):', arguments[2]);
       navBlocked = true;
     };
     history.replaceState = function() {
-      console.log('[Flow Auto] 네비게이션 차단됨 (replaceState):', arguments[2]);
+      DEBUG && console.log('[Flow Auto] 네비게이션 차단됨 (replaceState):', arguments[2]);
       navBlocked = true;
     };
     var blockNav = function(e) { e.preventDefault(); e.stopImmediatePropagation(); };
@@ -2330,7 +2330,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     // ArrowDown 후 포커스된 요소 찾기 (Radix는 포커스를 리스트 아이템으로 이동시킴)
     var focusedEl = document.activeElement;
     var enterTarget = (focusedEl && focusedEl !== searchInput && focusedEl !== document.body) ? focusedEl : searchInput;
-    console.log('[Flow Auto] Enter 대상: ' + enterTarget.tagName + ' class="' +
+    DEBUG && console.log('[Flow Auto] Enter 대상: ' + enterTarget.tagName + ' class="' +
       (enterTarget.className || '').toString().substring(0, 60) + '"' +
       (enterTarget === searchInput ? ' (searchInput)' : ' (포커스된 요소)'));
 
@@ -2349,11 +2349,11 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     window.removeEventListener('popstate', blockNav, true);
     window.removeEventListener('beforeunload', blockNav, true);
     if (navBlocked) {
-      console.log('[Flow Auto] 네비게이션이 차단되어 페이지 유지됨');
+      DEBUG && console.log('[Flow Auto] 네비게이션이 차단되어 페이지 유지됨');
     }
 
     // 6. 에셋 패널 닫기
-    console.log('[Flow Auto] 에셋 키보드 선택 완료, 패널 닫기');
+    DEBUG && console.log('[Flow Auto] 에셋 키보드 선택 완료, 패널 닫기');
     document.dispatchEvent(new KeyboardEvent('keydown', {
       key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true
     }));
@@ -2361,7 +2361,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
     // 7. 검색 결과가 있었고 Enter를 보냈으면 → 성공으로 처리
     // countRefImages()는 Flow의 에셋 레퍼런스를 감지하지 못하므로 검증 생략
-    console.log('[Flow Auto] 에셋 "' + charName + '" 선택 완료 (검색 결과 있음 + Enter 전송)');
+    DEBUG && console.log('[Flow Auto] 에셋 "' + charName + '" 선택 완료 (검색 결과 있음 + Enter 전송)');
     return true;
   }
 
@@ -2401,9 +2401,9 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         });
       }
     }
-    console.log('[Flow Auto] 패널 영역 요소들 (' + panelElements.length + '개):');
+    DEBUG && console.log('[Flow Auto] 패널 영역 요소들 (' + panelElements.length + '개):');
     panelElements.forEach(function(p) {
-      console.log('  ' + p.tag + ' "' + p.text.substring(0, 40) + '" aria="' + p.ariaLabel + '" at(' +
+      DEBUG && console.log('  ' + p.tag + ' "' + p.text.substring(0, 40) + '" aria="' + p.ariaLabel + '" at(' +
         Math.round(p.rect.left) + ',' + Math.round(p.rect.top) + ') ' +
         Math.round(p.rect.width) + 'x' + Math.round(p.rect.height));
     });
@@ -2418,7 +2418,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       var elAria = panelElements[pk].ariaLabel.toLowerCase();
       for (var uk = 0; uk < uploadKeywords.length; uk++) {
         if (elTxt.includes(uploadKeywords[uk]) || elAria.includes(uploadKeywords[uk])) {
-          console.log('[Flow Auto] 업로드 버튼 발견 (텍스트): "' + panelElements[pk].text.substring(0, 40) + '" → 클릭');
+          DEBUG && console.log('[Flow Auto] 업로드 버튼 발견 (텍스트): "' + panelElements[pk].text.substring(0, 40) + '" → 클릭');
           simulateRealClick(panelElements[pk].el);
           uploadTriggered = true;
           await sleep(1000);
@@ -2436,7 +2436,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
             fileInputs[fi].id === 'grokPromptFileInput') continue;
         var fiParent = fileInputs[fi].closest('body');
         // Flow 페이지의 file input만
-        console.log('[Flow Auto] Flow file input 발견: accept="' + (fileInputs[fi].accept || '') +
+        DEBUG && console.log('[Flow Auto] Flow file input 발견: accept="' + (fileInputs[fi].accept || '') +
           '" id="' + (fileInputs[fi].id || '') + '" → 클릭');
         fileInputs[fi].click();
         uploadTriggered = true;
@@ -2454,7 +2454,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         if (ibRect.width >= 24 && ibRect.width <= 80 && ibRect.height >= 24 && ibRect.height <= 80 &&
             (ibTxt.includes('add_photo') || ibTxt.includes('upload_file') || ibTxt.includes('cloud_upload') ||
              ibTxt.includes('file_upload') || ibTxt.includes('image'))) {
-          console.log('[Flow Auto] 아이콘 버튼 발견: "' + ibTxt + '" → 클릭');
+          DEBUG && console.log('[Flow Auto] 아이콘 버튼 발견: "' + ibTxt + '" → 클릭');
           simulateRealClick(panelElements[ib].el);
           uploadTriggered = true;
           await sleep(1000);
@@ -2476,13 +2476,13 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     }
 
     // 4. 업로드 완료 대기 (interceptor의 data-flow-upload-done 감시)
-    console.log('[Flow Auto] 에셋 업로드 대기: ' + searchName);
+    DEBUG && console.log('[Flow Auto] 에셋 업로드 대기: ' + searchName);
     var waited = 0;
     while (waited < 15000) {
       var done = document.documentElement.getAttribute('data-flow-upload-done');
       if (done === 'true') {
         document.documentElement.removeAttribute('data-flow-upload-done');
-        console.log('[Flow Auto] 에셋 파일 전달 완료: ' + searchName);
+        DEBUG && console.log('[Flow Auto] 에셋 파일 전달 완료: ' + searchName);
         break;
       }
       if (done === 'error') {
@@ -2500,7 +2500,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
     // 5. 패널 열린 상태에서 바로 키보드 선택 (패널 닫으면 인덱싱 안 돼서 검색 실패)
     //    업로드 직후 에셋 카드가 패널에 보이므로, 바로 검색+선택
-    console.log('[Flow Auto] 에셋 업로드 완료, 패널 내에서 키보드 선택: ' + searchName);
+    DEBUG && console.log('[Flow Auto] 에셋 업로드 완료, 패널 내에서 키보드 선택: ' + searchName);
 
     // 업로드 속성 정리
     document.documentElement.removeAttribute('data-flow-upload');
@@ -2532,7 +2532,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     }
 
     // 검색바에 에셋 이름 입력
-    console.log('[Flow Auto] 업로드 후 패널 내 검색: "' + searchName + '"');
+    DEBUG && console.log('[Flow Auto] 업로드 후 패널 내 검색: "' + searchName + '"');
     searchInputAfter.focus();
     await sleep(200);
     searchInputAfter.value = '';
@@ -2570,8 +2570,8 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     // SPA 네비게이션 차단
     var origPush = history.pushState.bind(history);
     var origReplace = history.replaceState.bind(history);
-    history.pushState = function() { console.log('[Flow Auto] 네비게이션 차단됨 (pushState)'); };
-    history.replaceState = function() { console.log('[Flow Auto] 네비게이션 차단됨 (replaceState)'); };
+    history.pushState = function() { DEBUG && console.log('[Flow Auto] 네비게이션 차단됨 (pushState)'); };
+    history.replaceState = function() { DEBUG && console.log('[Flow Auto] 네비게이션 차단됨 (replaceState)'); };
     var blockNavUpload = function(e) { e.preventDefault(); e.stopImmediatePropagation(); };
     window.addEventListener('popstate', blockNavUpload, true);
     window.addEventListener('beforeunload', blockNavUpload, true);
@@ -2618,7 +2618,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       upPollWaited += upPollInterval;
       afterUploadVoids = countRefImages(promptEl);
       if (afterUploadVoids > beforeVoids) {
-        console.log('[Flow Auto] 에셋 "' + searchName + '" 업로드 + 선택 성공! ref: ' + beforeVoids + ' → ' + afterUploadVoids + ' (' + (upPollWaited / 1000) + '초)');
+        DEBUG && console.log('[Flow Auto] 에셋 "' + searchName + '" 업로드 + 선택 성공! ref: ' + beforeVoids + ' → ' + afterUploadVoids + ' (' + (upPollWaited / 1000) + '초)');
         return true;
       }
     }
@@ -2643,7 +2643,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       var flowTag = flowTagMap[name] || flowTagMap[name.normalize('NFC')] || null;
       var searchName = flowTag || name; // flowTag 있으면 영문명으로 검색
 
-      console.log('[Flow Auto] 레퍼런스 선택 ' + (i + 1) + '/' + names.length + ': ' + name +
+      DEBUG && console.log('[Flow Auto] 레퍼런스 선택 ' + (i + 1) + '/' + names.length + ': ' + name +
         (flowTag ? ' (Flow태그: ' + flowTag + ')' : ' (태그 미설정, 한글 검색)'));
 
       // 에셋 패널에서 검색 → 키보드 선택
@@ -2652,11 +2652,11 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       if (!selected) {
         // 검색 결과 없음 → 최초 1회만 업로드 (이미 업로드한 에셋은 스킵)
         if (uploadedAssetNames.has(searchName)) {
-          console.log('[Flow Auto] 에셋 "' + searchName + '" 이미 업로드됨 — 재업로드 스킵');
+          DEBUG && console.log('[Flow Auto] 에셋 "' + searchName + '" 이미 업로드됨 — 재업로드 스킵');
         } else {
           var dataUrl = characterMap[name] || characterMap[name.normalize('NFC')];
           if (dataUrl) {
-            console.log('[Flow Auto] 새 에셋 업로드 (최초 1회): ' + searchName);
+            DEBUG && console.log('[Flow Auto] 새 에셋 업로드 (최초 1회): ' + searchName);
             var uploaded = await uploadNewAsset(searchName, dataUrl);
             if (uploaded) {
               uploadedAssetNames.add(searchName);
@@ -2672,7 +2672,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       await sleep(300);
     }
 
-    console.log('[Flow Auto] 레퍼런스 선택 완료: ' + names.length + '명');
+    DEBUG && console.log('[Flow Auto] 레퍼런스 선택 완료: ' + names.length + '명');
   }
 
   // 12. 기존 레퍼런스 제거 (프롬프트 영역 초기화)
@@ -2693,7 +2693,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     if (clearBtn) {
       simulateRealClick(clearBtn);
       await sleep(500);
-      console.log('[Flow Auto] "프롬프트 지우기" 버튼으로 초기화');
+      DEBUG && console.log('[Flow Auto] "프롬프트 지우기" 버튼으로 초기화');
       return;
     }
 
@@ -2714,7 +2714,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       }
     }
     if (cancelBtns.length > 0) {
-      console.log('[Flow Auto] 에셋 cancel 버튼 ' + cancelBtns.length + '개 클릭');
+      DEBUG && console.log('[Flow Auto] 에셋 cancel 버튼 ' + cancelBtns.length + '개 클릭');
       for (var k = cancelBtns.length - 1; k >= 0; k--) {
         simulateRealClick(cancelBtns[k]);
         await sleep(200);
@@ -2730,7 +2730,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     document.execCommand('delete');
     await sleep(200);
 
-    console.log('[Flow Auto] 레퍼런스 및 프롬프트 초기화');
+    DEBUG && console.log('[Flow Auto] 레퍼런스 및 프롬프트 초기화');
   }
 
   // 13. 생성 버튼 찾기 ("arrow_forward" + "만들기" 텍스트, 하단)
@@ -2741,7 +2741,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       var rect = buttons[i].getBoundingClientRect();
       if (rect.top > 500 && rect.width > 0 &&
           txt.includes('만들기') && txt.includes('arrow_forward')) {
-        console.log('[Flow Auto] 생성 버튼 발견: ' + Math.round(rect.width) + 'x' + Math.round(rect.height) +
+        DEBUG && console.log('[Flow Auto] 생성 버튼 발견: ' + Math.round(rect.width) + 'x' + Math.round(rect.height) +
           ' at(' + Math.round(rect.left) + ',' + Math.round(rect.top) + ')');
         return buttons[i];
       }
@@ -2752,7 +2752,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       var rect2 = buttons[j].getBoundingClientRect();
       if (rect2.top > 500 && rect2.width > 0 && txt2.includes('만들기') &&
           !txt2.includes('add_2')) {  // "add_2만들기"(ingredient 버튼) 제외
-        console.log('[Flow Auto] 생성 버튼(fallback) 발견: "' + txt2.substring(0, 30) + '"');
+        DEBUG && console.log('[Flow Auto] 생성 버튼(fallback) 발견: "' + txt2.substring(0, 30) + '"');
         return buttons[j];
       }
     }
@@ -2763,7 +2763,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
   async function clickGenerate() {
     var btn = findGenerateButton();
     simulateRealClick(btn);
-    console.log('[Flow Auto] 생성 버튼 클릭');
+    DEBUG && console.log('[Flow Auto] 생성 버튼 클릭');
     return true;
   }
 
@@ -2773,7 +2773,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     var pollInterval = 2000;
     var waited = 0;
 
-    console.log('[Flow Auto] 생성 완료 대기 (최대 ' + (maxWait / 1000) + '초)...');
+    DEBUG && console.log('[Flow Auto] 생성 완료 대기 (최대 ' + (maxWait / 1000) + '초)...');
 
     // 현재 이미지 src 스냅샷
     var knownSrcs = new Set();
@@ -2790,7 +2790,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         var videos = document.querySelectorAll('video');
         for (var v = 0; v < videos.length; v++) {
           if (videos[v].src && !knownSrcs.has(videos[v].src)) {
-            console.log('[Flow Auto] 비디오 생성 완료! (' + (waited / 1000) + '초)');
+            DEBUG && console.log('[Flow Auto] 비디오 생성 완료! (' + (waited / 1000) + '초)');
             return true;
           }
         }
@@ -2807,22 +2807,22 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       });
 
       if (newCount >= 1) {
-        console.log('[Flow Auto] 생성 완료! 새 이미지 ' + newCount + '개 감지 (' + (waited / 1000) + '초)');
+        DEBUG && console.log('[Flow Auto] 생성 완료! 새 이미지 ' + newCount + '개 감지 (' + (waited / 1000) + '초)');
         return true;
       }
 
       // 10초마다 진행 로그
       if (waited % 10000 === 0) {
-        console.log('[Flow Auto] 생성 대기 중... (' + (waited / 1000) + '초)');
+        DEBUG && console.log('[Flow Auto] 생성 대기 중... (' + (waited / 1000) + '초)');
       }
     }
 
-    console.log('[Flow Auto] ' + (maxWait / 1000) + '초 타임아웃 — 새 이미지 미감지');
+    DEBUG && console.log('[Flow Auto] ' + (maxWait / 1000) + '초 타임아웃 — 새 이미지 미감지');
     return false;
   }
 
   async function downloadImage(promptText, index, customFilename, preGenSrcs) {
-    console.log('[Flow Auto] 다운로드 시도...');
+    DEBUG && console.log('[Flow Auto] 다운로드 시도...');
 
     // Flow는 이미지 2개를 생성 → 첫 번째만 다운로드, 나머지는 스킵
     // preGenSrcs: 생성 전 스냅샷 (레퍼런스/스타일 이미지 제외용)
@@ -2846,7 +2846,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     });
 
     if (newImages.length > 1) {
-      console.log('[Flow Auto] 생성된 이미지 ' + newImages.length + '개 중 첫 번째만 다운로드');
+      DEBUG && console.log('[Flow Auto] 생성된 이미지 ' + newImages.length + '개 중 첫 번째만 다운로드');
     }
 
     // 모든 새 이미지를 "처리 완료"로 마킹 (2번째 이미지가 다음 프롬프트로 밀리는 것 방지)
@@ -2858,7 +2858,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
     // 새 이미지가 없으면 가장 큰 이미지 사용 (fallback)
     if (!targetImage) {
-      console.log('[Flow Auto] 새 이미지 없음, 가장 큰 이미지 사용');
+      DEBUG && console.log('[Flow Auto] 새 이미지 없음, 가장 큰 이미지 사용');
       let maxSize = 0;
       for (const img of images) {
         if (img.src && img.width > 100 && img.height > 100) {
@@ -2872,7 +2872,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     }
 
     if (targetImage && targetImage.src) {
-      console.log('[Flow Auto] 이미지 발견:', targetImage.width, 'x', targetImage.height);
+      DEBUG && console.log('[Flow Auto] 이미지 발견:', targetImage.width, 'x', targetImage.height);
 
       // 파일명 결정: 지정된 파일명 또는 자동 생성
       let fullFilename;
@@ -2880,7 +2880,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         // Windows 금지 문자 제거 + 확장자 없으면 .png 추가
         var safeName = customFilename.replace(/[<>:"|?*]/g, '_').replace(/_+/g, '_');
         fullFilename = safeName.includes('.') ? safeName : `${safeName}.png`;
-        console.log('[Flow Auto] 지정된 파일명 사용:', fullFilename);
+        DEBUG && console.log('[Flow Auto] 지정된 파일명 사용:', fullFilename);
       } else {
         // 기존 방식: 프롬프트에서 파일명 생성
         const autoFilename = promptText
@@ -2895,7 +2895,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       // 다운로드한 이미지 src 기록 (중복 방지)
       const imageSrc = targetImage.src;
       downloadedSrcs.add(imageSrc);
-      console.log('[Flow Auto] 이미지 src 기록됨, 총', downloadedSrcs.size, '개');
+      DEBUG && console.log('[Flow Auto] 이미지 src 기록됨, 총', downloadedSrcs.size, '개');
 
       try {
         // fetch로 이미지 가져오기 → dataUrl 변환 → background에 전달
@@ -2913,7 +2913,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
           url: dataUrl,
           filename: fullPath
         });
-        console.log('[Flow Auto] 다운로드 요청:', fullPath);
+        DEBUG && console.log('[Flow Auto] 다운로드 요청:', fullPath);
         return true;
       } catch (e) {
         console.error('[Flow Auto] 다운로드 실패:', e.message);
@@ -2921,13 +2921,13 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       }
     }
 
-    console.log('[Flow Auto] 다운로드할 이미지를 찾지 못함');
+    DEBUG && console.log('[Flow Auto] 다운로드할 이미지를 찾지 못함');
     return false;
   }
 
   // TODO: Flow DOM 탐색 완료 후 비디오 다운로드 로직 구현
   async function downloadVideo(promptText, index, customFilename) {
-    console.log('[Flow Auto] 비디오 다운로드 시도...');
+    DEBUG && console.log('[Flow Auto] 비디오 다운로드 시도...');
     var videos = document.querySelectorAll('video');
     var targetVideo = null;
 
@@ -2940,7 +2940,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     }
 
     if (!targetVideo || !targetVideo.src) {
-      console.log('[Flow Auto] 다운로드할 비디오를 찾지 못함');
+      DEBUG && console.log('[Flow Auto] 다운로드할 비디오를 찾지 못함');
       return false;
     }
 
@@ -2971,7 +2971,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         dataUrl: dataUrl,
         filename: savePath + '/' + fullFilename
       });
-      console.log('[Flow Auto] 비디오 다운로드 요청:', fullFilename);
+      DEBUG && console.log('[Flow Auto] 비디오 다운로드 요청:', fullFilename);
       return true;
     } catch (e) {
       console.error('[Flow Auto] 비디오 다운로드 실패:', e.message);
@@ -3035,7 +3035,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
       // 매칭을 찾았으면 더 위로 올라갈 필요 없음
       if (bestMatch >= 0) {
-        console.log('[Flow Auto] 텍스트매칭 성공: 이미지→프롬프트 #' + bestMatch +
+        DEBUG && console.log('[Flow Auto] 텍스트매칭 성공: 이미지→프롬프트 #' + bestMatch +
           ' (depth=' + depth + ', matchLen=' + bestMatchLen + ')');
         return bestMatch;
       }
@@ -3053,13 +3053,13 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       if (!debugEl || debugEl === document.body) break;
       var dt = (debugEl.textContent || '').substring(0, 200);
       if (dt.length >= 20) {
-        console.log('[Flow Auto] 카드텍스트 depth=' + dd + ' len=' + (debugEl.textContent || '').length + ': "' + dt + '"');
+        DEBUG && console.log('[Flow Auto] 카드텍스트 depth=' + dd + ' len=' + (debugEl.textContent || '').length + ': "' + dt + '"');
       }
     }
     for (var pi = 0; pi < batchPrompts.length; pi++) {
       if (!alreadyMatched.has(pi)) {
-        console.log('[Flow Auto] 프롬프트[' + pi + '] prompt: "' + (batchPrompts[pi].prompt || '').substring(0, 80) + '"');
-        console.log('[Flow Auto] 프롬프트[' + pi + '] original: "' + (batchPrompts[pi].originalPrompt || '').substring(0, 80) + '"');
+        DEBUG && console.log('[Flow Auto] 프롬프트[' + pi + '] prompt: "' + (batchPrompts[pi].prompt || '').substring(0, 80) + '"');
+        DEBUG && console.log('[Flow Auto] 프롬프트[' + pi + '] original: "' + (batchPrompts[pi].originalPrompt || '').substring(0, 80) + '"');
       }
     }
 
@@ -3074,7 +3074,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     var candidateImages;
     if (detectedImages && detectedImages.length > 0) {
       candidateImages = detectedImages.slice(); // 복사본 사용
-      console.log('[Flow Auto] 배치 다운로드: Phase 3 감지 이미지 ' + candidateImages.length + '개 사용');
+      DEBUG && console.log('[Flow Auto] 배치 다운로드: Phase 3 감지 이미지 ' + candidateImages.length + '개 사용');
     } else {
       // 폴백: DOM에서 직접 탐색
       candidateImages = [];
@@ -3085,7 +3085,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
           candidateImages.push(img);
         }
       });
-      console.log('[Flow Auto] 배치 다운로드: DOM 탐색 이미지 ' + candidateImages.length + '개 (폴백)');
+      DEBUG && console.log('[Flow Auto] 배치 다운로드: DOM 탐색 이미지 ' + candidateImages.length + '개 (폴백)');
     }
 
     // 위치순 정렬 (아래→위 = 제출 순서)
@@ -3097,7 +3097,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       return br.top - ar.top; // 아래→위 (제출 순서 = 프롬프트 순서)
     });
 
-    console.log('[Flow Auto] 배치 다운로드: 후보 이미지 ' + candidateImages.length + '개, 크기 필터 적용...');
+    DEBUG && console.log('[Flow Auto] 배치 다운로드: 후보 이미지 ' + candidateImages.length + '개, 크기 필터 적용...');
 
     // 후보 이미지를 fetch해서 실제 크기로 필터링 (에셋 이미지 제외)
     var verifiedImages = [];
@@ -3108,9 +3108,9 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         var fileSize = headBlob.size;
         if (fileSize >= MIN_GENERATED_IMAGE_SIZE) {
           verifiedImages.push({ img: candidateImages[ci], blob: headBlob, size: fileSize });
-          console.log('[Flow Auto] 이미지 #' + (ci + 1) + ': ' + Math.round(fileSize / 1024) + 'KB → 생성 이미지 (다운로드 대상)');
+          DEBUG && console.log('[Flow Auto] 이미지 #' + (ci + 1) + ': ' + Math.round(fileSize / 1024) + 'KB → 생성 이미지 (다운로드 대상)');
         } else {
-          console.log('[Flow Auto] 이미지 #' + (ci + 1) + ': ' + Math.round(fileSize / 1024) + 'KB → 에셋/썸네일 (스킵)');
+          DEBUG && console.log('[Flow Auto] 이미지 #' + (ci + 1) + ': ' + Math.round(fileSize / 1024) + 'KB → 에셋/썸네일 (스킵)');
           downloadedSrcs.add(candidateImages[ci].src); // 에셋도 등록하여 재처리 방지
         }
       } catch (e) {
@@ -3121,7 +3121,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
     var batchCount = batchEnd - batchStart;
     var dlCount = Math.min(verifiedImages.length, batchCount);
-    console.log('[Flow Auto] 크기 필터 후: 생성 이미지 ' + verifiedImages.length + '개, 다운로드 ' + dlCount + '개');
+    DEBUG && console.log('[Flow Auto] 크기 필터 후: 생성 이미지 ' + verifiedImages.length + '개, 다운로드 ' + dlCount + '개');
 
     // === 프롬프트-이미지 1:1 매칭 (카드 텍스트 기반) ===
     var batchPrompts = [];
@@ -3158,7 +3158,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       }
     }
 
-    console.log('[Flow Auto] 프롬프트 매칭: ' + matchCount + '/' + verifiedImages.length + ' 텍스트 매칭, ' +
+    DEBUG && console.log('[Flow Auto] 프롬프트 매칭: ' + matchCount + '/' + verifiedImages.length + ' 텍스트 매칭, ' +
       (verifiedImages.length - matchCount) + '개 위치 폴백');
 
     // 매칭 안 된 프롬프트 = 생성 실패
@@ -3194,7 +3194,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       var matchMethod = (imageToPromptMap[di] >= 0 && matchCount > 0) ? '텍스트매칭' : '위치폴백';
       try {
         var blob = verifiedImages[di].blob;
-        console.log('[Flow Auto] DL ' + (di + 1) + '/' + dlCount + ': ' + fullFilename +
+        DEBUG && console.log('[Flow Auto] DL ' + (di + 1) + '/' + dlCount + ': ' + fullFilename +
           ' (' + Math.round(blob.size / 1024) + 'KB, ' + matchMethod + ')');
 
         if (useCustomDir) {
@@ -3235,7 +3235,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     document.documentElement.removeAttribute('data-flow-stop');
 
     // 2. 모델/출력 유형 설정 (첫 실행 시 1회)
-    console.log('[Flow Auto] 모델: ' + (selectedModel || 'nano-banana-2') + ', 출력: ' + (selectedOutputType || 'image'));
+    DEBUG && console.log('[Flow Auto] 모델: ' + (selectedModel || 'nano-banana-2') + ', 출력: ' + (selectedOutputType || 'image'));
     await setupModelAndOutput(selectedModel, selectedOutputType);
     await sleep(1000);
 
@@ -3257,8 +3257,8 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     }
 
     if (uniqueChars.length > 0) {
-      console.log('[Flow Auto] === Phase 0: 에셋 사전 준비 (' + uniqueChars.length + '명) ===');
-      console.log('[Flow Auto] 캐릭터: ' + uniqueChars.join(', '));
+      DEBUG && console.log('[Flow Auto] === Phase 0: 에셋 사전 준비 (' + uniqueChars.length + '명) ===');
+      DEBUG && console.log('[Flow Auto] 캐릭터: ' + uniqueChars.join(', '));
 
       var flowTagMap = characters.__flowTagMap || {};
 
@@ -3270,7 +3270,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
       for (var ui = 0; ui < uniqueChars.length; ui++) {
         if (isStopRequested()) {
-          console.log('[Flow Auto] 사용자 정지 요청 — 자동화 중단');
+          DEBUG && console.log('[Flow Auto] 사용자 정지 요청 — 자동화 중단');
           try { chrome.runtime.sendMessage({ action: 'AUTOMATION_STOPPED' }); } catch(e) {}
           return;
         }
@@ -3279,7 +3279,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         var flowTag = flowTagMap[charName] || flowTagMap[charName.normalize('NFC')] || null;
         var searchName = flowTag || charName;
 
-        console.log('[Flow Auto] Phase 0 [' + (ui + 1) + '/' + uniqueChars.length + ']: ' + charName +
+        DEBUG && console.log('[Flow Auto] Phase 0 [' + (ui + 1) + '/' + uniqueChars.length + ']: ' + charName +
           (flowTag ? ' (Flow태그: ' + flowTag + ')' : ''));
 
         var needsUpload = false;
@@ -3288,7 +3288,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         try {
           var found = await selectAssetByName(searchName);
           if (found) {
-            console.log('[Flow Auto] Phase 0: 에셋 "' + searchName + '" 이미 존재');
+            DEBUG && console.log('[Flow Auto] Phase 0: 에셋 "' + searchName + '" 이미 존재');
           } else {
             needsUpload = true;
           }
@@ -3313,11 +3313,11 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
           var dataUrl = characters[charName] || characters[charName.normalize('NFC')];
           if (dataUrl) {
             try {
-              console.log('[Flow Auto] Phase 0: 에셋 "' + searchName + '" 업로드 중...');
+              DEBUG && console.log('[Flow Auto] Phase 0: 에셋 "' + searchName + '" 업로드 중...');
               var uploaded = await uploadNewAsset(searchName, dataUrl);
               if (uploaded) {
                 uploadedAssetNames.add(searchName);
-                console.log('[Flow Auto] Phase 0: 에셋 "' + searchName + '" 업로드 완료');
+                DEBUG && console.log('[Flow Auto] Phase 0: 에셋 "' + searchName + '" 업로드 완료');
               } else {
                 console.warn('[Flow Auto] Phase 0: 에셋 "' + searchName + '" 업로드 실패');
               }
@@ -3347,7 +3347,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       document.querySelectorAll('img').forEach(function(img) {
         if (img.src && img.src.includes('getMediaUrlRedirect') && !prePhase0Srcs.has(img.src)) {
           assetSrcs.add(img.src);
-          console.log('[Flow Auto] Phase 0 에셋 이미지 등록: ' + img.src.substring(0, 80) + '...');
+          DEBUG && console.log('[Flow Auto] Phase 0 에셋 이미지 등록: ' + img.src.substring(0, 80) + '...');
         }
       });
 
@@ -3355,16 +3355,16 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       try {
         await clearReferences();
       } catch(e) {
-        console.log('[Flow Auto] Phase 0 후 프롬프트 초기화 실패 (무시):', e.message);
+        DEBUG && console.log('[Flow Auto] Phase 0 후 프롬프트 초기화 실패 (무시):', e.message);
       }
       await sleep(500);
 
-      console.log('[Flow Auto] === Phase 0 완료: ' + uniqueChars.length + '명 에셋 준비됨 ===');
+      DEBUG && console.log('[Flow Auto] === Phase 0 완료: ' + uniqueChars.length + '명 에셋 준비됨 ===');
     }
 
     // === 파이프라인 모드: 전체 제출 → 텍스트 매칭 다운로드 ===
     var totalCount = promptsWithCharacters.length;
-    console.log('[Flow Auto] 파이프라인 모드: ' + totalCount + '개 프롬프트');
+    DEBUG && console.log('[Flow Auto] 파이프라인 모드: ' + totalCount + '개 프롬프트');
 
     try {
       // Phase 1: 생성 전 이미지 스냅샷
@@ -3376,7 +3376,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       // Phase 2: 프롬프트 전체 연속 제출
       for (var j = 0; j < totalCount; j++) {
         if (isStopRequested()) {
-          console.log('[Flow Auto] 사용자 정지 요청 — 자동화 중단');
+          DEBUG && console.log('[Flow Auto] 사용자 정지 요청 — 자동화 중단');
           try { chrome.runtime.sendMessage({ action: 'AUTOMATION_STOPPED' }); } catch(e) {}
           return;
         }
@@ -3385,7 +3385,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         var charForThisPrompt = item.character || '';
         var logPrefix = '[' + (item.index + 1) + ']' + (item.filename ? ' [' + item.filename + ']' : '');
 
-        console.log('[Flow Auto] 제출 ' + (j + 1) + '/' + totalCount + ': ' + logPrefix);
+        DEBUG && console.log('[Flow Auto] 제출 ' + (j + 1) + '/' + totalCount + ': ' + logPrefix);
 
         try {
           chrome.runtime.sendMessage({
@@ -3404,7 +3404,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
         // 에셋 레퍼런스 선택
         if (charForThisPrompt) {
-          console.log('[Flow Auto] 레퍼런스 선택: ' + charForThisPrompt);
+          DEBUG && console.log('[Flow Auto] 레퍼런스 선택: ' + charForThisPrompt);
           await uploadReferences(charForThisPrompt, characters);
           await sleep(500);
 
@@ -3425,7 +3425,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         }
       }
 
-      console.log('[Flow Auto] === 제출 완료: ' + totalCount + '개 — 스크롤 스윕 다운로드 시작 ===');
+      DEBUG && console.log('[Flow Auto] === 제출 완료: ' + totalCount + '개 — 스크롤 스윕 다운로드 시작 ===');
 
       // Phase 3: 스크롤 스윕 다운로드
       // Flow는 가상 스크롤 사용 — 뷰포트 근처 6~9개만 DOM 유지
@@ -3451,7 +3451,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         scrollContainer = null; // null = window 스크롤 사용
         maxScrollRange = document.documentElement.scrollHeight - window.innerHeight;
       } else {
-        console.log('[Flow Auto] 스크롤 컨테이너: ' +
+        DEBUG && console.log('[Flow Auto] 스크롤 컨테이너: ' +
           (scrollContainer.className || '').toString().slice(0, 50) +
           ' (범위: ' + maxScrollRange + 'px)');
       }
@@ -3459,7 +3459,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       // 3-2. 첫 이미지 생성 완료 대기
       var genWaitMax = selectedOutputType === 'video' ? 120000 : 60000;
       var genWaited = 0;
-      console.log('[Flow Auto] 첫 이미지 생성 대기...');
+      DEBUG && console.log('[Flow Auto] 첫 이미지 생성 대기...');
 
       while (genWaited < genWaitMax) {
         if (isStopRequested()) {
@@ -3474,13 +3474,13 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
           }
         });
         if (newGenCount > 0) {
-          console.log('[Flow Auto] 첫 이미지 감지! (' + (genWaited / 1000) + '초)');
+          DEBUG && console.log('[Flow Auto] 첫 이미지 감지! (' + (genWaited / 1000) + '초)');
           break;
         }
         await sleep(2000);
         genWaited += 2000;
         if (genWaited % 10000 === 0) {
-          console.log('[Flow Auto] 생성 대기 중... (' + (genWaited / 1000) + '초)');
+          DEBUG && console.log('[Flow Auto] 생성 대기 중... (' + (genWaited / 1000) + '초)');
         }
       }
 
@@ -3544,7 +3544,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
               // 크기 필터 (200KB 미만 = 에셋/썸네일)
               if (imgBlob.size < MIN_GENERATED_IMAGE_SIZE) {
-                console.log('[Flow Auto] 에셋/썸네일 스킵: ' + Math.round(imgBlob.size / 1024) + 'KB');
+                DEBUG && console.log('[Flow Auto] 에셋/썸네일 스킵: ' + Math.round(imgBlob.size / 1024) + 'KB');
                 assetSrcs.add(newImg.src);
                 continue;
               }
@@ -3554,7 +3554,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
               var actualIdx;
               if (textMatchIdx >= 0) {
                 actualIdx = textMatchIdx;
-                console.log('[Flow Auto] 텍스트매칭 성공: 이미지→프롬프트 #' + actualIdx);
+                DEBUG && console.log('[Flow Auto] 텍스트매칭 성공: 이미지→프롬프트 #' + actualIdx);
               } else {
                 // 텍스트 매칭 실패 — 순차 폴백 (매칭 안 된 것 중 가장 가까운 인덱스)
                 actualIdx = nextPromptIdx;
@@ -3566,7 +3566,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
                   downloadedSrcs.add(newImg.src);
                   continue;
                 }
-                console.log('[Flow Auto] 순차 폴백: 이미지→프롬프트 #' + actualIdx);
+                DEBUG && console.log('[Flow Auto] 순차 폴백: 이미지→프롬프트 #' + actualIdx);
               }
               var pItem = promptsWithCharacters[actualIdx];
               matchedPromptIndices.add(actualIdx);
@@ -3611,7 +3611,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
               downloadedSrcs.add(newImg.src);
               downloadedCount++;
 
-              console.log('[Flow Auto] ' + sweepLabel + ' DL ' + downloadedCount + '/' + totalCount +
+              DEBUG && console.log('[Flow Auto] ' + sweepLabel + ' DL ' + downloadedCount + '/' + totalCount +
                 ': ' + fullFilename + ' (' + Math.round(imgBlob.size / 1024) + 'KB)');
 
               try {
@@ -3632,7 +3632,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
           // 진행 로그 (3000px마다)
           if (pos % 3000 < sweepStep) {
-            console.log('[Flow Auto] ' + sweepLabel + ' scroll=' + pos + 'px DL=' +
+            DEBUG && console.log('[Flow Auto] ' + sweepLabel + ' scroll=' + pos + 'px DL=' +
               downloadedCount + '/' + totalCount);
           }
 
@@ -3642,13 +3642,13 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
       // 1차 스윕: 위→아래
       var startScroll = scrollContainer ? scrollContainer.scrollTop : window.scrollY;
-      console.log('[Flow Auto] 1차 스윕 시작 (위→아래, scroll=' + startScroll +
+      DEBUG && console.log('[Flow Auto] 1차 스윕 시작 (위→아래, scroll=' + startScroll +
         '→' + maxScrollRange + 'px)');
       await scrollSweep(startScroll, maxScrollRange, 1);
 
       // 2차 스윕: 부족하면 아래→위로 한번 더
       if (downloadedCount < totalCount && nextPromptIdx >= 0) {
-        console.log('[Flow Auto] 1차 스윕 부족 (' + downloadedCount + '/' + totalCount +
+        DEBUG && console.log('[Flow Auto] 1차 스윕 부족 (' + downloadedCount + '/' + totalCount +
           ') — 2차 스윕 (아래→위)');
         await sleep(3000); // 생성 대기 여유
         var currentPos = scrollContainer
@@ -3669,7 +3669,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
           ' (' + (totalCount - downloadedCount) + '개 누락)');
       }
 
-      console.log('[Flow Auto] === 완료: ' + downloadedCount + '/' + totalCount + ' 다운로드 ===');
+      DEBUG && console.log('[Flow Auto] === 완료: ' + downloadedCount + '/' + totalCount + ' 다운로드 ===');
 
       if (downloadedCount === 0) {
         throw new Error('생성 실패 — 다운로드 0개 (전체 ' + totalCount + '개 제출)');
@@ -3689,7 +3689,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
 
     } catch (error) {
       if (error.message === '__STOPPED__' || isStopRequested()) {
-        console.log('[Flow Auto] 사용자 정지 요청 — 자동화 중단');
+        DEBUG && console.log('[Flow Auto] 사용자 정지 요청 — 자동화 중단');
         try { chrome.runtime.sendMessage({ action: 'AUTOMATION_STOPPED' }); } catch(e) {}
         return;
       }
@@ -3705,7 +3705,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       return;
     }
 
-    console.log('[Flow Auto] 모든 프롬프트 완료!');
+    DEBUG && console.log('[Flow Auto] 모든 프롬프트 완료!');
     window.__flowAutoRunning = false;
     clearInterval(popupWatcher);
     try {
@@ -3745,19 +3745,19 @@ async function stopAutomation() {
 
 // 페이지 리로드 후 남은 프롬프트 재주입
 async function handleHardReset(completedCount) {
-  console.log(`[Popup] 하드 리셋: ${completedCount}장 완료, 페이지 리로드 시작`);
+  DEBUG && console.log(`[Popup] 하드 리셋: ${completedCount}장 완료, 페이지 리로드 시작`);
 
   completedOffset += completedCount;
   const remaining = sortedPromptsCache.slice(completedOffset);
 
   if (remaining.length === 0) {
-    console.log('[Popup] 남은 프롬프트 없음, 완료');
+    DEBUG && console.log('[Popup] 남은 프롬프트 없음, 완료');
     isRunning = false;
     updateUI();
     return;
   }
 
-  console.log(`[Popup] 남은 프롬프트: ${remaining.length}개`);
+  DEBUG && console.log(`[Popup] 남은 프롬프트: ${remaining.length}개`);
 
   try {
     const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
@@ -3765,7 +3765,7 @@ async function handleHardReset(completedCount) {
 
     // 리로드 전 현재 URL 저장
     const originalUrl = tab.url;
-    console.log(`[Popup] 현재 URL 저장: ${originalUrl}`);
+    DEBUG && console.log(`[Popup] 현재 URL 저장: ${originalUrl}`);
 
     // 페이지 리로드
     await chrome.tabs.reload(tab.id);
@@ -3784,7 +3784,7 @@ async function handleHardReset(completedCount) {
     // 리로드 후 URL 확인 — 다른 페이지로 갔으면 원래 URL로 이동
     const updatedTab = await chrome.tabs.get(tab.id);
     if (updatedTab.url !== originalUrl) {
-      console.log(`[Popup] URL 변경 감지: ${updatedTab.url} → 원래 URL로 복귀`);
+      DEBUG && console.log(`[Popup] URL 변경 감지: ${updatedTab.url} → 원래 URL로 복귀`);
       await chrome.tabs.update(tab.id, { url: originalUrl });
 
       // 다시 로딩 완료 대기
@@ -3800,7 +3800,7 @@ async function handleHardReset(completedCount) {
     }
 
     // UI 요소 감지 폴링 (textarea 또는 contenteditable 찾기, 최대 20초)
-    console.log('[Popup] Flow UI 요소 감지 대기 (최대 20초)...');
+    DEBUG && console.log('[Popup] Flow UI 요소 감지 대기 (최대 20초)...');
     const maxWaitMs = 20000;
     const pollMs = 2000;
     let waited = 0;
@@ -3825,13 +3825,13 @@ async function handleHardReset(completedCount) {
 
         const check = results[0]?.result;
         if (check && check.hasInput && check.hasButtons) {
-          console.log(`[Popup] Flow UI 준비 완료 (${waited / 1000}초, 버튼 ${check.buttonCount}개)`);
+          DEBUG && console.log(`[Popup] Flow UI 준비 완료 (${waited / 1000}초, 버튼 ${check.buttonCount}개)`);
           uiReady = true;
           break;
         }
-        console.log(`[Popup] UI 미준비 (${waited / 1000}초): input=${check?.hasInput}, buttons=${check?.buttonCount}`);
+        DEBUG && console.log(`[Popup] UI 미준비 (${waited / 1000}초): input=${check?.hasInput}, buttons=${check?.buttonCount}`);
       } catch (e) {
-        console.log(`[Popup] UI 확인 실패 (${waited / 1000}초): ${e.message}`);
+        DEBUG && console.log(`[Popup] UI 확인 실패 (${waited / 1000}초): ${e.message}`);
       }
     }
 
@@ -3844,11 +3844,11 @@ async function handleHardReset(completedCount) {
 
     // 남은 프롬프트로 재주입
     const p = automationParams;
-    console.log(`[Popup] 재주입: ${remaining.length}개 프롬프트`);
+    DEBUG && console.log(`[Popup] 재주입: ${remaining.length}개 프롬프트`);
 
     // interceptor.js는 manifest content_scripts로 자동 주입됨
     // 페이지 리로드 시 document_start에서 다시 설치되므로 수동 재주입 불필요
-    console.log('[Popup] 페이지 리로드 후 interceptor.js 자동 재주입됨');
+    DEBUG && console.log('[Popup] 페이지 리로드 후 interceptor.js 자동 재주입됨');
 
     await chrome.scripting.executeScript({
       target: { tabId: tab.id },
@@ -4212,7 +4212,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (message.status && origIdx !== undefined && prompts[origIdx]) {
         const testModeCheck = document.getElementById('testModeCheck');
         if (message.status === 'completed' && testModeCheck && testModeCheck.checked) {
-          console.log('[Popup] 테스트 모드: completed 스킵 (프롬프트 유지)');
+          DEBUG && console.log('[Popup] 테스트 모드: completed 스킵 (프롬프트 유지)');
         } else {
           prompts[origIdx].status = message.status;
         }
@@ -4276,7 +4276,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             const writable = await fileHandle.createWritable();
             await writable.write(bytes);
             await writable.close();
-            console.log('[Flow] 파일 저장 완료:', message.filename);
+            DEBUG && console.log('[Flow] 파일 저장 완료:', message.filename);
             return;
           } catch (e) {
             console.error('[Flow] 커스텀 폴더 저장 실패, 다운로드 폴백:', e);
@@ -4291,7 +4291,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             url: message.dataUrl,
             filename: fullPath
           });
-          console.log('[Flow] 다운로드 폴백 사용:', fullPath);
+          DEBUG && console.log('[Flow] 다운로드 폴백 사용:', fullPath);
         } catch (e2) {
           console.error('[Flow] 다운로드 폴백도 실패:', e2);
         }
