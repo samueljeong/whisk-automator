@@ -21,7 +21,7 @@
     var fileName = customName ? (customName + '.png') : 'upload.png';
     if (customName) {
       document.documentElement.removeAttribute('data-flow-upload-name');
-      console.log('[Flow Interceptor] 커스텀 파일명: ' + fileName);
+      DEBUG && console.log('[Flow Interceptor] 커스텀 파일명: ' + fileName);
     }
     return new File([blob], fileName, { type: 'image/png' });
   }
@@ -33,7 +33,7 @@
     var dataUrl = document.documentElement.getAttribute('data-flow-upload');
     if (dataUrl) {
       document.documentElement.removeAttribute('data-flow-upload');
-      console.log('[Flow Interceptor] showOpenFilePicker 가로채기! dataUrl 길이:', dataUrl.length);
+      DEBUG && console.log('[Flow Interceptor] showOpenFilePicker 가로채기! dataUrl 길이:', dataUrl.length);
 
       try {
         var file = dataUrlToFile(dataUrl);
@@ -47,7 +47,7 @@
         };
 
         document.documentElement.setAttribute('data-flow-upload-done', 'true');
-        console.log('[Flow Interceptor] showOpenFilePicker 파일 핸들 생성 완료 (' + file.size + ' bytes)');
+        DEBUG && console.log('[Flow Interceptor] showOpenFilePicker 파일 핸들 생성 완료 (' + file.size + ' bytes)');
         return [handle];
       } catch (e) {
         console.error('[Flow Interceptor] showOpenFilePicker 파일 변환 실패:', e);
@@ -67,7 +67,7 @@
     Object.defineProperty(window, 'showOpenFilePicker', {
       get: function() { return interceptedPicker; },
       set: function() {
-        console.log('[Flow Interceptor] showOpenFilePicker 재할당 시도 무시');
+        DEBUG && console.log('[Flow Interceptor] showOpenFilePicker 재할당 시도 무시');
       },
       configurable: true
     });
@@ -81,7 +81,7 @@
       var dataUrl = document.documentElement.getAttribute('data-flow-upload');
       if (dataUrl) {
         document.documentElement.removeAttribute('data-flow-upload');
-        console.log('[Flow Interceptor] input[type=file].click() 가로채기! dataUrl 길이:', dataUrl.length);
+        DEBUG && console.log('[Flow Interceptor] input[type=file].click() 가로채기! dataUrl 길이:', dataUrl.length);
 
         try {
           var file = dataUrlToFile(dataUrl);
@@ -94,7 +94,7 @@
           this.dispatchEvent(new Event('input', { bubbles: true }));
 
           document.documentElement.setAttribute('data-flow-upload-done', 'true');
-          console.log('[Flow Interceptor] input[type=file] 파일 주입 완료 (' + file.size + ' bytes)');
+          DEBUG && console.log('[Flow Interceptor] input[type=file] 파일 주입 완료 (' + file.size + ' bytes)');
           return;
         } catch (e) {
           console.error('[Flow Interceptor] input[type=file] 파일 주입 실패:', e);
@@ -113,7 +113,7 @@
       if (dataUrl) {
         e.preventDefault();
         e.stopPropagation();
-        console.log('[Flow Interceptor] click 캡처로 input[type=file] 가로채기');
+        DEBUG && console.log('[Flow Interceptor] click 캡처로 input[type=file] 가로채기');
 
         document.documentElement.removeAttribute('data-flow-upload');
         try {
@@ -150,7 +150,7 @@
       targetEl.dispatchEvent(new DragEvent('drop', commonOpts));
 
       document.documentElement.setAttribute('data-flow-upload-done', 'true');
-      console.log('[Flow Interceptor] Drag&Drop 시뮬레이션 완료 (' + file.size + ' bytes)');
+      DEBUG && console.log('[Flow Interceptor] Drag&Drop 시뮬레이션 완료 (' + file.size + ' bytes)');
       return true;
     } catch (e) {
       console.error('[Flow Interceptor] Drag&Drop 시뮬레이션 실패:', e);
@@ -237,7 +237,7 @@
             while (cur && d < 30) {
               var n = cur.type ? (cur.type.displayName || cur.type.name || String(cur.type).substring(0, 40)) : null;
               var pk = cur.memoizedProps ? Object.keys(cur.memoizedProps).join(',') : '';
-              console.log('[Slate Debug] fiber[' + d + '] ' + n + ' props=[' + pk + ']');
+              DEBUG && console.log('[Slate Debug] fiber[' + d + '] ' + n + ' props=[' + pk + ']');
               cur = cur.return;
               d++;
             }
@@ -247,12 +247,12 @@
         return;
       }
 
-      console.log('[Slate Debug] ===== EDITOR 발견! =====');
-      console.log('[Slate Debug] 키:', Object.keys(editor).join(', '));
-      console.log('[Slate Debug] children 수:', editor.children.length);
-      console.log('[Slate Debug] selection:', JSON.stringify(editor.selection));
-      console.log('[Slate Debug] children 전체:');
-      console.log(JSON.stringify(editor.children, null, 2));
+      DEBUG && console.log('[Slate Debug] ===== EDITOR 발견! =====');
+      DEBUG && console.log('[Slate Debug] 키:', Object.keys(editor).join(', '));
+      DEBUG && console.log('[Slate Debug] children 수:', editor.children.length);
+      DEBUG && console.log('[Slate Debug] selection:', JSON.stringify(editor.selection));
+      DEBUG && console.log('[Slate Debug] children 전체:');
+      DEBUG && console.log(JSON.stringify(editor.children, null, 2));
 
       // void/특수 노드 추출
       var voids = [];
@@ -267,13 +267,13 @@
       }
       findVoids(editor.children, []);
       if (voids.length > 0) {
-        console.log('[Slate Debug] ===== VOID 노드 (' + voids.length + '개) =====');
+        DEBUG && console.log('[Slate Debug] ===== VOID 노드 (' + voids.length + '개) =====');
         voids.forEach(function(v) {
-          console.log('[Slate Debug] path=' + JSON.stringify(v.path) + ' type="' + v.type + '"');
-          console.log(JSON.stringify(v.node, null, 2));
+          DEBUG && console.log('[Slate Debug] path=' + JSON.stringify(v.path) + ' type="' + v.type + '"');
+          DEBUG && console.log(JSON.stringify(v.node, null, 2));
         });
       } else {
-        console.log('[Slate Debug] void 노드 없음 (에셋 삽입 후 다시 실행해주세요)');
+        DEBUG && console.log('[Slate Debug] void 노드 없음 (에셋 삽입 후 다시 실행해주세요)');
       }
 
       window.__slateEditor = editor;
@@ -289,7 +289,7 @@
     for (var m = 0; m < mutations.length; m++) {
       if (mutations[m].attributeName === 'data-slate-debug') {
         var val = document.documentElement.getAttribute('data-slate-debug');
-        console.log('[Flow Interceptor] data-slate-debug 감지:', val);
+        DEBUG && console.log('[Flow Interceptor] data-slate-debug 감지:', val);
         if (val === 'dump') {
           document.documentElement.removeAttribute('data-slate-debug');
           handleSlateDebug();
@@ -298,10 +298,10 @@
     }
   });
   slateObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-slate-debug'] });
-  console.log('[Flow Interceptor] Slate debug observer 등록 완료');
+  DEBUG && console.log('[Flow Interceptor] Slate debug observer 등록 완료');
 
   window.__flowAutoInterceptorInstalled = true;
   // DOM 속성으로도 표시 (ISOLATED world에서 확인 가능)
   document.documentElement.setAttribute('data-flow-interceptor-ready', 'true');
-  console.log('[Flow Interceptor] document_start 설치 완료: showOpenFilePicker + input[type=file] + click 캡처 + drag&drop + slate-debug');
+  DEBUG && console.log('[Flow Interceptor] document_start 설치 완료: showOpenFilePicker + input[type=file] + click 캡처 + drag&drop + slate-debug');
 })();
