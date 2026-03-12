@@ -3,6 +3,12 @@
 (function() {
   'use strict';
 
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.appendChild(document.createTextNode(text));
+    return div.innerHTML;
+  }
+
   // ============================================================
   // 상태
   // ============================================================
