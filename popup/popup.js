@@ -853,13 +853,15 @@ function updateUI() {
   if (prompts.length === 0) {
     promptQueue.innerHTML = '<li class="empty-message">프롬프트를 추가해주세요</li>';
   } else {
-    promptQueue.innerHTML = prompts.map((prompt, index) => `
-      ${ '' /* status allowlist */ }
-      <li class="${['completed','error',''].includes(prompt.status) ? prompt.status : ''}" data-index="${index}">
+    promptQueue.innerHTML = prompts.map((prompt, index) => {
+      const safeStatus = ['completed','error',''].includes(prompt.status) ? prompt.status : '';
+      return `
+      <li class="${safeStatus}" data-index="${index}">
         <span class="prompt-text" title="${escapeHtml(prompt.text)}">${index + 1}. ${escapeHtml(prompt.text)}</span>
         ${!isRunning ? `<button class="delete-btn" data-index="${index}">×</button>` : ''}
       </li>
-    `).join('');
+    `;
+    }).join('');
   }
 
   // Update buttons
