@@ -1,7 +1,9 @@
 // Grok Content Script - ISOLATED world
 // 역할: 연결 확인 & 정지 신호 브릿지
 
-console.log('[Grok Automator] Content script loaded');
+const DEBUG = false;
+
+DEBUG && console.log('[Grok Automator] Content script loaded');
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'GROK_CHECK_CONNECTION') {
