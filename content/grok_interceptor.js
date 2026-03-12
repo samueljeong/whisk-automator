@@ -28,7 +28,7 @@
       var dataUrl = document.documentElement.getAttribute('data-grok-upload');
       if (dataUrl) {
         document.documentElement.removeAttribute('data-grok-upload');
-        console.log('[Grok Interceptor] input[type=file].click() 가로채기');
+        DEBUG && console.log('[Grok Interceptor] input[type=file].click() 가로채기');
         try {
           var file = dataUrlToFile(dataUrl);
           var dt = new DataTransfer();
@@ -37,7 +37,7 @@
           this.dispatchEvent(new Event('change', { bubbles: true }));
           this.dispatchEvent(new Event('input', { bubbles: true }));
           document.documentElement.setAttribute('data-grok-upload-done', 'true');
-          console.log('[Grok Interceptor] 파일 주입 완료 (' + file.size + ' bytes)');
+          DEBUG && console.log('[Grok Interceptor] 파일 주입 완료 (' + file.size + ' bytes)');
           return;
         } catch (e) {
           console.error('[Grok Interceptor] 파일 주입 실패:', e);
@@ -73,5 +73,5 @@
 
   window.__grokInterceptorInstalled = true;
   document.documentElement.setAttribute('data-grok-interceptor-ready', 'true');
-  console.log('[Grok Interceptor] document_start 설치 완료');
+  DEBUG && console.log('[Grok Interceptor] document_start 설치 완료');
 })();
