@@ -233,12 +233,6 @@ async function incrementFreeUsage() {
 }
 
 async function canGenerate(count = 1) {
-  // 개발자 무제한
-  const devEmail = await getAuthEmail();
-  if (devEmail === MASTER_EMAIL) {
-    return { allowed: true };
-  }
-
   // 로그인 상태 확인
   const token = await getAccessToken();
   if (token) {
