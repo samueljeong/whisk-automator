@@ -2,7 +2,7 @@
 
 const DEBUG = false;
 
-DEBUG && console.log('[Flow Automator] Background service worker started');
+DEBUG && DEBUG && console.log('[Flow Automator] Background service worker started');
 
 // 아이콘 클릭 시 사이드 패널 열기
 chrome.action.onClicked.addListener((tab) => {
@@ -13,7 +13,7 @@ chrome.action.onClicked.addListener((tab) => {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // 메시지 발신자 검증
   if (sender.id !== chrome.runtime.id) return;
-  console.log('[Flow Automator Background] Received message:', message.action);
+  DEBUG && console.log('[Flow Automator Background] Received message:', message.action);
 
   switch (message.action) {
     case 'DOWNLOAD_IMAGE':
@@ -75,14 +75,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // MAIN world에 파일 업로드 인터셉터 주입
 async function injectFileInterceptor(tabId) {
   if (!tabId) throw new Error('tabId 없음');
-  console.log('[Background] MAIN world interceptor 주입 시도, tabId:', tabId);
+  DEBUG && console.log('[Background] MAIN world interceptor 주입 시도, tabId:', tabId);
 
   await chrome.scripting.executeScript({
     target: { tabId: tabId },
     world: 'MAIN',
     func: () => {
       if (window.__flowAutoInterceptorInstalled) {
-        console.log('[Flow Interceptor] 이미 설치됨');
+        DEBUG && console.log('[Flow Interceptor] 이미 설치됨');
         document.documentElement.setAttribute('data-flow-interceptor-ready', 'true');
         return;
       }
@@ -103,7 +103,7 @@ async function injectFileInterceptor(tabId) {
         var dataUrl = document.documentElement.getAttribute('data-flow-upload');
         if (dataUrl) {
           document.documentElement.removeAttribute('data-flow-upload');
-          console.log('[Flow Interceptor] showOpenFilePicker 가로채기!');
+          DEBUG && console.log('[Flow Interceptor] showOpenFilePicker 가로채기!');
           try {
             var file = dataUrlToFile(dataUrl);
             var handle = {
@@ -140,7 +140,7 @@ async function injectFileInterceptor(tabId) {
           var dataUrl = document.documentElement.getAttribute('data-flow-upload');
           if (dataUrl) {
             document.documentElement.removeAttribute('data-flow-upload');
-            console.log('[Flow Interceptor] input[type=file].click() 가로채기!');
+            DEBUG && console.log('[Flow Interceptor] input[type=file].click() 가로채기!');
             try {
               var file = dataUrlToFile(dataUrl);
               var dt = new DataTransfer();
@@ -183,10 +183,10 @@ async function injectFileInterceptor(tabId) {
 
       window.__flowAutoInterceptorInstalled = true;
       document.documentElement.setAttribute('data-flow-interceptor-ready', 'true');
-      console.log('[Flow Interceptor] background 주입 완료: showOpenFilePicker + input[type=file] + click 캡처');
+      DEBUG && console.log('[Flow Interceptor] background 주입 완료: showOpenFilePicker + input[type=file] + click 캡처');
     }
   });
-  console.log('[Background] MAIN world interceptor 주입 완료');
+  DEBUG && console.log('[Background] MAIN world interceptor 주입 완료');
 }
 
 // Flow 영상 다운로드 (Grok 패턴 재사용)
@@ -218,7 +218,7 @@ async function flowDownloadVideo(url, dataUrl, filename) {
         saveAs: false
       });
     }
-    console.log('[Flow Background] 영상 다운로드 시작:', filename);
+    DEBUG && console.log('[Flow Background] 영상 다운로드 시작:', filename);
   } catch (error) {
     console.error('[Flow Background] 영상 다운로드 오류:', error);
   }
@@ -227,7 +227,7 @@ async function flowDownloadVideo(url, dataUrl, filename) {
 // Download image
 async function downloadImage(url, filename) {
   try {
-    console.log('[Flow Automator Background] Downloading to:', filename);
+    DEBUG && console.log('[Flow Automator Background] Downloading to:', filename);
     chrome.downloads.download({
       url: url,
       filename: filename,
@@ -250,10 +250,10 @@ async function openSaveFolder(savePath) {
     });
 
     if (results.length > 0) {
-      console.log('[Flow Automator Background] Opening folder for:', results[0].filename);
+      DEBUG && console.log('[Flow Automator Background] Opening folder for:', results[0].filename);
       chrome.downloads.show(results[0].id);
     } else {
-      console.log('[Flow Automator Background] No files found, opening default folder');
+      DEBUG && console.log('[Flow Automator Background] No files found, opening default folder');
       chrome.downloads.showDefaultFolder();
     }
   } catch (error) {
@@ -265,7 +265,7 @@ async function openSaveFolder(savePath) {
 // Track download progress
 chrome.downloads.onChanged.addListener((delta) => {
   if (delta.state?.current === 'complete') {
-    console.log('[Flow Automator Background] Download completed');
+    DEBUG && console.log('[Flow Automator Background] Download completed');
   } else if (delta.error) {
     console.error('[Flow Automator Background] Download error:', delta.error.current);
   }
@@ -274,14 +274,14 @@ chrome.downloads.onChanged.addListener((delta) => {
 // Discord 초대 탭 자동 닫기 (Flow가 자동으로 열어버리는 Google Labs Discord)
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.url && changeInfo.url.includes('discord.com/invite')) {
-    console.log('[Flow Automator] Discord 초대 탭 자동 닫기:', changeInfo.url);
+    DEBUG && console.log('[Flow Automator] Discord 초대 탭 자동 닫기:', changeInfo.url);
     chrome.tabs.remove(tabId);
   }
 });
 
 chrome.tabs.onCreated.addListener((tab) => {
   if (tab.pendingUrl && tab.pendingUrl.includes('discord.com/invite')) {
-    console.log('[Flow Automator] Discord 초대 탭 생성 차단:', tab.pendingUrl);
+    DEBUG && console.log('[Flow Automator] Discord 초대 탭 생성 차단:', tab.pendingUrl);
     chrome.tabs.remove(tab.id);
   }
 });
@@ -319,7 +319,7 @@ async function grokDownloadVideo(url, dataUrl, filename) {
         saveAs: false
       });
     }
-    console.log('[Grok Background] 다운로드 시작:', filename);
+    DEBUG && console.log('[Grok Background] 다운로드 시작:', filename);
   } catch (error) {
     console.error('[Grok Background] 다운로드 오류:', error);
   }
@@ -328,14 +328,14 @@ async function grokDownloadVideo(url, dataUrl, filename) {
 // Grok 인터셉터 주입
 async function grokInjectInterceptor(tabId) {
   if (!tabId) throw new Error('tabId 없음');
-  console.log('[Grok Background] 인터셉터 주입 시도, tabId:', tabId);
+  DEBUG && console.log('[Grok Background] 인터셉터 주입 시도, tabId:', tabId);
 
   await chrome.scripting.executeScript({
     target: { tabId: tabId },
     world: 'MAIN',
     func: () => {
       if (window.__grokInterceptorInstalled) {
-        console.log('[Grok Interceptor] 이미 설치됨');
+        DEBUG && console.log('[Grok Interceptor] 이미 설치됨');
         return;
       }
 
@@ -396,15 +396,15 @@ async function grokInjectInterceptor(tabId) {
 
       window.__grokInterceptorInstalled = true;
       document.documentElement.setAttribute('data-grok-interceptor-ready', 'true');
-      console.log('[Grok Interceptor] background 주입 완료');
+      DEBUG && console.log('[Grok Interceptor] background 주입 완료');
     }
   });
-  console.log('[Grok Background] 인터셉터 주입 완료');
+  DEBUG && console.log('[Grok Background] 인터셉터 주입 완료');
 }
 
 // Handle extension install/update
 chrome.runtime.onInstalled.addListener((details) => {
-  console.log('[Flow Automator Background] Extension installed/updated:', details.reason);
+  DEBUG && console.log('[Flow Automator Background] Extension installed/updated:', details.reason);
 
   if (details.reason === 'install') {
     // Initialize default settings
