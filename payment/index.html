@@ -255,25 +255,36 @@
       yearly: { name: 'Flow+Grok Pro 연간', amount: 100000, period: 'yearly' },
     };
 
-    // ─── URL 파라미터 파싱 ───
+    // ─── 인증 정보 로드 (chrome.storage.session) ───
     const params = new URLSearchParams(window.location.search);
-    const userId = params.get('userId');
-    const email = params.get('email');
-    const token = params.get('token');
     const isDemo = params.get('demo') === 'true';
+    let userId = null;
+    let email = null;
+    let token = null;
     let selectedPlan = 'monthly';
 
-    if (email) {
-      document.getElementById('emailDisplay').textContent = email;
-    } else if (isDemo) {
-      document.getElementById('emailDisplay').textContent = '심사용 테스트 모드';
+    async function loadAuth() {
+      if (isDemo) {
+        document.getElementById('emailDisplay').textContent = '심사용 테스트 모드';
+        return;
+      }
+      const result = await chrome.storage.session.get('payment_auth');
+      const auth = result.payment_auth;
+      if (!auth || !auth.userId || !auth.token) {
+        document.getElementById('errorMsg').textContent = '잘못된 접근입니다. 확장 프로그램에서 다시 시도해주세요.';
+        document.getElementById('errorMsg').style.display = 'block';
+        return;
+      }
+      userId = auth.userId;
+      email = auth.email;
+      token = auth.token;
+      if (email) {
+        document.getElementById('emailDisplay').textContent = email;
+      }
+      // 사용 후 즉시 삭제
+      await chrome.storage.session.remove('payment_auth');
     }
-
-    if (!isDemo && (!userId || !token)) {
-      document.getElementById('errorMsg').textContent = '잘못된 접근입니다. 확장 프로그램에서 다시 시도해주세요.';
-      document.getElementById('errorMsg').style.display = 'block';
-      document.getElementById('subscribeBtn').disabled = true;
-    }
+    loadAuth();
 
     // ─── 플랜 선택 ───
     function selectPlan(plan) {
