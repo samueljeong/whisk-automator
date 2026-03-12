@@ -1,11 +1,4 @@
 const DEBUG = false;
-const _MASTER_HASH = "e464e2f4f9e4f13b4f1ee902626d7b78733db32edacc0ec79235609251ac3f1f";
-async function isMasterEmail(email) {
-  if (!email) return false;
-  const hash = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(email))))
-    .map(b => b.toString(16).padStart(2, "0")).join("");
-  return hash === _MASTER_HASH;
-}
 
 // Flow/Imagen 프롬프트 안전 치환 규칙
 // 위험 표현 → 안전 표현 자동 변환
