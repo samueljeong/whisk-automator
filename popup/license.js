@@ -181,9 +181,11 @@ async function checkLicense() {
       return { valid: true, tier: "free", device_conflict: true };
     }
 
-    // 캐시 저장
+    // 캐시 저장 (HMAC 서명 포함)
+    const cacheData = { ...result, cached_at: Date.now() };
+    const signature = await signCache(cacheData);
     await chrome.storage.local.set({
-      [LICENSE_CACHE_KEY]: { ...result, cached_at: Date.now() },
+      [LICENSE_CACHE_KEY]: { ...cacheData, _sig: signature },
     });
 
     return result;
