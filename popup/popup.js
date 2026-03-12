@@ -322,11 +322,11 @@ document.getElementById('upgradeBtn')?.addEventListener('click', async () => {
     showLoginScreen();
     return;
   }
-  // 로그인 Free → 결제 페이지로 이동
+  // 로그인 Free → 결제 페이지로 이동 (토큰은 storage.session 경유)
   const userId = await getAuthUserId();
   const token = await getAccessToken();
-  const paymentUrl = `${PAYMENT_PAGE_URL}?userId=${userId}&email=${encodeURIComponent(email)}&token=${token}`;
-  chrome.tabs.create({ url: paymentUrl });
+  await chrome.storage.session.set({ payment_auth: { token, userId, email } });
+  chrome.tabs.create({ url: PAYMENT_PAGE_URL });
 });
 
 // 구독 관리 버튼
