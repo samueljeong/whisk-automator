@@ -313,7 +313,7 @@ async function getAuthUserId() {
 }
 
 // ─── 캐시 무결성 ───
-const CACHE_SIGN_KEY = 'whisk_cache_sign';
+const CACHE_SIGN_KEY = 'flow_cache_sign';
 
 async function signCache(data) {
   const raw = JSON.stringify(data);
