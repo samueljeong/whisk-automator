@@ -3,7 +3,7 @@
 
 const DEBUG = false;
 
-DEBUG && DEBUG && console.log('[Grok Automator] Content script loaded');
+DEBUG && console.log('[Grok Automator] Content script loaded');
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'GROK_CHECK_CONNECTION') {
