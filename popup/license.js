@@ -7,9 +7,9 @@ const CHECK_LICENSE_URL = `${SUPABASE_URL}/rest/v1/rpc/check_license`;
 const REDEEM_COUPON_URL = `${SUPABASE_URL}/rest/v1/rpc/redeem_coupon`;
 
 // Storage 키
-const AUTH_TOKEN_KEY = "whisk_auth_token";
-const LICENSE_CACHE_KEY = "whisk_license_cache";
-const FREE_USAGE_KEY = "whisk_free_usage";
+const AUTH_TOKEN_KEY = "flow_auth_token";
+const LICENSE_CACHE_KEY = "flow_license_cache";
+const FREE_USAGE_KEY = "flow_free_usage";
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5분
 
 // Free 한도
