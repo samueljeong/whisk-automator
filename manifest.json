@@ -14,7 +14,7 @@
   ],
   "host_permissions": [
     "https://labs.google/*",
-    "https://*.supabase.co/*",
+    "https://cyrbibbosfybylsparfk.supabase.co/*",
     "https://grok.com/*"
   ],
   "action": {
