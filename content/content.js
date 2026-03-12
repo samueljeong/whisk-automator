@@ -4,7 +4,9 @@
 // 역할: 연결 상태 확인 전용
 // 자동화 로직은 popup.js에서 chrome.scripting.executeScript()로 직접 주입됨
 
-console.log('[Flow Automator] Content script loaded');
+const DEBUG = false;
+
+DEBUG && console.log('[Flow Automator] Content script loaded');
 
 // Message listener
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
