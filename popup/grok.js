@@ -313,7 +313,7 @@
         }
       }
     } catch (e) {
-      console.log('[Grok] 연결 확인 실패:', e.message);
+      DEBUG && console.log('[Grok] 연결 확인 실패:', e.message);
     }
 
     grokConnectionStatus.textContent = 'grok.com 미연결';
@@ -683,7 +683,7 @@
         tabId: grokTabId
       });
     } catch (e) {
-      console.log('[Grok] 인터셉터 주입:', e.message);
+      DEBUG && console.log('[Grok] 인터셉터 주입:', e.message);
     }
     await sleep(500);
 
@@ -719,7 +719,7 @@
         for (let attempt = 1; attempt <= 3; attempt++) {
           clickResult = await clickGenerateButton();
           if (clickResult?.found) break;
-          console.log(`[Grok] 생성 버튼 클릭 ${attempt}차 실패, ${attempt < 3 ? '재시도...' : '중단'}`);
+          DEBUG && console.log(`[Grok] 생성 버튼 클릭 ${attempt}차 실패, ${attempt < 3 ? '재시도...' : '중단'}`);
           updateProgress(completed, total, `${item.name}: 버튼 찾기 ${attempt}/3...`);
           await sleep(2000);
         }
@@ -758,12 +758,12 @@
             const upscaledUrl = await waitForUpscale();
             if (upscaledUrl) {
               videoUrl = upscaledUrl;
-              console.log('[Grok] 업스케일 완료, 새 URL:', videoUrl.substring(0, 80));
+              DEBUG && console.log('[Grok] 업스케일 완료, 새 URL:', videoUrl.substring(0, 80));
             } else {
-              console.log('[Grok] 업스케일 대기 실패, 원본 영상으로 진행');
+              DEBUG && console.log('[Grok] 업스케일 대기 실패, 원본 영상으로 진행');
             }
           } else {
-            console.log('[Grok] 업스케일 메뉴 클릭 실패, 원본 영상으로 진행');
+            DEBUG && console.log('[Grok] 업스케일 메뉴 클릭 실패, 원본 영상으로 진행');
           }
         }
 
@@ -775,7 +775,7 @@
           item.status = 'done';
         } else {
           // Step 6b: URL 추출 실패 → 페이지 다운로드 버튼 클릭
-          console.log('[Grok] video URL 미발견, 페이지 다운로드 버튼 시도');
+          DEBUG && console.log('[Grok] video URL 미발견, 페이지 다운로드 버튼 시도');
           updateProgress(completed, total, `${item.name}: 다운로드 버튼 클릭...`);
           const downloaded = await clickPageDownloadButton();
           if (downloaded) {
@@ -824,7 +824,7 @@
       target: { tabId: grokTabId },
       world: 'MAIN',
       func: () => {
-        console.log('[Grok] Imagine 페이지로 URL 직접 이동');
+        DEBUG && console.log('[Grok] Imagine 페이지로 URL 직접 이동');
         window.location.href = 'https://grok.com/imagine';
       }
     });
@@ -851,7 +851,7 @@
         return 'location-fallback';
       }
     });
-    console.log('[Grok] 네비게이션:', navResult?.result);
+    DEBUG && console.log('[Grok] 네비게이션:', navResult?.result);
 
     // 2) 갤러리 페이지 로드 대기
     for (let i = 0; i < 30; i++) {
@@ -911,9 +911,9 @@
 
     const result = scanResult?.result;
     if (result?.clicked) {
-      console.log('[Grok] "만들기" 클릭 성공:', result.clicked);
+      DEBUG && console.log('[Grok] "만들기" 클릭 성공:', result.clicked);
     } else {
-      console.log('[Grok] "만들기" 버튼 미발견. 페이지 버튼 목록:', result?.found);
+      DEBUG && console.log('[Grok] "만들기" 버튼 미발견. 페이지 버튼 목록:', result?.found);
     }
     await sleep(2000);
   }
@@ -979,7 +979,7 @@
     }
 
     // 인터셉터가 작동하지 않았을 수 있음 - 직접 주입 시도
-    console.log('[Grok] 인터셉터 미반응, 직접 파일 주입 시도');
+    DEBUG && console.log('[Grok] 인터셉터 미반응, 직접 파일 주입 시도');
     await chrome.scripting.executeScript({
       target: { tabId: grokTabId },
       world: 'MAIN',
@@ -1094,7 +1094,7 @@
           if (btn && !btn.disabled) {
             const r = btn.getBoundingClientRect();
             if (r.width > 0) {
-              console.log('[Grok] ✓ aria 직접 매치:', sel,
+              DEBUG && console.log('[Grok] ✓ aria 직접 매치:', sel,
                 `pos=(${Math.round(r.left)},${Math.round(r.top)})`,
                 `${Math.round(r.width)}x${Math.round(r.height)}`);
               simulateClick(btn);
@@ -1115,7 +1115,7 @@
           const btn = document.querySelector(sel);
           if (btn && !btn.disabled) {
             const r = btn.getBoundingClientRect();
-            console.log('[Grok] ✓ 셀렉터 매치:', sel,
+            DEBUG && console.log('[Grok] ✓ 셀렉터 매치:', sel,
               `pos=(${Math.round(r.left)},${Math.round(r.top)})`);
             simulateClick(btn);
             return { found: true, method: 'selector', selector: sel };
@@ -1130,13 +1130,13 @@
           // "동영상"이 포함된 aria (단, "옵션"은 제외)
           if (/동영상/i.test(aria) && !/옵션/i.test(aria)) {
             const r = btn.getBoundingClientRect();
-            console.log('[Grok] ✓ 동영상 aria 매치:', aria,
+            DEBUG && console.log('[Grok] ✓ 동영상 aria 매치:', aria,
               `pos=(${Math.round(r.left)},${Math.round(r.top)})`);
             simulateClick(btn);
             return { found: true, method: 'aria-video', aria };
           }
           if (/^(generate|create|send|생성|만들기|전송)$/i.test(text)) {
-            console.log('[Grok] ✓ 텍스트 폴백:', text);
+            DEBUG && console.log('[Grok] ✓ 텍스트 폴백:', text);
             simulateClick(btn);
             return { found: true, method: 'text-fallback', text };
           }
@@ -1155,7 +1155,7 @@
             svg: !!btn.querySelector('svg')
           });
         }
-        console.log('[Grok] 전송 버튼 미발견. 전체 버튼:',
+        DEBUG && console.log('[Grok] 전송 버튼 미발견. 전체 버튼:',
           JSON.stringify(diag, null, 2));
         return { found: false, reason: 'all-failed', buttons: diag };
       }
@@ -1163,7 +1163,7 @@
 
     const res = result?.result;
     if (res?.found) {
-      console.log(`[Grok] 생성 버튼 클릭: ${res.method}`);
+      DEBUG && console.log(`[Grok] 생성 버튼 클릭: ${res.method}`);
     } else {
       console.error('[Grok] 생성 버튼 미발견:', res?.reason);
     }
@@ -1200,12 +1200,12 @@
           if (label.includes('project') || label.includes('프로젝트')) continue;
           if (text === 'no thanks' || text === 'skip' || text === 'maybe later' ||
               label.includes('dismiss')) {
-            console.log('[Grok] 방해 팝업 닫기:', text || label);
+            DEBUG && console.log('[Grok] 방해 팝업 닫기:', text || label);
             simulateClick(btn);
             return;
           }
         }
-        console.log('[Grok] 닫을 방해 팝업 없음');
+        DEBUG && console.log('[Grok] 닫을 방해 팝업 없음');
       }
     });
   }
@@ -1229,7 +1229,7 @@
           const makeVideoBtn = document.querySelector('button[aria-label="동영상 만들기"]');
 
           if (shouldLog) {
-            console.log('[Grok] 이미지 생성 대기...',
+            DEBUG && console.log('[Grok] 이미지 생성 대기...',
               'url:', url, 'isPost:', isPostPage, 'makeVideoBtn:', !!makeVideoBtn);
           }
 
@@ -1247,7 +1247,7 @@
       });
 
       if (result?.result?.ready) {
-        console.log('[Grok] 이미지 생성 완료, 포스트 페이지 도착');
+        DEBUG && console.log('[Grok] 이미지 생성 완료, 포스트 페이지 도착');
         await sleep(1500); // DOM 안정화 대기
         return true;
       }
@@ -1255,7 +1255,7 @@
       await sleep(pollInterval);
     }
 
-    console.log('[Grok] 이미지 생성 대기 타임아웃 (3분)');
+    DEBUG && console.log('[Grok] 이미지 생성 대기 타임아웃 (3분)');
     return false;
   }
 
@@ -1283,7 +1283,7 @@
           if (btn) {
             const r = btn.getBoundingClientRect();
             if (r.width > 0) {
-              console.log('[Grok] "동영상 만들기" 버튼 클릭:',
+              DEBUG && console.log('[Grok] "동영상 만들기" 버튼 클릭:',
                 `(${Math.round(r.left)},${Math.round(r.top)}) ${Math.round(r.width)}x${Math.round(r.height)}`);
               simulateClick(btn);
               return { found: true };
@@ -1299,24 +1299,24 @@
                 /동영상 만들기|make video|create video/i.test(aria)) {
               const r = b.getBoundingClientRect();
               if (r.width > 0) {
-                console.log('[Grok] "동영상 만들기" 텍스트 폴백:', text || aria);
+                DEBUG && console.log('[Grok] "동영상 만들기" 텍스트 폴백:', text || aria);
                 simulateClick(b);
                 return { found: true, method: 'text-fallback' };
               }
             }
           }
 
-          console.log('[Grok] "동영상 만들기" 버튼 미발견');
+          DEBUG && console.log('[Grok] "동영상 만들기" 버튼 미발견');
           return { found: false };
         }
       });
 
       if (result?.result?.found) {
-        console.log('[Grok] 동영상 만들기 클릭 성공');
+        DEBUG && console.log('[Grok] 동영상 만들기 클릭 성공');
         return true;
       }
 
-      console.log(`[Grok] 동영상 만들기 ${attempt}차 실패, ${attempt < 3 ? '재시도...' : '중단'}`);
+      DEBUG && console.log(`[Grok] 동영상 만들기 ${attempt}차 실패, ${attempt < 3 ? '재시도...' : '중단'}`);
       await sleep(2000);
     }
 
@@ -1343,7 +1343,7 @@
           for (const v of videos) {
             const src = v.src || v.currentSrc || v.querySelector('source')?.src;
             if (src) {
-              console.log('[Grok] 영상 URL 발견:', src.substring(0, 120));
+              DEBUG && console.log('[Grok] 영상 URL 발견:', src.substring(0, 120));
               return { type: 'url', value: src };
             }
           }
@@ -1363,7 +1363,7 @@
 
           // 4. 주기적 진단 로그 (매 3번째 = 9초마다)
           if (shouldLog) {
-            console.log('[Grok] 대기 중...',
+            DEBUG && console.log('[Grok] 대기 중...',
               'video:', videos.length,
               'loading:', loadingEls.length,
               'elapsed:', Math.round((Date.now() - performance.timeOrigin) / 1000) + 's');
@@ -1382,7 +1382,7 @@
       await sleep(pollInterval);
     }
 
-    console.log('[Grok] 영상 대기 타임아웃 (3분)');
+    DEBUG && console.log('[Grok] 영상 대기 타임아웃 (3분)');
     return null;
   }
 
@@ -1415,7 +1415,7 @@
         }
 
         const r = btn.getBoundingClientRect();
-        console.log('[Grok Upscale] "추가 옵션" 버튼 클릭 (simulateClick):',
+        DEBUG && console.log('[Grok Upscale] "추가 옵션" 버튼 클릭 (simulateClick):',
           `(${Math.round(r.left)},${Math.round(r.top)}) ${Math.round(r.width)}x${Math.round(r.height)}`);
 
         // 클릭 전 DOM 스냅샷: 현재 존재하는 모든 텍스트 노드 수집
@@ -1495,7 +1495,7 @@
           }
         }
 
-        console.log('[Grok Upscale] "업스케일" 텍스트 포함 요소:', upscaleCandidates.length,
+        DEBUG && console.log('[Grok Upscale] "업스케일" 텍스트 포함 요소:', upscaleCandidates.length,
           upscaleCandidates.map(c => `${c.tag}:"${c.directText}"|"${c.text}" (${c.x},${c.y}) ${c.w}x${c.h}`));
 
         if (upscaleCandidates.length > 0) {
@@ -1510,7 +1510,7 @@
 
           const best = upscaleCandidates[0];
           const clickTarget = best.el.closest('button, a, [role="menuitem"], [role="option"], [role="button"], li') || best.el;
-          console.log('[Grok Upscale] 업스케일 항목 클릭:', best.directText, '|', best.text, clickTarget.tagName);
+          DEBUG && console.log('[Grok Upscale] 업스케일 항목 클릭:', best.directText, '|', best.text, clickTarget.tagName);
           simulateClick(clickTarget);
           return { success: true, text: best.text };
         }
@@ -1543,7 +1543,7 @@
 
     const menuRes = menuResult?.result;
     if (menuRes?.success) {
-      console.log('[Grok] 업스케일 메뉴 클릭 성공:', menuRes.text);
+      DEBUG && console.log('[Grok] 업스케일 메뉴 클릭 성공:', menuRes.text);
       return true;
     } else {
       console.error('[Grok] 업스케일 메뉴 클릭 실패:', menuRes?.reason);
@@ -1569,7 +1569,7 @@
       }
     });
     const initialSrc = initialResult?.result || '';
-    console.log('[Grok Upscale] 초기 video src:', initialSrc.substring(0, 80));
+    DEBUG && console.log('[Grok Upscale] 초기 video src:', initialSrc.substring(0, 80));
 
     while (Date.now() - startTime < maxWait) {
       if (!grokIsRunning) return null;
@@ -1608,7 +1608,7 @@
           const isLoading = loadingEls.length > 0;
 
           if (shouldLog) {
-            console.log('[Grok Upscale] 대기 중...',
+            DEBUG && console.log('[Grok Upscale] 대기 중...',
               'HD:', hdFound, 'srcChanged:', srcChanged,
               'loading:', isLoading);
           }
@@ -1630,14 +1630,14 @@
 
       const res = result?.result;
       if (res?.done) {
-        console.log('[Grok Upscale] 업스케일 완료!', res.method, res.videoUrl?.substring(0, 80));
+        DEBUG && console.log('[Grok Upscale] 업스케일 완료!', res.method, res.videoUrl?.substring(0, 80));
         return res.videoUrl;
       }
 
       await sleep(pollInterval);
     }
 
-    console.log('[Grok Upscale] 업스케일 대기 타임아웃 (5분)');
+    DEBUG && console.log('[Grok Upscale] 업스케일 대기 타임아웃 (5분)');
     return null;
   }
 
@@ -1667,7 +1667,7 @@
         }
 
         const r = btn.getBoundingClientRect();
-        console.log('[Grok Extend] "추가 옵션" 버튼 클릭:',
+        DEBUG && console.log('[Grok Extend] "추가 옵션" 버튼 클릭:',
           `(${Math.round(r.left)},${Math.round(r.top)}) ${Math.round(r.width)}x${Math.round(r.height)}`);
 
         simulateClick(btn);
@@ -1724,7 +1724,7 @@
           }
         }
 
-        console.log('[Grok Extend] "연장" 텍스트 포함 요소:', extendCandidates.length,
+        DEBUG && console.log('[Grok Extend] "연장" 텍스트 포함 요소:', extendCandidates.length,
           extendCandidates.map(c => `${c.tag}:"${c.directText}"|"${c.text}" (${c.x},${c.y}) ${c.w}x${c.h}`));
 
         if (extendCandidates.length > 0) {
@@ -1739,7 +1739,7 @@
 
           const best = extendCandidates[0];
           const clickTarget = best.el.closest('button, a, [role="menuitem"], [role="option"], [role="button"], li') || best.el;
-          console.log('[Grok Extend] 연장 항목 클릭:', best.directText, '|', best.text, clickTarget.tagName);
+          DEBUG && console.log('[Grok Extend] 연장 항목 클릭:', best.directText, '|', best.text, clickTarget.tagName);
           simulateClick(clickTarget);
           return { success: true, text: best.text };
         }
@@ -1751,7 +1751,7 @@
 
     const menuRes = menuResult?.result;
     if (menuRes?.success) {
-      console.log('[Grok Extend] 연장 메뉴 클릭 성공:', menuRes.text);
+      DEBUG && console.log('[Grok Extend] 연장 메뉴 클릭 성공:', menuRes.text);
       return true;
     } else {
       console.error('[Grok Extend] 연장 메뉴 클릭 실패:', menuRes?.reason);
@@ -1777,7 +1777,7 @@
       }
     });
     const initialSrc = initialResult?.result || '';
-    console.log('[Grok Extend] 초기 video src:', initialSrc.substring(0, 80));
+    DEBUG && console.log('[Grok Extend] 초기 video src:', initialSrc.substring(0, 80));
 
     while (Date.now() - startTime < maxWait) {
       if (!grokIsRunning) return null;
@@ -1797,7 +1797,7 @@
           const isLoading = loadingEls.length > 0;
 
           if (shouldLog) {
-            console.log('[Grok Extend] 대기 중...',
+            DEBUG && console.log('[Grok Extend] 대기 중...',
               'srcChanged:', srcChanged, 'loading:', isLoading);
           }
 
@@ -1813,14 +1813,14 @@
 
       const res = result?.result;
       if (res?.done) {
-        console.log('[Grok Extend] 연장 완료!', res.videoUrl?.substring(0, 80));
+        DEBUG && console.log('[Grok Extend] 연장 완료!', res.videoUrl?.substring(0, 80));
         return res.videoUrl;
       }
 
       await sleep(pollInterval);
     }
 
-    console.log('[Grok Extend] 연장 대기 타임아웃 (5분)');
+    DEBUG && console.log('[Grok Extend] 연장 대기 타임아웃 (5분)');
     return null;
   }
 
@@ -1846,7 +1846,7 @@
         for (const btn of btns) {
           const aria = (btn.getAttribute('aria-label') || '');
           if (/다운로드|download/i.test(aria)) {
-            console.log('[Grok] 페이지 다운로드 버튼 클릭:', aria);
+            DEBUG && console.log('[Grok] 페이지 다운로드 버튼 클릭:', aria);
             simulateClick(btn);
             return { clicked: true, aria };
           }
@@ -1857,13 +1857,13 @@
           links[links.length - 1].click();
           return { clicked: true, type: 'link' };
         }
-        console.log('[Grok] 다운로드 버튼 미발견');
+        DEBUG && console.log('[Grok] 다운로드 버튼 미발견');
         return { clicked: false };
       }
     });
     const res = result?.result;
     if (res?.clicked) {
-      console.log('[Grok] 페이지 다운로드 버튼 클릭 성공:', res.aria || res.type);
+      DEBUG && console.log('[Grok] 페이지 다운로드 버튼 클릭 성공:', res.aria || res.type);
     }
     return res?.clicked;
   }
@@ -1953,7 +1953,7 @@
       try {
         await chrome.tabs.sendMessage(grokTabId, { action: 'GROK_STOP_AUTOMATION' });
       } catch (e) {
-        console.log('[Grok] 정지 신호 전달 실패:', e.message);
+        DEBUG && console.log('[Grok] 정지 신호 전달 실패:', e.message);
       }
     }
   });
@@ -1985,7 +1985,7 @@
       try {
         await chrome.tabs.sendMessage(grokTabId, { action: 'GROK_STOP_AUTOMATION' });
       } catch (e) {
-        console.log('[Grok Extend] 정지 신호 전달 실패:', e.message);
+        DEBUG && console.log('[Grok Extend] 정지 신호 전달 실패:', e.message);
       }
     }
   });
@@ -2015,7 +2015,7 @@
         tabId: grokTabId
       });
     } catch (e) {
-      console.log('[Grok Extend] 인터셉터 주입:', e.message);
+      DEBUG && console.log('[Grok Extend] 인터셉터 주입:', e.message);
     }
     await sleep(500);
 
@@ -2118,7 +2118,7 @@
           if (extendedUrl) {
             videoUrl = extendedUrl;
           } else {
-            console.log('[Grok Extend] 연장 대기 실패, 이전 URL 유지');
+            DEBUG && console.log('[Grok Extend] 연장 대기 실패, 이전 URL 유지');
           }
         }
 
@@ -2214,5 +2214,5 @@
     }
   }, 5000);
 
-  console.log('[Grok Automator] grok.js 로드 완료');
+  DEBUG && console.log('[Grok Automator] grok.js 로드 완료');
 })();
