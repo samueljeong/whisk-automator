@@ -310,9 +310,8 @@ document.getElementById('logoutBtn')?.addEventListener('click', async () => {
   updateGrokAccess();
 });
 
-// 결제 페이지 URL (Vercel 배포 후 실제 URL로 교체)
-// TODO: 배포 후 실제 URL로 교체
-const PAYMENT_PAGE_URL = 'https://payment-tau-three.vercel.app';
+// 결제 페이지 - 확장 내부 로드
+const PAYMENT_PAGE_URL = chrome.runtime.getURL('payment/index.html');
 const CANCEL_SUB_URL = `${SUPABASE_URL}/functions/v1/cancel-subscription`;
 
 // Pro 업그레이드 버튼
