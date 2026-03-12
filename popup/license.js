@@ -204,7 +204,13 @@ async function getCachedLicense(ignoreExpiry = false) {
   const cached = result[LICENSE_CACHE_KEY];
   if (!cached) return null;
   if (!ignoreExpiry && Date.now() - cached.cached_at > CACHE_TTL_MS) return null;
-  return cached;
+  // 무결성 검증
+  const { _sig, ...data } = cached;
+  if (_sig && !(await verifyCache(data, _sig))) {
+    await chrome.storage.local.remove(LICENSE_CACHE_KEY);
+    return null;
+  }
+  return data;
 }
 
 // ─── Free 일일 카운트 ───
