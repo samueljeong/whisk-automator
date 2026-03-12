@@ -1,5 +1,3 @@
-const DEBUG = false;
-
 // Supabase OTP 인증 + 라이선스 모듈
 const SUPABASE_URL = "https://cyrbibbosfybylsparfk.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_YPB5wFe6t2ij6dVzdlQYrA_fQf5Sqqm";
