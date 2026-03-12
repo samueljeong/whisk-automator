@@ -1,3 +1,5 @@
+const DEBUG = false;
+
 // State
 let prompts = [];
 let isRunning = false;
