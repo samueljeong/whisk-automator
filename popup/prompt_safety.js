@@ -1,4 +1,5 @@
 const DEBUG = false;
+const MASTER_EMAIL = "zkvp17@naver.com";
 
 // Flow/Imagen 프롬프트 안전 치환 규칙
 // 위험 표현 → 안전 표현 자동 변환
