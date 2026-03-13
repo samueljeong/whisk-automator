@@ -1,11 +1,10 @@
 // cancel-subscription: 구독 취소 (즉시 해지 아닌 기간 만료 시 해지)
-// 환경변수: IMP_API_KEY, IMP_API_SECRET, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+// 환경변수: PORTONE_API_SECRET, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const IMP_API_KEY = Deno.env.get("IMP_API_KEY")!;
-const IMP_API_SECRET = Deno.env.get("IMP_API_SECRET")!;
-const IMP_API_URL = "https://api.iamport.kr";
+const PORTONE_API_SECRET = Deno.env.get("PORTONE_API_SECRET")!;
+const PORTONE_API_URL = "https://api.portone.io";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,20 +12,11 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-async function getAccessToken(): Promise<string> {
-  const res = await fetch(`${IMP_API_URL}/users/getToken`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      imp_key: IMP_API_KEY,
-      imp_secret: IMP_API_SECRET,
-    }),
-  });
-  const data = await res.json();
-  if (data.code !== 0) {
-    throw new Error(`Token error: ${data.message}`);
-  }
-  return data.response.access_token;
+function apiHeaders(): Record<string, string> {
+  return {
+    Authorization: `PortOne ${PORTONE_API_SECRET}`,
+    "Content-Type": "application/json",
+  };
 }
 
 Deno.serve(async (req) => {
@@ -70,26 +60,35 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "활성 구독이 없습니다" }, 400);
     }
 
-    // 3. 예약된 스케줄 결제 취소
+    // 3. 예약된 스케줄 결제 취소 (V2: billing_key로 스케줄 조회 후 취소)
     if (license.billing_key) {
       try {
-        const accessToken = await getAccessToken();
-        await fetch(
-          `${IMP_API_URL}/subscribe/payments/unschedule`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${accessToken}`,
-            },
-            body: JSON.stringify({
-              customer_uid: license.billing_key,
-            }),
-          }
+        // V2에서는 빌링키의 예약 결제를 조회하여 개별 취소
+        const schedulesRes = await fetch(
+          `${PORTONE_API_URL}/billing-keys/${encodeURIComponent(license.billing_key)}/schedules`,
+          { headers: apiHeaders() }
         );
-        console.log(`[cancel] Unscheduled payments for ${license.billing_key}`);
+
+        if (schedulesRes.ok) {
+          const schedulesData = await schedulesRes.json();
+          const schedules = schedulesData.items || [];
+          for (const schedule of schedules) {
+            if (schedule.status === "SCHEDULED") {
+              await fetch(
+                `${PORTONE_API_URL}/payments/${encodeURIComponent(schedule.paymentId)}/schedule/revoke`,
+                {
+                  method: "POST",
+                  headers: apiHeaders(),
+                }
+              );
+            }
+          }
+        }
+        console.log(
+          `[cancel] Revoked scheduled payments for ${license.billing_key}`
+        );
       } catch (err) {
-        console.error("[cancel] Failed to unschedule:", err);
+        console.error("[cancel] Failed to revoke schedules:", err);
       }
     }
 
