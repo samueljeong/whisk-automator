@@ -1323,12 +1323,34 @@
     return false;
   }
 
-  // 영상 완성 대기 (최대 3분)
+  // 영상 완성 대기 (최대 3분) — initialSrc로 이전 영상 구분
   async function waitForVideo() {
     const maxWait = 3 * 60 * 1000; // 3분
     const pollInterval = 3000; // 3초
     const startTime = Date.now();
     let pollCount = 0;
+
+    // 현재 페이지에 이미 있는 video src 수집 (이전 영상 무시용)
+    let initialSrcs = [];
+    try {
+      const [initResult] = await chrome.scripting.executeScript({
+        target: { tabId: grokTabId },
+        world: 'MAIN',
+        func: () => {
+          const srcs = [];
+          document.querySelectorAll('video').forEach(v => {
+            const s = v.src || v.currentSrc || v.querySelector('source')?.src;
+            if (s) srcs.push(s);
+          });
+          document.querySelectorAll('a[download], a[href*=".mp4"], a[href*="video"]').forEach(a => {
+            if (a.href && !a.href.startsWith('javascript:')) srcs.push(a.href);
+          });
+          return srcs;
+        }
+      });
+      initialSrcs = initResult?.result || [];
+    } catch { /* ignore */ }
+    DEBUG && console.log('[Grok] waitForVideo initialSrcs:', initialSrcs.length);
 
     while (Date.now() - startTime < maxWait) {
       if (!grokIsRunning) return null;
@@ -1337,21 +1359,21 @@
       const [result] = await chrome.scripting.executeScript({
         target: { tabId: grokTabId },
         world: 'MAIN',
-        func: (shouldLog) => {
-          // 1. video 태그
+        func: (shouldLog, knownSrcs) => {
+          // 1. video 태그 — 이전 영상 제외
           const videos = document.querySelectorAll('video');
           for (const v of videos) {
             const src = v.src || v.currentSrc || v.querySelector('source')?.src;
-            if (src) {
-              DEBUG && console.log('[Grok] 영상 URL 발견:', src.substring(0, 120));
+            if (src && !knownSrcs.includes(src)) {
+              DEBUG && console.log('[Grok] 새 영상 URL 발견:', src.substring(0, 120));
               return { type: 'url', value: src };
             }
           }
 
-          // 2. download 링크
+          // 2. download 링크 — 이전 것 제외
           const dlinks = document.querySelectorAll('a[download], a[href*=".mp4"], a[href*="video"]');
           for (const a of dlinks) {
-            if (a.href && !a.href.startsWith('javascript:')) {
+            if (a.href && !a.href.startsWith('javascript:') && !knownSrcs.includes(a.href)) {
               return { type: 'url', value: a.href };
             }
           }
@@ -1373,7 +1395,7 @@
           if (loadingEls.length > 0) return { type: 'loading' };
           return { type: 'none' };
         },
-        args: [pollCount % 3 === 0]
+        args: [pollCount % 3 === 0, initialSrcs]
       });
 
       const res = result?.result;
