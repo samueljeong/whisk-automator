@@ -294,81 +294,10 @@
 
       <!-- ====== 영상연장 서브컨테이너 ====== -->
       <div id="grokExtendContainer" hidden>
-      <!-- 기본 이미지 -->
-      <section class="grok-input-section">
-        <div class="input-header">
-          <h2>기본 이미지</h2>
-        </div>
-        <div class="extend-image-area" id="extendImageArea">
-          <label class="extend-image-upload" id="extendImageLabel">
-            <input type="file" id="extendImageInput" accept="image/*" hidden>
-            <div class="extend-image-placeholder" id="extendImagePlaceholder">
-              <span class="extend-image-icon">+</span>
-              <span>이미지 선택</span>
-            </div>
-            <img id="extendImagePreview" class="extend-image-preview" hidden>
-          </label>
-          <button id="extendImageClearBtn" class="btn btn-small btn-danger extend-image-clear" hidden>&times;</button>
-        </div>
-        <p class="hint">이 이미지로 1차 영상을 생성하고, 이후 프롬프트마다 6초씩 연장합니다</p>
-      </section>
-
-      <!-- 프롬프트 입력 -->
-      <section class="grok-input-section">
-        <div class="input-header">
-          <h2>프롬프트 (최대 5개)</h2>
-          <div class="input-header-actions">
-            <label class="file-input-label">
-              <input type="file" id="extendPromptFileInput" accept=".txt" hidden>
-              📁 파일 불러오기
-            </label>
-          </div>
-        </div>
-        <textarea
-          id="extendPromptInput"
-          placeholder="프롬프트를 입력하세요. 줄바꿈으로 구분됩니다.&#10;&#10;1차: 이미지로 영상 생성 (6초)&#10;2차~: 마지막 프레임에서 연장 (각 +6초)&#10;&#10;예시:&#10;slow zoom in, flickering firelight&#10;camera pans left, revealing the landscape&#10;slow zoom out, cinematic wide shot"
-          rows="5"
-        ></textarea>
-        <div class="input-actions">
-          <button id="addExtendPromptsBtn" class="btn btn-secondary">프롬프트 추가</button>
-        </div>
-      </section>
-
-      <!-- 연장 대기열 -->
-      <section class="grok-queue-section">
-        <div class="queue-header">
-          <h2>프롬프트 목록 <span id="extendQueueCount">(0개 / 5개)</span></h2>
-          <button id="extendClearQueueBtn" class="btn btn-small btn-danger">전체 삭제</button>
-        </div>
-        <ul id="extendQueue" class="prompt-list extend-queue-list">
-          <li class="empty-message">프롬프트를 추가해주세요 (최대 5개)</li>
-        </ul>
-      </section>
-
-      <!-- 설정 -->
-      <section class="grok-settings-section">
-        <h2>설정</h2>
-        <div class="grok-setting-group">
-          <label for="extendDelay">연장 간격 (초):</label>
-          <input type="number" id="extendDelay" value="10" min="5" max="60">
-        </div>
-        <div class="grok-setting-group">
-          <label for="extendSaveLocation">저장 위치:</label>
-          <input type="text" id="extendSaveLocation" placeholder="grok-videos" value="grok-videos">
-        </div>
-        <div class="grok-setting-group">
-          <label class="toggle-label">
-            <input type="checkbox" id="extendUpscaleEnabled">
-            <span class="toggle-text">업스케일 후 저장</span>
-          </label>
-        </div>
-      </section>
-
-      <!-- 제어 -->
-      <section class="control-section">
-        <button id="extendStartBtn" class="btn btn-primary" disabled>영상 연장 시작</button>
-        <button id="extendStopBtn" class="btn btn-danger" hidden>중지</button>
-      </section>
+        <section class="grok-input-section" style="text-align:center; padding:40px 20px; color:#999;">
+          <h2 style="margin-bottom:12px; color:#ccc;">영상 연장 기능</h2>
+          <p>이 기능은 추후 업데이트에서 제공됩니다.</p>
+        </section>
       </div><!-- /grokExtendContainer -->
 
       <!-- 진행률 (공용) -->
