@@ -3716,6 +3716,39 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         await scrollSweep(currentPos, 0, -1);
       }
 
+      // 3차 재시도: 아직 누락 있으면 남은 이미지 생성 대기 후 다시 스윕
+      if (downloadedCount < totalCount && nextPromptIdx >= 0) {
+        var remaining = totalCount - downloadedCount;
+        DEBUG && console.log('[Flow Auto] 2차 스윕 후 ' + remaining + '개 누락 — 추가 생성 대기 후 3차 스윕');
+        // 남은 이미지 생성 대기 (최대 60초, 2초 간격 폴링)
+        var retryWait = 0;
+        var retryMax = 60000;
+        while (retryWait < retryMax && downloadedCount < totalCount) {
+          if (isStopRequested()) break;
+          await sleep(5000);
+          retryWait += 5000;
+          // 새 이미지가 나타났는지 빠르게 체크
+          var checkNew = document.querySelectorAll('img[src*="getMediaUrlRedirect"]');
+          var hasNew = false;
+          checkNew.forEach(function(img) {
+            if (!preGenSrcs.has(img.src) && !downloadedSrcs.has(img.src) && !assetSrcs.has(img.src)) {
+              hasNew = true;
+            }
+          });
+          if (hasNew) {
+            DEBUG && console.log('[Flow Auto] 새 이미지 감지 — 3차 스윕 시작');
+            break;
+          }
+          if (retryWait % 15000 === 0) {
+            DEBUG && console.log('[Flow Auto] 추가 생성 대기 중... (' + (retryWait / 1000) + '초)');
+          }
+        }
+        // 3차 스윕: 전체 범위
+        if (downloadedCount < totalCount && nextPromptIdx >= 0) {
+          await scrollSweep(0, maxScrollRange, 1);
+        }
+      }
+
       // 스크롤 원위치
       if (scrollContainer) {
         scrollContainer.scrollTop = 0;
