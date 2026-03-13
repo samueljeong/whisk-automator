@@ -316,8 +316,8 @@ document.getElementById('logoutBtn')?.addEventListener('click', async () => {
   updateGrokAccess();
 });
 
-// 결제 페이지 - 확장 내부 로드
-const PAYMENT_PAGE_URL = chrome.runtime.getURL('payment/index.html');
+// 결제 페이지 - Vercel 배포 (MV3 CSP로 확장 내부 불가)
+const PAYMENT_PAGE_BASE = 'https://payment-tau-three.vercel.app';
 const CANCEL_SUB_URL = `${SUPABASE_URL}/functions/v1/cancel-subscription`;
 
 // Pro 업그레이드 버튼
@@ -328,11 +328,11 @@ document.getElementById('upgradeBtn')?.addEventListener('click', async () => {
     showLoginScreen();
     return;
   }
-  // 로그인 Free → 결제 페이지로 이동 (토큰은 storage.session 경유)
+  // 로그인 Free → 결제 페이지로 이동 (토큰은 URL fragment로 전달, 서버에 전송 안 됨)
   const userId = await getAuthUserId();
   const token = await getAccessToken();
-  await chrome.storage.session.set({ payment_auth: { token, userId, email } });
-  chrome.tabs.create({ url: PAYMENT_PAGE_URL });
+  const authData = btoa(JSON.stringify({ token, userId, email }));
+  chrome.tabs.create({ url: `${PAYMENT_PAGE_BASE}/index.html#auth=${authData}` });
 });
 
 // 구독 관리 버튼
