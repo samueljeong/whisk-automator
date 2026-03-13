@@ -3136,6 +3136,10 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
   // 에셋 이미지(~100KB)와 생성 이미지(~500KB+)를 크기로 구분
   var MIN_GENERATED_IMAGE_SIZE = 200 * 1024; // 200KB 이상만 생성 이미지로 간주
   async function downloadBatch(batchStart, batchEnd, preGenSrcs, detectedImages) {
+    if (!autoDownload) {
+      DEBUG && console.log('[Flow Auto] 자동 다운로드 해제됨, 배치 다운로드 스킵');
+      return 0;
+    }
     // Phase 3에서 전달받은 이미지 배열 사용 (DOM 재탐색으로 인한 누락 방지)
     var candidateImages;
     if (detectedImages && detectedImages.length > 0) {
