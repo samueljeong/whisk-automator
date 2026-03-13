@@ -2988,8 +2988,11 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
     return false;
   }
 
-  // TODO: Flow DOM 탐색 완료 후 비디오 다운로드 로직 구현
   async function downloadVideo(promptText, index, customFilename) {
+    if (!autoDownload) {
+      DEBUG && console.log('[Flow Auto] 자동 다운로드 해제됨, 스킵');
+      return true;
+    }
     DEBUG && console.log('[Flow Auto] 비디오 다운로드 시도...');
     var videos = document.querySelectorAll('video');
     var targetVideo = null;
