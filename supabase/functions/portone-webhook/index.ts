@@ -1,13 +1,12 @@
-// portone-webhook: 포트원 V1 웹훅 수신 → DB 업데이트 + 다음 스케줄 등록
-// 환경변수: IMP_API_KEY, IMP_API_SECRET, PORTONE_WEBHOOK_SECRET, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+// portone-webhook: 포트원 V2 웹훅 수신 → DB 업데이트 + 다음 스케줄 등록
+// 환경변수: PORTONE_API_SECRET, PORTONE_WEBHOOK_SECRET, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 // 배포 시: --no-verify-jwt 필수 (외부에서 호출)
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const IMP_API_KEY = Deno.env.get("IMP_API_KEY")!;
-const IMP_API_SECRET = Deno.env.get("IMP_API_SECRET")!;
+const PORTONE_API_SECRET = Deno.env.get("PORTONE_API_SECRET")!;
 const PORTONE_WEBHOOK_SECRET = Deno.env.get("PORTONE_WEBHOOK_SECRET") || "";
-const IMP_API_URL = "https://api.iamport.kr";
+const PORTONE_API_URL = "https://api.portone.io";
 
 const PLANS: Record<string, { amount: number; dayInterval: number }> = {
   monthly: { amount: 9900, dayInterval: 30 },
@@ -19,20 +18,11 @@ const supabaseAdmin = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 );
 
-async function getAccessToken(): Promise<string> {
-  const res = await fetch(`${IMP_API_URL}/users/getToken`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      imp_key: IMP_API_KEY,
-      imp_secret: IMP_API_SECRET,
-    }),
-  });
-  const data = await res.json();
-  if (data.code !== 0) {
-    throw new Error(`Token error: ${data.message}`);
-  }
-  return data.response.access_token;
+function apiHeaders(): Record<string, string> {
+  return {
+    Authorization: `PortOne ${PORTONE_API_SECRET}`,
+    "Content-Type": "application/json",
+  };
 }
 
 Deno.serve(async (req) => {
@@ -62,7 +52,9 @@ Deno.serve(async (req) => {
       }
 
       const signedContent = `${webhookId}.${webhookTimestamp}.${body}`;
-      const secretBytes = base64Decode(PORTONE_WEBHOOK_SECRET.replace("whsec_", ""));
+      const secretBytes = base64Decode(
+        PORTONE_WEBHOOK_SECRET.replace("whsec_", "")
+      );
       const key = await crypto.subtle.importKey(
         "raw",
         secretBytes,
@@ -86,22 +78,21 @@ Deno.serve(async (req) => {
     }
 
     const event = JSON.parse(body);
-    console.log(`[webhook] Event: ${event.type}`);
+    console.log(`[webhook] Event type: ${event.type}`);
 
-    // V1 웹훅: imp_uid와 merchant_uid로 결제 조회
-    // V2 웹훅: Transaction.Paid / Transaction.Failed
-    if (event.type === "Transaction.Paid" || event.status === "paid") {
-      const impUid = event.data?.paymentId || event.imp_uid;
-      if (impUid) {
-        await handlePaymentSuccess(impUid);
+    // V2 웹훅 이벤트
+    if (event.type === "Transaction.Paid") {
+      const paymentId = event.data?.paymentId;
+      if (paymentId) {
+        await handlePaymentSuccess(paymentId);
       }
-    } else if (event.type === "Transaction.Failed" || event.status === "failed") {
-      const impUid = event.data?.paymentId || event.imp_uid;
-      if (impUid) {
-        await handlePaymentFailed(impUid);
+    } else if (event.type === "Transaction.Failed") {
+      const paymentId = event.data?.paymentId;
+      if (paymentId) {
+        await handlePaymentFailed(paymentId);
       }
     } else {
-      console.log(`[webhook] Unhandled event:`, event);
+      console.log(`[webhook] Unhandled event:`, event.type);
     }
 
     return new Response(JSON.stringify({ ok: true }), {
@@ -114,27 +105,23 @@ Deno.serve(async (req) => {
   }
 });
 
-async function handlePaymentSuccess(impUid: string) {
-  // V1 API로 결제 상세 조회
-  const accessToken = await getAccessToken();
+async function handlePaymentSuccess(paymentId: string) {
+  // V2 API로 결제 상세 조회
   const payRes = await fetch(
-    `${IMP_API_URL}/payments/${encodeURIComponent(impUid)}`,
-    {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    }
+    `${PORTONE_API_URL}/payments/${encodeURIComponent(paymentId)}`,
+    { headers: apiHeaders() }
   );
 
-  const payData = await payRes.json();
-  if (payData.code !== 0) {
-    console.error("[webhook] Failed to fetch payment:", impUid);
+  if (!payRes.ok) {
+    console.error("[webhook] Failed to fetch payment:", paymentId);
     return;
   }
 
-  const payment = payData.response;
-  const customerUid = payment.customer_uid;
+  const payment = await payRes.json();
+  const billingKey = payment.billingKey;
 
-  if (!customerUid) {
-    console.error("[webhook] No customer_uid in payment");
+  if (!billingKey) {
+    console.error("[webhook] No billingKey in payment");
     return;
   }
 
@@ -142,11 +129,11 @@ async function handlePaymentSuccess(impUid: string) {
   const { data: license } = await supabaseAdmin
     .from("licenses")
     .select("*")
-    .eq("billing_key", customerUid)
+    .eq("billing_key", billingKey)
     .single();
 
   if (!license) {
-    console.error("[webhook] No license found for billing_key:", customerUid);
+    console.error("[webhook] No license found for billing_key:", billingKey);
     return;
   }
 
@@ -161,33 +148,30 @@ async function handlePaymentSuccess(impUid: string) {
 
   // 취소 예정이 아니면 다음 스케줄 등록
   if (!license.cancel_at_period_end) {
-    const nextMerchantUid = `whisk_${license.user_id}_${Date.now()}`;
+    const nextPaymentId = `flow_${license.user_id}_${Date.now()}`;
     const scheduleRes = await fetch(
-      `${IMP_API_URL}/subscribe/payments/schedule`,
+      `${PORTONE_API_URL}/payments/${encodeURIComponent(nextPaymentId)}/schedule`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
+        headers: apiHeaders(),
         body: JSON.stringify({
-          customer_uid: customerUid,
-          schedules: [
-            {
-              merchant_uid: nextMerchantUid,
-              schedule_at: Math.floor(newExpiry.getTime() / 1000),
-              amount: plan.amount,
-              name:
-                planType === "monthly" ? "Whisk Pro 월간" : "Whisk Pro 연간",
-            },
-          ],
+          payment: {
+            billingKey,
+            orderName:
+              planType === "monthly"
+                ? "Flow+Grok Pro 월간"
+                : "Flow+Grok Pro 연간",
+            amount: { total: plan.amount },
+            currency: "KRW",
+          },
+          timeToPay: newExpiry.toISOString(),
         }),
       }
     );
 
-    const scheduleData = await scheduleRes.json();
-    if (scheduleData.code !== 0) {
-      console.error("[webhook] Failed to schedule next payment:", scheduleData);
+    if (!scheduleRes.ok) {
+      const scheduleErr = await scheduleRes.json().catch(() => ({}));
+      console.error("[webhook] Failed to schedule next payment:", scheduleErr);
     }
   }
 
@@ -206,31 +190,26 @@ async function handlePaymentSuccess(impUid: string) {
   );
 }
 
-async function handlePaymentFailed(impUid: string) {
-  const accessToken = await getAccessToken();
+async function handlePaymentFailed(paymentId: string) {
   const payRes = await fetch(
-    `${IMP_API_URL}/payments/${encodeURIComponent(impUid)}`,
-    {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    }
+    `${PORTONE_API_URL}/payments/${encodeURIComponent(paymentId)}`,
+    { headers: apiHeaders() }
   );
 
-  const payData = await payRes.json();
-  if (payData.code !== 0) {
-    console.error("[webhook] Failed to fetch failed payment:", impUid);
+  if (!payRes.ok) {
+    console.error("[webhook] Failed to fetch failed payment:", paymentId);
     return;
   }
 
-  const payment = payData.response;
-  const customerUid = payment.customer_uid;
+  const payment = await payRes.json();
+  const billingKey = payment.billingKey;
 
-  if (!customerUid) return;
+  if (!billingKey) return;
 
-  // billing_key로 라이선스 조회
   const { data: license } = await supabaseAdmin
     .from("licenses")
     .select("user_id")
-    .eq("billing_key", customerUid)
+    .eq("billing_key", billingKey)
     .single();
 
   if (!license) return;
