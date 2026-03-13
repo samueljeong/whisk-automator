@@ -3657,25 +3657,27 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
               }
 
               // blob → dataUrl → background 다운로드
-              var reader = new FileReader();
-              var dataUrl = await new Promise(function(resolve, reject) {
-                reader.onload = function() { resolve(reader.result); };
-                reader.onerror = reject;
-                reader.readAsDataURL(imgBlob);
-              });
+              if (autoDownload) {
+                var reader = new FileReader();
+                var dataUrl = await new Promise(function(resolve, reject) {
+                  reader.onload = function() { resolve(reader.result); };
+                  reader.onerror = reject;
+                  reader.readAsDataURL(imgBlob);
+                });
 
-              if (useCustomDir) {
-                chrome.runtime.sendMessage({
-                  action: 'SAVE_IMAGE_DATA',
-                  dataUrl: dataUrl,
-                  filename: fullFilename
-                });
-              } else {
-                chrome.runtime.sendMessage({
-                  action: 'DOWNLOAD_IMAGE',
-                  url: dataUrl,
-                  filename: savePath + '/' + fullFilename
-                });
+                if (useCustomDir) {
+                  chrome.runtime.sendMessage({
+                    action: 'SAVE_IMAGE_DATA',
+                    dataUrl: dataUrl,
+                    filename: fullFilename
+                  });
+                } else {
+                  chrome.runtime.sendMessage({
+                    action: 'DOWNLOAD_IMAGE',
+                    url: dataUrl,
+                    filename: savePath + '/' + fullFilename
+                  });
+                }
               }
 
               downloadedSrcs.add(newImg.src);
