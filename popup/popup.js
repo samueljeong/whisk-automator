@@ -412,6 +412,14 @@ document.getElementById('cancelCouponBtn')?.addEventListener('click', () => {
   document.getElementById('couponModal').hidden = true;
 });
 
+// Flow 페이지 URL 패턴 확인
+function isFlowUrl(url) {
+  if (!url) return false;
+  return (url.includes('labs.google') && url.includes('flow')) ||
+         url.includes('/fx/flow') ||
+         url.includes('/fx/tools/flow');
+}
+
 // Check connection to Flow page
 async function checkConnection() {
   try {
@@ -422,17 +430,50 @@ async function checkConnection() {
 
     DEBUG && console.log('[Flow Automator] Current tab URL:', url);
 
-    // Flow 페이지 패턴 확인 (다양한 URL 형식 지원)
-    const isFlowPage = url.includes('labs.google') && url.includes('flow') ||
-                       url.includes('/fx/flow') ||
-                       url.includes('/fx/tools/flow');
+    if (!isFlowUrl(url)) {
+      connectionStatus.textContent = 'Flow 페이지 아님';
+      connectionStatus.className = 'status disconnected';
+      startBtn.disabled = true;
+      return;
+    }
 
-    if (isFlowPage) {
+    // URL은 Flow → content script 응답 확인
+    let contentAlive = false;
+    try {
+      const resp = await chrome.tabs.sendMessage(tab.id, { action: 'CHECK_CONNECTION' });
+      contentAlive = resp?.connected === true;
+    } catch {
+      contentAlive = false;
+    }
+
+    if (!contentAlive) {
+      // Content script 미응답 → 동적 주입 시도
+      DEBUG && console.log('[Flow Automator] Content script 미응답, 동적 주입 시도');
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ['content/content.js']
+        });
+        // interceptor도 주입 (MAIN world)
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ['content/interceptor.js'],
+          world: 'MAIN'
+        });
+        // 재확인
+        const resp2 = await chrome.tabs.sendMessage(tab.id, { action: 'CHECK_CONNECTION' });
+        contentAlive = resp2?.connected === true;
+      } catch (injectErr) {
+        DEBUG && console.log('[Flow Automator] 동적 주입 실패:', injectErr.message);
+      }
+    }
+
+    if (contentAlive) {
       connectionStatus.textContent = '연결됨';
       connectionStatus.className = 'status connected';
       startBtn.disabled = prompts.length === 0;
     } else {
-      connectionStatus.textContent = 'Flow 페이지 아님';
+      connectionStatus.textContent = '연결 대기중... (새로고침 필요)';
       connectionStatus.className = 'status disconnected';
       startBtn.disabled = true;
     }
@@ -443,6 +484,20 @@ async function checkConnection() {
     startBtn.disabled = true;
   }
 }
+
+// 탭 URL 변경/활성 탭 전환 시 자동 감지
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete' || changeInfo.url) {
+    // 활성 탭이면 연결 재확인
+    if (tab.active) {
+      checkConnection();
+    }
+  }
+});
+
+chrome.tabs.onActivated.addListener(() => {
+  checkConnection();
+});
 
 // IndexedDB for FileSystemDirectoryHandle persistence
 function openHandleDB() {
