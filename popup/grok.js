@@ -1217,23 +1217,36 @@
     const startTime = Date.now();
     let pollCount = 0;
 
+    // 현재 URL 기록 — 이전 포스트 페이지에 머물러 있는 경우 구분
+    let prevUrl = '';
+    try {
+      const [initResult] = await chrome.scripting.executeScript({
+        target: { tabId: grokTabId },
+        func: () => window.location.pathname
+      });
+      prevUrl = initResult?.result || '';
+    } catch { /* ignore */ }
+    DEBUG && console.log('[Grok] waitForImagePost prevUrl:', prevUrl);
+
     while (Date.now() - startTime < maxWait) {
       if (!grokIsRunning) return false;
       pollCount++;
 
       const [result] = await chrome.scripting.executeScript({
         target: { tabId: grokTabId },
-        func: (shouldLog) => {
+        func: (shouldLog, knownUrl) => {
           const url = window.location.pathname;
           const isPostPage = url.startsWith('/imagine/post/');
+          // 이전 포스트와 다른 새 포스트인지 확인
+          const isNewPost = isPostPage && url !== knownUrl;
           const makeVideoBtn = document.querySelector('button[aria-label="동영상 만들기"]');
 
           if (shouldLog) {
             DEBUG && console.log('[Grok] 이미지 생성 대기...',
-              'url:', url, 'isPost:', isPostPage, 'makeVideoBtn:', !!makeVideoBtn);
+              'url:', url, 'isNewPost:', isNewPost, 'makeVideoBtn:', !!makeVideoBtn);
           }
 
-          if (isPostPage || makeVideoBtn) {
+          if (isNewPost || makeVideoBtn) {
             return { ready: true, isPost: isPostPage, hasBtn: !!makeVideoBtn };
           }
 
@@ -1243,7 +1256,7 @@
           );
           return { ready: false, loading: loadingEls.length > 0 };
         },
-        args: [pollCount % 3 === 0]
+        args: [pollCount % 3 === 0, prevUrl]
       });
 
       if (result?.result?.ready) {
