@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Flow 자동화 도구",
-  "version": "4.0.0",
+  "version": "4.1.0",
   "description": "Google Flow AI 이미지/영상 대량 생성 자동화",
   "permissions": [
     "activeTab",
