@@ -1997,6 +1997,7 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
   async function selectQuantity(menu, count) {
     var targetText = 'x' + (count || 1);
     var items = menu.querySelectorAll('*');
+    // 정확 매칭 우선
     for (var i = 0; i < items.length; i++) {
       var txt = items[i].textContent.trim();
       if (txt === targetText && items[i].getBoundingClientRect().width > 0) {
@@ -2007,7 +2008,27 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
         return true;
       }
     }
-    DEBUG && console.log('[Flow Auto] 수량 "' + targetText + '" 메뉴 아이템 미발견');
+    // 부분 매칭 폴백: "1" 또는 count 숫자만 포함된 버튼
+    for (var i = 0; i < items.length; i++) {
+      var txt = items[i].textContent.trim();
+      var rect = items[i].getBoundingClientRect();
+      // 수량 관련 작은 버튼/라벨 (숫자만 포함, 크기 작은 것)
+      if (rect.width > 0 && rect.width < 80 && (txt === String(count || 1))) {
+        var clickTarget = items[i].closest('button, [role="menuitem"], [role="menuitemradio"]') || items[i];
+        DEBUG && console.log('[Flow Auto] 수량 선택 (폴백): "' + txt + '"');
+        simulateRealClick(clickTarget);
+        await sleep(300);
+        return true;
+      }
+    }
+    console.warn('[Flow Auto] 수량 "' + targetText + '" 메뉴 아이템 미발견 — 현재 메뉴 내용:');
+    for (var i = 0; i < items.length; i++) {
+      var txt = items[i].textContent.trim();
+      var rect = items[i].getBoundingClientRect();
+      if (txt && rect.width > 0 && txt.length < 20) {
+        console.log('  [' + i + '] "' + txt + '" (' + Math.round(rect.width) + 'x' + Math.round(rect.height) + ')');
+      }
+    }
     return false;
   }
 
