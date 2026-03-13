@@ -244,9 +244,9 @@
   </div>
 
   <script>
-    // ─── 설정 (포트원 V1 + 토스페이먼츠) ───
-    const IMP_CODE = 'imp64251264';
-    const BILLING_PG = 'tosspayments.iamporttest_4';
+    // ─── 설정 (포트원 V2 + 토스페이먼츠) ───
+    const STORE_ID = 'store-69866015-89c0-4137-a567-1bf4a51db2db';
+    const CHANNEL_KEY = 'channel-key-87d939a8-7c4c-40b8-a7c1-84125c9902b7';
     const SUPABASE_URL = 'https://cyrbibbosfybylsparfk.supabase.co';
     const ACTIVATE_URL = `${SUPABASE_URL}/functions/v1/activate-subscription`;
 
@@ -294,8 +294,8 @@
       });
     }
 
-    // ─── 구독 시작 (V1 SDK) ───
-    function startSubscription() {
+    // ─── 구독 시작 (V2 SDK) ───
+    async function startSubscription() {
       const btn = document.getElementById('subscribeBtn');
       const loading = document.getElementById('loadingMsg');
       const errorEl = document.getElementById('errorMsg');
@@ -304,7 +304,7 @@
       loading.style.display = 'block';
       errorEl.style.display = 'none';
 
-      if (!window.IMP) {
+      if (!window.PortOne) {
         errorEl.textContent = 'SDK 로딩 실패. 페이지를 새로고침 해주세요.';
         errorEl.style.display = 'block';
         btn.disabled = false;
@@ -312,28 +312,32 @@
         return;
       }
 
-      window.IMP.init(IMP_CODE);
-
-      const plan = PLANS[selectedPlan];
       const effectiveUserId = userId || 'demo_' + Date.now();
-      const customerUid = `billing_${effectiveUserId}_${Date.now()}`;
 
-      window.IMP.request_pay({
-        pg: BILLING_PG,
-        pay_method: 'card',
-        merchant_uid: `order_${effectiveUserId}_${Date.now()}`,
-        customer_uid: customerUid,
-        name: plan.name,
-        amount: 0,
-        buyer_email: email || '',
-      }, async function(rsp) {
-        if (!rsp.success) {
-          errorEl.textContent = rsp.error_msg || '카드 등록에 실패했습니다';
-          errorEl.style.display = 'block';
-          btn.disabled = false;
-          loading.style.display = 'none';
-          return;
+      try {
+        // V2: 빌링키 발급 요청
+        const issueResponse = await PortOne.requestIssueBillingKey({
+          storeId: STORE_ID,
+          channelKey: CHANNEL_KEY,
+          billingKeyMethod: 'CARD',
+          issueId: `billing_${effectiveUserId}_${Date.now()}`,
+          issueName: PLANS[selectedPlan].name,
+          customer: {
+            email: email || undefined,
+          },
+        });
+
+        if (issueResponse.code) {
+          // 사용자 취소 또는 에러
+          if (issueResponse.code === 'PORTONE_BROWSER_SDK_PG_CANCELLED') {
+            btn.disabled = false;
+            loading.style.display = 'none';
+            return;
+          }
+          throw new Error(issueResponse.message || '카드 등록에 실패했습니다');
         }
+
+        const billingKey = issueResponse.billingKey;
 
         // 데모 모드: 서버 호출 없이 바로 success 페이지로
         if (isDemo) {
@@ -341,36 +345,35 @@
           return;
         }
 
-        try {
-          const res = await fetch(ACTIVATE_URL, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              billingKey: customerUid,
-              planType: selectedPlan,
-            }),
-          });
+        // 서버에 빌링키 전달 → 첫 결제 + 스케줄 등록
+        const res = await fetch(ACTIVATE_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            billingKey: billingKey,
+            planType: selectedPlan,
+          }),
+        });
 
-          if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            throw new Error(err.error || '구독 활성화에 실패했습니다');
-          }
-
-          const result = await res.json();
-          window.location.href = `success.html?plan=${selectedPlan}&expires=${result.expiresAt || ''}`;
-
-        } catch (err) {
-          console.error('Subscription error:', err);
-          errorEl.textContent = err.message || '결제 처리 중 오류가 발생했습니다';
-          errorEl.style.display = 'block';
-          btn.disabled = false;
-        } finally {
-          loading.style.display = 'none';
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || '구독 활성화에 실패했습니다');
         }
-      });
+
+        const result = await res.json();
+        window.location.href = `success.html?plan=${selectedPlan}&expires=${result.expiresAt || ''}`;
+
+      } catch (err) {
+        console.error('Subscription error:', err);
+        errorEl.textContent = err.message || '결제 처리 중 오류가 발생했습니다';
+        errorEl.style.display = 'block';
+        btn.disabled = false;
+      } finally {
+        loading.style.display = 'none';
+      }
     }
   </script>
 </body>
