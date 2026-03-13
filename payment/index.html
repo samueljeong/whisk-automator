@@ -255,7 +255,7 @@
       yearly: { name: 'Flow+Grok Pro 연간', amount: 100000, period: 'yearly' },
     };
 
-    // ─── 인증 정보 로드 (chrome.storage.session) ───
+    // ─── 인증 정보 로드 (URL fragment) ───
     const params = new URLSearchParams(window.location.search);
     const isDemo = params.get('demo') === 'true';
     let userId = null;
@@ -263,26 +263,34 @@
     let token = null;
     let selectedPlan = 'monthly';
 
-    async function loadAuth() {
+    function loadAuth() {
       if (isDemo) {
         document.getElementById('emailDisplay').textContent = '심사용 테스트 모드';
         return;
       }
-      const result = await chrome.storage.session.get('payment_auth');
-      const auth = result.payment_auth;
-      if (!auth || !auth.userId || !auth.token) {
+      // URL fragment에서 인증 정보 추출 (#auth=base64)
+      const hash = window.location.hash;
+      const authMatch = hash.match(/auth=([^&]+)/);
+      if (!authMatch) {
         document.getElementById('errorMsg').textContent = '잘못된 접근입니다. 확장 프로그램에서 다시 시도해주세요.';
         document.getElementById('errorMsg').style.display = 'block';
         return;
       }
-      userId = auth.userId;
-      email = auth.email;
-      token = auth.token;
-      if (email) {
-        document.getElementById('emailDisplay').textContent = email;
+      try {
+        const auth = JSON.parse(atob(authMatch[1]));
+        if (!auth.userId || !auth.token) throw new Error('invalid');
+        userId = auth.userId;
+        email = auth.email;
+        token = auth.token;
+        if (email) {
+          document.getElementById('emailDisplay').textContent = email;
+        }
+        // fragment 정리 (주소창에서 토큰 숨김)
+        history.replaceState(null, '', window.location.pathname);
+      } catch {
+        document.getElementById('errorMsg').textContent = '인증 정보가 잘못되었습니다. 다시 시도해주세요.';
+        document.getElementById('errorMsg').style.display = 'block';
       }
-      // 사용 후 즉시 삭제
-      await chrome.storage.session.remove('payment_auth');
     }
     loadAuth();
 
