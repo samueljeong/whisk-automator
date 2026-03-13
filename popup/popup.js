@@ -2167,7 +2167,14 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
       }
 
       // 수량 x1 강제 (자동화는 프롬프트당 1개씩 순차 생성)
-      await selectQuantity(menu, 1);
+      var qtyOk = await selectQuantity(menu, 1);
+      if (!qtyOk) {
+        // 메뉴 닫고 다시 열어서 재시도
+        await closeMenus();
+        await sleep(500);
+        menu = await openModelMenu();
+        await selectQuantity(menu, 1);
+      }
       await sleep(300);
 
       // 메뉴 재확인
