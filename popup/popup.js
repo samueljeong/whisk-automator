@@ -2881,6 +2881,10 @@ function runFlowAutomation(promptsWithCharacters, delayMs, autoDownload, _unused
   }
 
   async function downloadImage(promptText, index, customFilename, preGenSrcs) {
+    if (!autoDownload) {
+      DEBUG && console.log('[Flow Auto] 자동 다운로드 해제됨, 스킵');
+      return true;
+    }
     DEBUG && console.log('[Flow Auto] 다운로드 시도...');
 
     // Flow는 이미지 2개를 생성 → 첫 번째만 다운로드, 나머지는 스킵
