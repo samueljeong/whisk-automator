@@ -49,6 +49,7 @@
   const grokStartBtn = $('#grokStartBtn');
   const grokStopBtn = $('#grokStopBtn');
   const grokUpscaleEnabled = $('#grokUpscaleEnabled');
+  const grokAutoDownload = $('#grokAutoDownload');
 
   // 서브탭 & 서브컨테이너
   const grokSubTabGenerate = $('#grokSubTabGenerate');
