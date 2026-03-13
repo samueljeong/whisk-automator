@@ -36,8 +36,12 @@ Deno.serve(async (req) => {
   try {
     const body = await req.text();
 
-    // 웹훅 서명 검증 (Standard Webhooks)
-    if (PORTONE_WEBHOOK_SECRET) {
+    // 웹훅 서명 검증 (Standard Webhooks — 필수)
+    if (!PORTONE_WEBHOOK_SECRET) {
+      console.error("[webhook] No webhook secret configured");
+      return new Response("Server misconfiguration", { status: 500 });
+    }
+    {
       const webhookId = req.headers.get("webhook-id");
       const webhookSignature = req.headers.get("webhook-signature");
       const webhookTimestamp = req.headers.get("webhook-timestamp");
