@@ -5,7 +5,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const PORTONE_API_SECRET = Deno.env.get("PORTONE_API_SECRET")!;
-const PORTONE_WEBHOOK_SECRET = Deno.env.get("PORTONE_WEBHOOK_SECRET") || "";
+const PORTONE_WEBHOOK_SECRET = Deno.env.get("PORTONE_WEBHOOK_SECRET");
+if (!PORTONE_WEBHOOK_SECRET) {
+  console.error("[webhook] PORTONE_WEBHOOK_SECRET is required");
+}
 const PORTONE_API_URL = "https://api.portone.io";
 
 const PLANS: Record<string, { amount: number; dayInterval: number }> = {
