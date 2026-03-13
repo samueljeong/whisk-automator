@@ -2194,7 +2194,7 @@
     }
 
     // 최종 영상 다운로드
-    if (videoUrl && completed > 0) {
+    if (videoUrl && completed > 0 && grokAutoDownload.checked) {
       updateProgress(completed, total, '최종 영상 다운로드 중...');
       const saveLoc = extendSaveLocation.value || 'grok-videos';
       await downloadVideo(videoUrl, `extended_${Date.now()}`);
@@ -2206,7 +2206,7 @@
       const upscaleClicked = await clickUpscaleInMenu();
       if (upscaleClicked) {
         const upscaledUrl = await waitForUpscale();
-        if (upscaledUrl) {
+        if (upscaledUrl && grokAutoDownload.checked) {
           await downloadVideo(upscaledUrl, `extended_upscaled_${Date.now()}`);
         }
       }
