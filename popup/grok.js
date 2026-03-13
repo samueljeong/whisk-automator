@@ -607,32 +607,35 @@
 
       let matchCount = 0;
 
+      // 순차 읽기로 파일 정렬 순서 보장 (비동기 FileReader는 순서 깨질 수 있음)
       for (const { file } of sortedHandles) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          // 씬 번호로 Flow 프롬프트 매칭
-          const sceneIdx = extractSceneIndex(file.name);
-          let flowText = '';
-          if (sceneIdx >= 0 && sceneIdx < flowPrompts.length) {
-            flowText = flowPrompts[sceneIdx].text || '';
-            matchCount++;
-          }
+        const dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
 
-          const motion = generateMotionPrompt(flowText);
+        const sceneIdx = extractSceneIndex(file.name);
+        let flowText = '';
+        if (sceneIdx >= 0 && sceneIdx < flowPrompts.length) {
+          flowText = flowPrompts[sceneIdx].text || '';
+          matchCount++;
+        }
 
-          grokQueue.push({
-            id: generateId(),
-            name: file.name,
-            dataUrl: e.target.result,
-            motionPrompt: motion,
-            flowPrompt: flowText, // 원본 Flow 프롬프트 보존
-            status: 'pending',
-            videoUrl: null
-          });
-          renderQueue();
-          saveQueue();
-        };
-        reader.readAsDataURL(file);
+        const motion = generateMotionPrompt(flowText);
+
+        grokQueue.push({
+          id: generateId(),
+          name: file.name,
+          dataUrl,
+          motionPrompt: motion,
+          flowPrompt: flowText,
+          status: 'pending',
+          videoUrl: null
+        });
+        renderQueue();
+        saveQueue();
       }
     } catch (e) {
       if (e.name !== 'AbortError') {
