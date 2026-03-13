@@ -774,12 +774,14 @@
         }
 
         if (videoUrl) {
-          // Step 6a: URL 추출 성공 → 프로그래밍 방식 다운로드
-          updateProgress(completed, total, `${item.name}: 다운로드 중...`);
           item.videoUrl = videoUrl;
-          await downloadVideo(videoUrl, item.name);
+          // Step 6a: 자동 다운로드 체크 시에만 다운로드
+          if (grokAutoDownload.checked) {
+            updateProgress(completed, total, `${item.name}: 다운로드 중...`);
+            await downloadVideo(videoUrl, item.name);
+          }
           item.status = 'done';
-        } else {
+        } else if (grokAutoDownload.checked) {
           // Step 6b: URL 추출 실패 → 페이지 다운로드 버튼 클릭
           DEBUG && console.log('[Grok] video URL 미발견, 페이지 다운로드 버튼 시도');
           updateProgress(completed, total, `${item.name}: 다운로드 버튼 클릭...`);
