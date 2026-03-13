@@ -37,30 +37,20 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "인증이 필요합니다" }, 401);
     }
 
-    const token = authHeader.replace("Bearer ", "");
-    let userId: string;
-    let userEmail: string | undefined;
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
 
-    if (token === "test-token") {
-      userId = "test123";
-      userEmail = "test@test.com";
-      console.log("[activate] Using test mode");
-    } else {
-      const supabase = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_ANON_KEY")!,
-        { global: { headers: { Authorization: authHeader } } }
-      );
-
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        return jsonResponse({ error: "인증이 유효하지 않습니다" }, 401);
-      }
-      userId = user.id;
-      userEmail = user.email;
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return jsonResponse({ error: "인증이 유효하지 않습니다" }, 401);
     }
+    const userId = user.id;
+    const userEmail = user.email;
 
     // 2. 요청 파싱
     const { billingKey, planType } = await req.json();
